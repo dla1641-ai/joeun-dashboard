@@ -654,14 +654,32 @@
 
     // ── 기준 전환 ──
     function applyBasis() {
-        // 선택한 기준에 따라 month 값 설정
+        const savedFilters = {
+            customer: tsCust  ? getFilterVals(tsCust)  : [],
+            vehicle:  tsVeh   ? getFilterVals(tsVeh)   : [],
+            waste:    tsWaste ? getFilterVals(tsWaste) : [],
+            month:    tsMon   ? getFilterVals(tsMon)   : [],
+            year:     tsYear  ? getFilterVals(tsYear)  : [],
+        };
         window.rawData = window.rawDataBase.map(d => ({
             ...d,
             month: _dataBasis === 'account'
-                ? (d.accountMonth || d.month)  // 매출인식 기준
-                : d.month                       // 수행일 기준
+                ? (d.accountMonth || d.month)
+                : d.month
         })).filter(d => d.month);
         initFilters();
+        const restoreFilter = (ts, vals) => {
+            if (!ts || !vals.length) return;
+            const validVals = vals.filter(v => ts.options[v]);
+            validVals.forEach(v => ts.addItem(v, true));
+            if (validVals.length) ts.refreshItems();
+        };
+        restoreFilter(tsCust,  savedFilters.customer);
+        restoreFilter(tsVeh,   savedFilters.vehicle);
+        restoreFilter(tsWaste, savedFilters.waste);
+        restoreFilter(tsMon,   savedFilters.month);
+        restoreFilter(tsYear,  savedFilters.year);
+        renderPills();
         renderDashboard();
     }
 
