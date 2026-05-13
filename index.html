@@ -1614,7 +1614,7 @@
                 plugins:{
                     legend:{position:'bottom',labels:{font:{family:"'Noto Sans KR',sans-serif",size:11,weight:'bold'},boxWidth:12,padding:12}},
                     tooltip:{backgroundColor:'#1e293b',padding:10,titleFont:{size:12,family:"'Noto Sans KR'"},bodyFont:{size:12,weight:'bold',family:"'Noto Sans KR'"},callbacks:{label:ctx=>{const v=ctx.parsed.y;if(!v)return null;return ` ${ctx.dataset.label}: ${v.toFixed(2)}Ton`;}}},
-                    datalabels:{display:ctx=>ctx.parsed.y>0,anchor:'top',align:'top',font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'},color:ctx=>ctx.dataset.borderColor,formatter:v=>v>0?v.toFixed(1):null,offset:2,clip:false}
+                    datalabels:{display:ctx=>ctx.parsed?.y>0,anchor:'top',align:'top',font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'},color:ctx=>ctx.dataset.borderColor,formatter:v=>v>0?v.toFixed(1):null,offset:2,clip:false}
                 },
                 scales:{
                     y:{beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11}}},
@@ -1638,7 +1638,7 @@
                 plugins:{
                     legend:{position:'bottom',labels:{font:{family:"'Noto Sans KR',sans-serif",size:11,weight:'bold'},boxWidth:12,padding:12}},
                     tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>{const v=ctx.parsed.y;if(!v)return null;return ` ${ctx.dataset.label}: ${Math.round(v).toLocaleString('ko-KR')}원`;}}},
-                    datalabels:{display:ctx=>ctx.parsed.y>0,anchor:'center',align:'center',font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'},color:'#fff',formatter:v=>{if(!v||v===0)return null;if(v>=1000000)return(v/1000000).toFixed(1)+'백만';if(v>=10000)return Math.round(v/10000)+'만';return null;}}
+                    datalabels:{display:ctx=>ctx.parsed?.y>0,anchor:'center',align:'center',font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'},color:'#fff',formatter:v=>{if(!v||v===0)return null;if(v>=1000000)return(v/1000000).toFixed(1)+'백만';if(v>=10000)return Math.round(v/10000)+'만';return null;}}
                 },
                 scales:{
                     y:{stacked:true,beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11},callback:v=>v>=100000000?(v/100000000).toFixed(1)+'억':v>=10000000?(v/10000000).toFixed(0)+'천만':v>=10000?(v/10000).toFixed(0)+'만':v}},
@@ -1736,7 +1736,7 @@
                 layout:{padding:{top:28}},
                 plugins:{
                     legend:{display:false},
-                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` ${ctx.parsed.y.toFixed(2)}Ton (${yearMap[years[ctx.dataIndex]]?.count||0}건)`}},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` ${(ctx.parsed?.y||0).toFixed(2)}Ton (${yearMap[years[ctx.dataIndex]]?.count||0}건)`}},
                     datalabels:{display:true,anchor:'end',align:'end',font:{family:"'Noto Sans KR',sans-serif",size:13,weight:'bold'},color:ctx=>colors[ctx.dataIndex%colors.length],formatter:v=>v.toFixed(2)+'T',offset:4,clip:false}
                 },
                 scales:{
@@ -1797,7 +1797,7 @@
                 plugins:{
                     legend:{display:false},
                     title:{display:true,text:'총 배출량 (Ton)',font:{family:"'Noto Sans KR'",size:13,weight:'bold'},color:'#334155'},
-                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` ${ctx.parsed.y.toFixed(2)}Ton / ${trips[ctx.dataIndex]}건 운반`}},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` ${(ctx.parsed?.y||0).toFixed(2)}Ton / ${trips[ctx.dataIndex]}건 운반`}},
                     datalabels:{display:true,anchor:'end',align:'end',font:{family:"'Noto Sans KR',sans-serif",size:12,weight:'bold'},color:ctx=>colors[ctx.dataIndex%colors.length],formatter:v=>v.toFixed(2)+'T',offset:4,clip:false}
                 },
                 scales:{
@@ -1825,7 +1825,7 @@
                 plugins:{
                     legend:{display:false},
                     title:{display:true,text:'일평균 발생량 (t/d)',font:{family:"'Noto Sans KR'",size:13,weight:'bold'},color:'#334155'},
-                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` ${ctx.parsed.y.toFixed(2)} t/d (${calendarDays[ctx.dataIndex]}일 기준)`}},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` ${(ctx.parsed?.y||0).toFixed(2)} t/d (${calendarDays[ctx.dataIndex]}일 기준)`}},
                     datalabels:{display:true,anchor:'end',align:'end',font:{family:"'Noto Sans KR',sans-serif",size:12,weight:'bold'},color:ctx=>colors[ctx.dataIndex%colors.length],formatter:v=>v.toFixed(2)+' t/d',offset:4,clip:false}
                 },
                 scales:{
@@ -1929,7 +1929,7 @@
                         callbacks:{ label(ctx){ const v=ctx.parsed.y; if(!v) return null;
                             if(ctx.dataset.yAxisID==='y2') return ` 도급비율: ${v.toFixed(1)}%`;
                             return ` ${ctx.dataset.label}: ${Math.round(v).toLocaleString('ko-KR')}원`; }}},
-                    datalabels:{ display: ctx => ctx.dataset.type==='line', anchor:'top', align:'top', font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'}, color:'#e63946', formatter: v => v>0?v.toFixed(1)+'%':null, offset:2 }
+                    datalabels:{ display: ctx => ctx.parsed?.y !== undefined && ctx.dataset.type==='line', anchor:'top', align:'top', font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'}, color:'#e63946', formatter: v => v>0?v.toFixed(1)+'%':null, offset:2 }
                 },
                 scales:{
                     y1:{ type:'linear', position:'left', beginAtZero:true, grid:{color:'#e2e8f0',borderDash:[4,4]}, ticks:{font:{family:"'Noto Sans KR'",size:11}, callback:v=>v>=100000000?(v/100000000).toFixed(1)+'억':v>=10000?(v/10000).toFixed(0)+'만':v}},
@@ -1987,7 +1987,7 @@
                 plugins:{
                     legend:{display:false},
                     annotation:{ annotations:{ line30:{ type:'line', yMin:30, yMax:30, borderColor:'#A32D2D', borderWidth:1.5, borderDash:[4,4], label:{content:'30% 기준선', display:true, position:'end', font:{size:10}} } } },
-                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` 도급비율: ${ctx.parsed.y.toFixed(1)}%`}},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` 도급비율: ${(ctx.parsed?.y||0).toFixed(1)}%`}},
                     datalabels:{display:true, anchor:'end', align:'end', font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'}, color:ctx=>ctx.dataset.backgroundColor[ctx.dataIndex].includes('163,45')?'#A32D2D':ctx.dataset.backgroundColor[ctx.dataIndex].includes('186,117')?'#BA7517':'#0F6E56', formatter:v=>v>0?v.toFixed(1)+'%':null, offset:2}
                 },
                 scales:{
