@@ -444,23 +444,31 @@
 
         <!-- 탭4: 고객사 브리핑 -->
         <div id="tab4-content" class="hidden space-y-6">
-            <!-- KPI 요약 -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- KPI 카드 6개 -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div class="bg-white rounded-xl p-5 card-shadow border-l-4 border-teal-600">
                     <p class="text-xs font-bold text-slate-500 mb-1">총 배출량</p>
-                    <h3 id="b4TotalWeight" class="text-2xl font-bold text-slate-900">0<span class="text-sm font-normal text-slate-500 ml-1">Ton</span></h3>
+                    <h3 id="b4TotalWeight" class="text-xl font-bold text-slate-900">0<span class="text-xs font-normal text-slate-500 ml-1">Ton</span></h3>
                 </div>
                 <div class="bg-white rounded-xl p-5 card-shadow border-l-4 border-blue-500">
                     <p class="text-xs font-bold text-slate-500 mb-1">총 처리 비용</p>
-                    <h3 id="b4TotalCost" class="text-2xl font-bold text-slate-900">0<span class="text-sm font-normal text-slate-500 ml-1">원</span></h3>
+                    <h3 id="b4TotalCost" class="text-xl font-bold text-slate-900">0<span class="text-xs font-normal text-slate-500 ml-1">원</span></h3>
                 </div>
                 <div class="bg-white rounded-xl p-5 card-shadow border-l-4 border-amber-500">
                     <p class="text-xs font-bold text-slate-500 mb-1">평균 톤당 단가</p>
-                    <h3 id="b4AvgUnitPrice" class="text-2xl font-bold text-slate-900">0<span class="text-sm font-normal text-slate-500 ml-1">원/Ton</span></h3>
+                    <h3 id="b4AvgUnitPrice" class="text-xl font-bold text-slate-900">0<span class="text-xs font-normal text-slate-500 ml-1">원/Ton</span></h3>
                 </div>
                 <div class="bg-white rounded-xl p-5 card-shadow border-l-4 border-emerald-500">
                     <p class="text-xs font-bold text-slate-500 mb-1">총 운반 횟수</p>
-                    <h3 id="b4TotalTrips" class="text-2xl font-bold text-slate-900">0<span class="text-sm font-normal text-slate-500 ml-1">건</span></h3>
+                    <h3 id="b4TotalTrips" class="text-xl font-bold text-slate-900">0<span class="text-xs font-normal text-slate-500 ml-1">건</span></h3>
+                </div>
+                <div class="bg-white rounded-xl p-5 card-shadow border-l-4 border-purple-500">
+                    <p class="text-xs font-bold text-slate-500 mb-1">월평균 운반 톤수</p>
+                    <h3 id="b4MonthAvgWeight" class="text-xl font-bold text-slate-900">0<span class="text-xs font-normal text-slate-500 ml-1">Ton/월</span></h3>
+                </div>
+                <div class="bg-white rounded-xl p-5 card-shadow border-l-4 border-rose-500">
+                    <p class="text-xs font-bold text-slate-500 mb-1">일평균 운반 톤수</p>
+                    <h3 id="b4DayAvgWeight" class="text-xl font-bold text-slate-900">0<span class="text-xs font-normal text-slate-500 ml-1">Ton/일</span></h3>
                 </div>
             </div>
 
@@ -469,7 +477,7 @@
                 <div class="bg-white rounded-xl p-6 card-shadow border border-slate-100 flex flex-col">
                     <h2 class="text-lg font-bold text-slate-800 mb-1">📈 폐기물별 배출량 추이</h2>
                     <p class="text-xs text-slate-400 mb-3">월별 폐기물 종류별 배출 중량 (Ton)</p>
-                    <div class="relative flex-1 w-full min-h-[320px]"><canvas id="b4WeightChart"></canvas></div>
+                    <div class="relative flex-1 w-full min-h-[320px]" style="padding-top:20px;"><canvas id="b4WeightChart"></canvas></div>
                 </div>
                 <div class="bg-white rounded-xl p-6 card-shadow border border-slate-100 flex flex-col">
                     <h2 class="text-lg font-bold text-slate-800 mb-1">💰 폐기물 비용 발생 추이</h2>
@@ -478,18 +486,43 @@
                 </div>
             </div>
 
-            <!-- 차트 row 2: 톤당 단가 + 배출량 vs 비용 상관 -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white rounded-xl p-6 card-shadow border border-slate-100 flex flex-col">
-                    <h2 class="text-lg font-bold text-slate-800 mb-1">💡 톤당 단가 추이</h2>
-                    <p class="text-xs text-slate-400 mb-3">월별 총비용 ÷ 총중량 (원/Ton) — 단가 이상 감지</p>
-                    <div class="relative flex-1 w-full min-h-[300px]"><canvas id="b4UnitPriceChart"></canvas></div>
+            <!-- 차트 row 2: YoY 비교 -->
+            <div class="bg-white rounded-xl p-6 card-shadow border border-slate-100">
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <h2 class="text-lg font-bold text-slate-800">📊 YoY 배출량 비교</h2>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <label class="text-xs font-bold text-slate-500">비교 월:</label>
+                        <select id="yoyMonthSelect" onchange="renderYoYChart()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white cursor-pointer">
+                            <option value="">월 선택</option>
+                        </select>
+                        <label class="text-xs font-bold text-slate-500">폐기물:</label>
+                        <select id="yoyWasteSelect" onchange="renderYoYChart()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white cursor-pointer">
+                            <option value="all">전체</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="bg-white rounded-xl p-6 card-shadow border border-slate-100 flex flex-col">
-                    <h2 class="text-lg font-bold text-slate-800 mb-1">🔗 배출량 vs 비용 상관</h2>
-                    <p class="text-xs text-slate-400 mb-3">월별 총중량(막대)과 총비용(꺾은선) 비교</p>
-                    <div class="relative flex-1 w-full min-h-[300px]"><canvas id="b4CorrelChart"></canvas></div>
+                <div class="relative w-full min-h-[300px]" style="padding-top:20px;"><canvas id="b4YoYChart"></canvas></div>
+            </div>
+
+            <!-- 차트 row 3: 일평균 발생량 비교 -->
+            <div class="bg-white rounded-xl p-6 card-shadow border border-slate-100">
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">📅 월별 일평균 발생량 비교</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">총 배출량 ÷ 조업일수 — 발생량 증가 원인 분석</p>
+                    </div>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <label class="text-xs font-bold text-slate-500">비교 기준 월:</label>
+                        <select id="dailyMonthSelect" onchange="renderDailyAvgChart()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white cursor-pointer">
+                            <option value="">월 선택</option>
+                        </select>
+                    </div>
                 </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="relative w-full min-h-[260px]" style="padding-top:20px;"><canvas id="b4DailyTotalChart"></canvas></div>
+                    <div class="relative w-full min-h-[260px]" style="padding-top:20px;"><canvas id="b4DailyAvgChart"></canvas></div>
+                </div>
+                <div id="b4DailyInfoBox" class="hidden mt-4 grid grid-cols-2 gap-4"></div>
             </div>
 
             <!-- 월별 요약 테이블 -->
@@ -853,6 +886,8 @@
     let vehicleRevChartInst = null, vehicleCountChartInst = null;
     let donutChartInst = null;
     let b4WeightInst = null, b4CostInst = null, b4UnitPriceInst = null, b4CorrelInst = null;
+    let b4YoYInst = null, b4DailyTotalInst = null, b4DailyAvgInst = null;
+    let _b4Data = []; // 브리핑 탭 현재 데이터 캐시
     let d5RevenueInst = null, d5AnomalyInst = null, d5RatioInst = null, d5RankInst = null;
     let renderDebounce = null;
 
@@ -1494,11 +1529,12 @@
     // ── 탭4: 고객사 브리핑 ──
     function renderBriefingTab(data) {
         if (!data.length) return;
+        _b4Data = data;
 
-        // 월별 × 폐기물별 집계
+        // 집계
         const allMonths = new Set();
-        const wasteMap  = {}; // waste → month → {weight, cost, count}
-        const monthTotals = {}; // month → {weight, cost}
+        const wasteMap  = {};
+        const monthTotals = {};
 
         data.forEach(d => {
             const w = d.waste || '미상';
@@ -1508,165 +1544,127 @@
             wasteMap[w][d.month].weight += d.weight;
             wasteMap[w][d.month].cost   += d.totalRev;
             wasteMap[w][d.month].count  += 1;
-            if (!monthTotals[d.month]) monthTotals[d.month] = { weight:0, cost:0 };
+            if (!monthTotals[d.month]) monthTotals[d.month] = { weight:0, cost:0, count:0 };
             monthTotals[d.month].weight += d.weight;
             monthTotals[d.month].cost   += d.totalRev;
+            monthTotals[d.month].count  += 1;
         });
 
-        const months  = [...allMonths].sort();
-        const wastes  = Object.keys(wasteMap).sort();
-        const labels  = months.map(m => m.length===4&&!isNaN(m) ? `${m.substring(0,2)}년 ${m.substring(2,4)}월` : m);
+        const months = [...allMonths].sort();
+        const labels = months.map(m => m.length===4&&!isNaN(m)?`${m.substring(0,2)}년 ${m.substring(2,4)}월`:m);
+        const wastes = Object.keys(wasteMap).sort();
+        const totalWeight = data.reduce((s,d)=>s+d.weight,0);
+        const totalCost   = data.reduce((s,d)=>s+d.totalRev,0);
+        const totalMonths = months.length || 1;
+
+        // 일평균 계산 (운반건수가 있는 날 = 조업일수 근사)
+        let totalWorkDays = 0;
+        months.forEach(m => {
+            const daySet = new Set(data.filter(d=>d.month===m).map(d=>d.month+'-'+d.weight.toString().slice(0,3)));
+            totalWorkDays += Math.max(daySet.size, monthTotals[m]?.count || 1);
+        });
+        const avgWorkDaysPerMonth = totalWorkDays / totalMonths;
 
         // KPI
-        const totalWeight = data.reduce((s,d) => s+d.weight, 0);
-        const totalCost   = data.reduce((s,d) => s+d.totalRev, 0);
-        document.getElementById('b4TotalWeight').innerHTML   = `${formatNumber(totalWeight)}<span class="text-sm font-normal text-slate-500 ml-1">Ton</span>`;
-        document.getElementById('b4TotalCost').innerHTML     = `${formatCurrency(totalCost)}<span class="text-sm font-normal text-slate-500 ml-1">원</span>`;
-        document.getElementById('b4AvgUnitPrice').innerHTML  = `${formatCurrency(totalWeight>0?totalCost/totalWeight:0)}<span class="text-sm font-normal text-slate-500 ml-1">원/Ton</span>`;
-        document.getElementById('b4TotalTrips').innerHTML    = `${data.length.toLocaleString('ko-KR')}<span class="text-sm font-normal text-slate-500 ml-1">건</span>`;
+        document.getElementById('b4TotalWeight').innerHTML   = `${formatNumber(totalWeight)}<span class="text-xs font-normal text-slate-500 ml-1">Ton</span>`;
+        document.getElementById('b4TotalCost').innerHTML     = `${formatCurrency(totalCost)}<span class="text-xs font-normal text-slate-500 ml-1">원</span>`;
+        document.getElementById('b4AvgUnitPrice').innerHTML  = `${formatCurrency(totalWeight>0?totalCost/totalWeight:0)}<span class="text-xs font-normal text-slate-500 ml-1">원/Ton</span>`;
+        document.getElementById('b4TotalTrips').innerHTML    = `${data.length.toLocaleString('ko-KR')}<span class="text-xs font-normal text-slate-500 ml-1">건</span>`;
+        document.getElementById('b4MonthAvgWeight').innerHTML= `${formatNumber(totalWeight/totalMonths)}<span class="text-xs font-normal text-slate-500 ml-1">Ton/월</span>`;
+        document.getElementById('b4DayAvgWeight').innerHTML  = `${formatNumber(totalWeight/totalWorkDays)}<span class="text-xs font-normal text-slate-500 ml-1">Ton/일</span>`;
 
         const donutColors = ['#0d9488','#4363d8','#f58231','#911eb4','#3cb44b','#e63946','#42d4f4','#f032e6','#bfef45','#9A6324'];
+        buildColorMap(wastes);
 
-        // ① 배출량 추이 (꺾은선)
-        const dsWeight = wastes.map((w,i) => ({
-            label: w,
-            data: months.map(m => wasteMap[w][m]?.weight || 0),
-            borderColor: donutColors[i % donutColors.length],
-            backgroundColor: donutColors[i % donutColors.length]+'33',
-            borderWidth: 2.5, tension: 0.3, pointRadius: 4,
-            pointBackgroundColor: donutColors[i % donutColors.length], fill: false
+        // ① 배출량 추이 (꺾은선 + datalabels)
+        const dsWeight = wastes.map(w => ({
+            label:w, data:months.map(m=>wasteMap[w][m]?.weight||0),
+            borderColor:getColorForLabel(w), backgroundColor:getColorForLabel(w)+'33',
+            borderWidth:2.5, tension:0.3, pointRadius:4, pointBackgroundColor:getColorForLabel(w), fill:false
         }));
         if (b4WeightInst) b4WeightInst.destroy();
         b4WeightInst = new Chart(document.getElementById('b4WeightChart').getContext('2d'), {
-            type: 'line', data: { labels, datasets: dsWeight },
-            plugins: [ChartDataLabels],
-            options: {
-                ...b4ChartOpts('Ton', false),
-                plugins: {
-                    ...b4ChartOpts('Ton', false).plugins,
-                    datalabels: {
-                        display: true,
-                        align: 'top',
-                        anchor: 'end',
-                        font: { family:"'Noto Sans KR',sans-serif", size: 10, weight: 'bold' },
-                        color: ctx => ctx.dataset.borderColor,
-                        formatter: v => v > 0 ? v.toFixed(2) : null,
-                        offset: 2,
-                    }
+            type:'line', data:{labels, datasets:dsWeight},
+            plugins:[ChartDataLabels],
+            options:{
+                responsive:true, maintainAspectRatio:false, clip:false,
+                interaction:{mode:'index',intersect:false},
+                layout:{padding:{top:24}},
+                plugins:{
+                    legend:{position:'bottom',labels:{font:{family:"'Noto Sans KR',sans-serif",size:11,weight:'bold'},boxWidth:12,padding:12}},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,titleFont:{size:12,family:"'Noto Sans KR'"},bodyFont:{size:12,weight:'bold',family:"'Noto Sans KR'"},callbacks:{label:ctx=>{const v=ctx.parsed.y;if(!v)return null;return ` ${ctx.dataset.label}: ${v.toFixed(2)}Ton`;}}},
+                    datalabels:{display:ctx=>ctx.parsed.y>0,anchor:'top',align:'top',font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'},color:ctx=>ctx.dataset.borderColor,formatter:v=>v>0?v.toFixed(1):null,offset:2,clip:false}
+                },
+                scales:{
+                    y:{beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11}}},
+                    x:{grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:11},maxRotation:45,minRotation:0}}
                 }
             }
         });
 
-        // ② 비용 발생 추이 (누적 막대)
-        const dsCost = wastes.map((w,i) => ({
-            label: w,
-            data: months.map(m => wasteMap[w][m]?.cost || 0),
-            backgroundColor: donutColors[i % donutColors.length]+'CC',
-            borderColor: donutColors[i % donutColors.length],
-            borderWidth: 1, borderRadius: 3,
+        // ② 비용 추이 (누적 막대)
+        const dsCost = wastes.map(w => ({
+            label:w, data:months.map(m=>wasteMap[w][m]?.cost||0),
+            backgroundColor:getColorForLabel(w)+'CC', borderColor:getColorForLabel(w), borderWidth:1, borderRadius:3
         }));
         if (b4CostInst) b4CostInst.destroy();
         b4CostInst = new Chart(document.getElementById('b4CostChart').getContext('2d'), {
-            type: 'bar', data: { labels, datasets: dsCost },
-            plugins: [ChartDataLabels],
-            options: {
-                ...b4ChartOpts('원', true),
-                plugins: {
-                    ...b4ChartOpts('원', true).plugins,
-                    datalabels: {
-                        display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-                        anchor: 'center',
-                        align: 'center',
-                        font: { family:"'Noto Sans KR',sans-serif", size: 10, weight: 'bold' },
-                        color: '#fff',
-                        formatter: v => {
-                            if (!v || v === 0) return null;
-                            if (v >= 1000000) return (v/1000000).toFixed(1)+'백만';
-                            if (v >= 10000)   return Math.round(v/10000)+'만';
-                            return Math.round(v).toLocaleString('ko-KR');
-                        },
-                    }
-                }
-            }
-        });
-
-        // ③ 톤당 단가 추이 (꺾은선)
-        const unitPriceData = months.map(m => {
-            const mt = monthTotals[m];
-            return mt && mt.weight > 0 ? Math.round(mt.cost / mt.weight) : 0;
-        });
-        if (b4UnitPriceInst) b4UnitPriceInst.destroy();
-        b4UnitPriceInst = new Chart(document.getElementById('b4UnitPriceChart').getContext('2d'), {
-            type: 'line',
-            data: { labels, datasets: [{
-                label: '톤당 단가',
-                data: unitPriceData,
-                borderColor: '#f58231', backgroundColor: '#f5823133',
-                borderWidth: 3, tension: 0.3, pointRadius: 5,
-                pointBackgroundColor: '#f58231', fill: true,
-            }]},
-            options: { ...b4ChartOpts('원/Ton', false) }
-        });
-
-        // ④ 배출량 vs 비용 상관 (혼합)
-        if (b4CorrelInst) b4CorrelInst.destroy();
-        b4CorrelInst = new Chart(document.getElementById('b4CorrelChart').getContext('2d'), {
-            type: 'bar',
-            data: { labels, datasets: [
-                { type:'line', label:'총 처리 비용', data: months.map(m=>monthTotals[m]?.cost||0),
-                  borderColor:'#4363d8', backgroundColor:'#4363d833', borderWidth:3,
-                  tension:0.3, pointRadius:5, pointBackgroundColor:'#4363d8', yAxisID:'y2' },
-                { type:'bar', label:'총 배출량(Ton)', data: months.map(m=>monthTotals[m]?.weight||0),
-                  backgroundColor:'#0d948880', borderColor:'#0d9488', borderWidth:1,
-                  borderRadius:4, yAxisID:'y1' }
-            ]},
-            options: {
+            type:'bar', data:{labels, datasets:dsCost},
+            plugins:[ChartDataLabels],
+            options:{
                 responsive:true, maintainAspectRatio:false,
-                interaction:{ mode:'index', intersect:false },
+                interaction:{mode:'index',intersect:false},
                 plugins:{
-                    legend:{ position:'bottom', labels:{ font:{family:"'Noto Sans KR',sans-serif",size:11,weight:'bold'}, boxWidth:12, padding:14 }},
-                    tooltip:{ backgroundColor:'#1e293b', padding:12,
-                        titleFont:{size:13,family:"'Noto Sans KR'"},
-                        bodyFont:{size:13,weight:'bold',family:"'Noto Sans KR'"},
-                        callbacks:{ label(ctx) {
-                            if (ctx.dataset.yAxisID==='y2') return ` 비용: ${Math.round(ctx.parsed.y).toLocaleString('ko-KR')}원`;
-                            return ` 배출량: ${ctx.parsed.y.toFixed(1)}Ton`;
-                        }}
-                    }
+                    legend:{position:'bottom',labels:{font:{family:"'Noto Sans KR',sans-serif",size:11,weight:'bold'},boxWidth:12,padding:12}},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>{const v=ctx.parsed.y;if(!v)return null;return ` ${ctx.dataset.label}: ${Math.round(v).toLocaleString('ko-KR')}원`;}}},
+                    datalabels:{display:ctx=>ctx.parsed.y>0,anchor:'center',align:'center',font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'},color:'#fff',formatter:v=>{if(!v||v===0)return null;if(v>=1000000)return(v/1000000).toFixed(1)+'백만';if(v>=10000)return Math.round(v/10000)+'만';return null;}}
                 },
                 scales:{
-                    y1:{ type:'linear', position:'left', beginAtZero:true,
-                        grid:{color:'#e2e8f0',borderDash:[4,4]},
-                        ticks:{font:{family:"'Noto Sans KR'",size:11}, callback: v => v+'Ton' }},
-                    y2:{ type:'linear', position:'right', beginAtZero:true,
-                        grid:{display:false},
-                        ticks:{font:{family:"'Noto Sans KR'",size:11}, callback: v => v>=100000000?(v/100000000).toFixed(1)+'억':v>=10000?(v/10000).toFixed(0)+'만':v }},
-                    x:{ grid:{display:false}, ticks:{font:{family:"'Noto Sans KR'",size:11},maxRotation:45,minRotation:0}}
+                    y:{stacked:true,beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11},callback:v=>v>=100000000?(v/100000000).toFixed(1)+'억':v>=10000000?(v/10000000).toFixed(0)+'천만':v>=10000?(v/10000).toFixed(0)+'만':v}},
+                    x:{stacked:true,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:11},maxRotation:45,minRotation:0}}
                 }
             }
         });
 
-        // ⑤ 월별 요약 테이블 (폐기물별)
+        // YoY 셀렉트 구성
+        const yoySelect = document.getElementById('yoyMonthSelect');
+        const dailySelect = document.getElementById('dailyMonthSelect');
+        const wasteSelect = document.getElementById('yoyWasteSelect');
+        const prevVal = yoySelect.value;
+        const prevDaily = dailySelect.value;
+        yoySelect.innerHTML = '<option value="">월 선택</option>';
+        dailySelect.innerHTML = '<option value="">월 선택</option>';
+        const mmOnly = [...new Set(months.map(m=>m.substring(2,4)))].sort();
+        mmOnly.forEach(mm => {
+            yoySelect.add(new Option(`${mm}월`, mm));
+            dailySelect.add(new Option(`${mm}월`, mm));
+        });
+        wasteSelect.innerHTML = '<option value="all">전체</option>';
+        wastes.forEach(w => wasteSelect.add(new Option(w, w)));
+        if (prevVal) yoySelect.value = prevVal;
+        if (prevDaily) dailySelect.value = prevDaily;
+        if (yoySelect.value) renderYoYChart();
+        if (dailySelect.value) renderDailyAvgChart();
+
+        // 테이블
         let html = '';
-        wastes.forEach((w, i) => {
+        wastes.forEach((w,i) => {
             const rows = Object.values(wasteMap[w]);
             const totW = rows.reduce((s,r)=>s+r.weight,0);
             const totC = rows.reduce((s,r)=>s+r.cost,0);
             const totN = rows.reduce((s,r)=>s+r.count,0);
-            const unitP = totW>0 ? totC/totW : 0;
-            const color = donutColors[i % donutColors.length];
+            const color = getColorForLabel(w);
             html += `<tr class="border-b border-slate-100 hover:bg-teal-50 transition-colors">
                 <td class="p-3 font-semibold text-slate-800 flex items-center gap-2">
                     <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;"></span>${w}
                 </td>
                 <td class="p-3 text-right font-bold text-teal-700">${formatNumber(totW)}</td>
                 <td class="p-3 text-right font-bold text-blue-700">${formatCurrency(totC)}원</td>
-                <td class="p-3 text-right text-amber-700 font-bold">${formatCurrency(unitP)}원</td>
+                <td class="p-3 text-right text-amber-700 font-bold">${formatCurrency(totW>0?totC/totW:0)}원</td>
                 <td class="p-3 text-right text-slate-600">${totN.toLocaleString('ko-KR')}건</td>
                 <td class="p-3 text-right text-slate-600">${formatNumber(totN>0?totW/totN:0)}Ton</td>
             </tr>`;
         });
-        // 합계 행
         html += `<tr class="bg-teal-50/60 font-bold border-t-2 border-teal-200">
             <td class="p-3 text-teal-900">합계</td>
             <td class="p-3 text-right text-teal-900">${formatNumber(totalWeight)}</td>
@@ -1678,7 +1676,169 @@
         document.getElementById('b4SummaryTableBody').innerHTML = html;
     }
 
-    // ── 탭5: 기사 도급비 현황 ──
+    // ── YoY 차트 ──
+    function renderYoYChart() {
+        const mm = document.getElementById('yoyMonthSelect')?.value;
+        const selWaste = document.getElementById('yoyWasteSelect')?.value || 'all';
+        if (!mm || !_b4Data.length) return;
+
+        // 해당 월(MM)의 데이터 연도별 집계
+        const yearMap = {};
+        _b4Data.forEach(d => {
+            if (!d.month || d.month.length !== 4) return;
+            if (d.month.substring(2,4) !== mm) return;
+            if (selWaste !== 'all' && d.waste !== selWaste) return;
+            const yy = '20' + d.month.substring(0,2);
+            if (!yearMap[yy]) yearMap[yy] = { weight:0, cost:0, count:0 };
+            yearMap[yy].weight += d.weight;
+            yearMap[yy].cost   += d.totalRev;
+            yearMap[yy].count  += 1;
+        });
+
+        const years = Object.keys(yearMap).sort();
+        const colors = ['#4363d8','#f58231','#0d9488','#e63946','#911eb4'];
+        const yoyLabels = years.map(y => `${y.substring(2)}년 ${mm}월`);
+
+        if (b4YoYInst) b4YoYInst.destroy();
+        b4YoYInst = new Chart(document.getElementById('b4YoYChart').getContext('2d'), {
+            type:'bar',
+            data:{ labels:yoyLabels, datasets:[{
+                label:'배출량 (Ton)',
+                data: years.map(y=>yearMap[y].weight),
+                backgroundColor: years.map((_,i)=>colors[i%colors.length]+'CC'),
+                borderColor:     years.map((_,i)=>colors[i%colors.length]),
+                borderWidth:1.5, borderRadius:6,
+            }]},
+            plugins:[ChartDataLabels],
+            options:{
+                responsive:true, maintainAspectRatio:false, clip:false,
+                layout:{padding:{top:28}},
+                plugins:{
+                    legend:{display:false},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` ${ctx.parsed.y.toFixed(2)}Ton (${yearMap[years[ctx.dataIndex]]?.count||0}건)`}},
+                    datalabels:{display:true,anchor:'end',align:'end',font:{family:"'Noto Sans KR',sans-serif",size:13,weight:'bold'},color:ctx=>colors[ctx.dataIndex%colors.length],formatter:v=>v.toFixed(2)+'T',offset:4,clip:false}
+                },
+                scales:{
+                    y:{beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11},callback:v=>v+'T'}},
+                    x:{grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:13,weight:'bold'}}}
+                }
+            }
+        });
+    }
+
+    // ── 일평균 발생량 비교 차트 ──
+    function renderDailyAvgChart() {
+        const mm = document.getElementById('dailyMonthSelect')?.value;
+        if (!mm || !_b4Data.length) return;
+
+        const monthMap = {};
+        _b4Data.forEach(d => {
+            if (!d.month || d.month.length !== 4) return;
+            if (d.month.substring(2,4) !== mm) return;
+            if (!monthMap[d.month]) monthMap[d.month] = { weight:0, cost:0, trips:0 };
+            monthMap[d.month].weight += d.weight;
+            monthMap[d.month].cost   += d.totalRev;
+            monthMap[d.month].trips  += 1;
+        });
+
+        const months = Object.keys(monthMap).sort();
+        if (!months.length) return;
+        const labels = months.map(m => `${m.substring(0,2)}년 ${m.substring(2,4)}월`);
+        const colors = ['#4363d8','#f58231','#0d9488','#e63946','#911eb4'];
+
+        // 조업일수 = 운반횟수 (근사)
+        const getDaysInMonthFromYYMM = m => {
+            const y = 2000+parseInt(m.substring(0,2));
+            const mo = parseInt(m.substring(2,4));
+            return new Date(y,mo,0).getDate();
+        };
+
+        const totalWeights = months.map(m => monthMap[m].weight);
+        const trips = months.map(m => monthMap[m].trips);
+        const calendarDays = months.map(m => getDaysInMonthFromYYMM(m));
+        const dailyAvgs = months.map((m,i) => +(totalWeights[i]/calendarDays[i]).toFixed(2));
+
+        // 총 배출량 차트
+        if (b4DailyTotalInst) b4DailyTotalInst.destroy();
+        b4DailyTotalInst = new Chart(document.getElementById('b4DailyTotalChart').getContext('2d'), {
+            type:'bar',
+            data:{ labels, datasets:[{
+                label:'총 배출량 (Ton)',
+                data:totalWeights,
+                backgroundColor:months.map((_,i)=>colors[i%colors.length]+'CC'),
+                borderColor:months.map((_,i)=>colors[i%colors.length]),
+                borderWidth:1.5, borderRadius:6,
+            }]},
+            plugins:[ChartDataLabels],
+            options:{
+                responsive:true, maintainAspectRatio:false, clip:false,
+                layout:{padding:{top:28}},
+                plugins:{
+                    legend:{display:false},
+                    title:{display:true,text:'총 배출량 (Ton)',font:{family:"'Noto Sans KR'",size:13,weight:'bold'},color:'#334155'},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` ${ctx.parsed.y.toFixed(2)}Ton / ${trips[ctx.dataIndex]}건 운반`}},
+                    datalabels:{display:true,anchor:'end',align:'end',font:{family:"'Noto Sans KR',sans-serif",size:12,weight:'bold'},color:ctx=>colors[ctx.dataIndex%colors.length],formatter:v=>v.toFixed(2)+'T',offset:4,clip:false}
+                },
+                scales:{
+                    y:{beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11}}},
+                    x:{grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:12,weight:'bold'}}}
+                }
+            }
+        });
+
+        // 일평균 차트
+        if (b4DailyAvgInst) b4DailyAvgInst.destroy();
+        b4DailyAvgInst = new Chart(document.getElementById('b4DailyAvgChart').getContext('2d'), {
+            type:'bar',
+            data:{ labels, datasets:[{
+                label:'일평균 발생량 (t/d)',
+                data:dailyAvgs,
+                backgroundColor:months.map((_,i)=>colors[i%colors.length]+'99'),
+                borderColor:months.map((_,i)=>colors[i%colors.length]),
+                borderWidth:1.5, borderRadius:6,
+            }]},
+            plugins:[ChartDataLabels],
+            options:{
+                responsive:true, maintainAspectRatio:false, clip:false,
+                layout:{padding:{top:28}},
+                plugins:{
+                    legend:{display:false},
+                    title:{display:true,text:'일평균 발생량 (t/d)',font:{family:"'Noto Sans KR'",size:13,weight:'bold'},color:'#334155'},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>` ${ctx.parsed.y.toFixed(2)} t/d (${calendarDays[ctx.dataIndex]}일 기준)`}},
+                    datalabels:{display:true,anchor:'end',align:'end',font:{family:"'Noto Sans KR',sans-serif",size:12,weight:'bold'},color:ctx=>colors[ctx.dataIndex%colors.length],formatter:v=>v.toFixed(2)+' t/d',offset:4,clip:false}
+                },
+                scales:{
+                    y:{beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11}}},
+                    x:{grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:12,weight:'bold'}}}
+                }
+            }
+        });
+
+        // YoY 증감 정보 박스
+        const infoBox = document.getElementById('b4DailyInfoBox');
+        if (months.length >= 2 && infoBox) {
+            infoBox.classList.remove('hidden');
+            infoBox.innerHTML = months.slice(1).map((m,i) => {
+                const prev = monthMap[months[i]];
+                const curr = monthMap[m];
+                const wDiff = curr.weight - prev.weight;
+                const aDiff = dailyAvgs[i+1] - dailyAvgs[i];
+                const wPct = prev.weight > 0 ? ((wDiff/prev.weight)*100).toFixed(1) : '-';
+                const aPct = dailyAvgs[i] > 0 ? ((aDiff/dailyAvgs[i])*100).toFixed(1) : '-';
+                const col = wDiff >= 0 ? 'color:#065f46;background:#d1fae5' : 'color:#991b1b;background:#fee2e2';
+                return `<div style="border-radius:12px;padding:14px 18px;${col}">
+                    <p style="font-size:12px;font-weight:700;margin-bottom:6px;">${labels[i]} → ${labels[i+1]}</p>
+                    <p style="font-size:13px;font-weight:500;">총 배출량: ${wDiff>=0?'▲':'▼'} ${Math.abs(wDiff).toFixed(2)}T (${wPct}%)</p>
+                    <p style="font-size:13px;font-weight:500;">일평균 발생량: ${aDiff>=0?'▲':'▼'} ${Math.abs(aDiff).toFixed(2)} t/d (${aPct}%)</p>
+                    <p style="font-size:11px;margin-top:4px;opacity:0.8;">운반 횟수: ${prev.trips}건 → ${curr.trips}건</p>
+                </div>`;
+            }).join('');
+        } else if (infoBox) {
+            infoBox.classList.add('hidden');
+        }
+    }
+
+        // ── 탭5: 기사 도급비 현황 ──
     function setDriverType(type) {
         _driverType = type;
         ['all','out','direct'].forEach(t => {
