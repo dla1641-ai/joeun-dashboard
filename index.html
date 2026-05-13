@@ -865,9 +865,23 @@
 
     window.saveDataToCloud = function() {}; // 미사용
     if (typeof ChartDataLabels !== 'undefined') {
-        Chart.register(ChartDataLabels);
-        Chart.defaults.set('plugins.datalabels', { display: false });
-    }
+    Chart.register(ChartDataLabels);
+
+    // 전역 기본값
+    Chart.defaults.set('plugins.datalabels', {
+        display: true,
+        color: '#334155',
+        font: {
+            family: "'Noto Sans KR', sans-serif",
+            size: 10,
+            weight: 'bold'
+        },
+        anchor: 'end',
+        align: 'top',
+        offset: 2,
+        clip: false
+    });
+}
     window.rawData = [];
     window.rawDataBase = [];
     window.dogupData = []; // 기사도급비현황 데이터
@@ -1763,7 +1777,12 @@
             plugins:[ChartDataLabels],
             options:{
                 responsive:true, maintainAspectRatio:false, clip:false,
-                layout:{padding:{top:28}},
+                layout:{
+                    padding:{
+                        top:40,   // 숫자 잘리지 않게 증가
+                        right:10
+                    }
+                },
                 interaction:{mode:'index',intersect:false},
                 plugins:{
                     legend:{position:'bottom',labels:{font:{family:"'Noto Sans KR',sans-serif",size:11,weight:'bold'},boxWidth:12,padding:12}},
@@ -1850,7 +1869,12 @@
             plugins:[ChartDataLabels],
             options:{
                 responsive:true, maintainAspectRatio:false, clip:false,
-                layout:{padding:{top:28}},
+                layout:{
+                    padding:{
+                        top:40,   // 숫자 잘리지 않게 증가
+                        right:10
+                    }
+                },
                 plugins:{
                     legend:{display:false},
                     title:{display:true,text:'총 배출량 (Ton)',font:{family:"'Noto Sans KR'",size:13,weight:'bold'},color:'#334155'},
@@ -1873,7 +1897,12 @@
             plugins:[ChartDataLabels],
             options:{
                 responsive:true, maintainAspectRatio:false, clip:false,
-                layout:{padding:{top:28}},
+                layout:{
+                    padding:{
+                        top:40,   // 숫자 잘리지 않게 증가
+                        right:10
+                    }
+                },
                 plugins:{
                     legend:{display:false},
                     title:{display:true,text:'일평균 발생량 (t/d)',font:{family:"'Noto Sans KR'",size:13,weight:'bold'},color:'#334155'},
@@ -1896,15 +1925,56 @@
                 const color = mmColors[mm];
 
                 // 각 연도 데이터 카드
-                const yearCards = mMonths.map(m => {
-                    const d = monthMap[m];
-                    const td = d.trips > 0 ? (d.weight/d.trips).toFixed(2) : '0';
-                    return `<div style="flex:1;text-align:center;padding:12px;border-radius:10px;background:#f8fafc;border:1.5px solid #e2e8f0;">
-                        <p style="font-size:20px;font-weight:800;color:${color};">${td} t/d</p>
-                        <p style="font-size:11px;color:#475569;margin-top:4px;">${d.yy}년 ${mm}월</p>
-                        <p style="font-size:11px;color:#64748b;">총 ${d.weight.toFixed(2)}T / ${d.trips}일 조업</p>
-                    </div>`;
-                }).join('');
+const yearCards = mMonths.map(m => {
+    const d = monthMap[m];
+    const td = d.trips > 0 ? (d.weight/d.trips).toFixed(2) : '0';
+    
+    // 👇 여기서부터 화면에 보여지는 UI 코드가 바뀐 부분입니다.
+    return `
+    <div style="
+        flex:1;
+        padding:16px;
+        border-radius:12px;
+        background:#f8fafc;
+        border:1.5px solid #e2e8f0;
+    ">
+        <p style="
+            font-size:13px;
+            font-weight:700;
+            color:${color};
+            margin-bottom:12px;
+        ">
+            📅 ${d.yy}년 ${mm}월
+        </p>
+
+        <div style="
+            display:flex;
+            flex-direction:column;
+            gap:6px;
+        ">
+            <div>
+                <p style="font-size:11px;color:#64748b;">총 배출량</p>
+                <p style="font-size:22px;font-weight:800;color:#0f172a;">
+                    ${d.weight.toFixed(2)} T
+                </p>
+            </div>
+
+            <div>
+                <p style="font-size:11px;color:#64748b;">일평균 발생량</p>
+                <p style="font-size:22px;font-weight:800;color:${color};">
+                    ${td} t/d
+                </p>
+            </div>
+
+            <div>
+                <p style="font-size:11px;color:#64748b;">
+                    조업일수(운반횟수): ${d.trips}일
+                </p>
+            </div>
+        </div>
+    </div>
+    `;
+}).join('');
 
                 // 증감 계산
                 let diffHtml = '';
