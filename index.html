@@ -617,7 +617,6 @@
             'chan@recokr.com',
             'bethebest@recokr.com',
             'keehwan@recokr.com',
-            'hyungkeon.kim@recokr.com',
             'kwangil.jeon@recokr.com',
         ]
     };
@@ -688,13 +687,16 @@
 
             const headers    = rows[0].map(h => (h||'').trim());
             const idxMonth      = headers.findIndex(h => h.includes('년/월') || h.includes('년월'));
-            const idxAcctDate   = headers.findIndex(h => h.includes('일자') && !h.includes('수행')); // D열 매출인식 일자
+            const idxAcctDate   = headers.findIndex(h => h.includes('매출인식') || (h.includes('일자') && !h.includes('수행') && !h.includes('년')));
             const idxCust    = headers.findIndex(h => h.includes('업체명'));
             const idxWaste   = headers.findIndex(h => h.includes('폐기물명'));
             const idxWeight  = headers.findIndex(h => h.includes('중량'));
             const idxTotal   = headers.findIndex(h => h.includes('총매출액'));
             const idxNet     = headers.findIndex(h => h.includes('순매출액'));
-            const idxVehicle = headers.findIndex(h => h.includes('차량번호'));
+            // 차량번호: 여러 패턴으로 검색, 모두 실패하면 C열(2) 고정
+            let idxVehicle = headers.findIndex(h => h.includes('차량번호'));
+            if (idxVehicle === -1) idxVehicle = headers.findIndex(h => h.includes('차량'));
+            if (idxVehicle === -1) idxVehicle = 2; // C열 기본값
 
             console.log('헤더:', headers);
             console.log('인덱스:', { idxMonth, idxAcctDate, idxCust, idxWaste, idxWeight, idxTotal, idxNet, idxVehicle });
@@ -762,10 +764,10 @@
                 ratio:   parseNum(r[9]),
                 isDirect: DIRECT_VEHICLES.includes(String(r[1]||'').trim()),
             }));
-            applyBasis();
+            // 도급비 탭 보고 있을 때만 렌더링
+            if (currentTab === 5) renderDogupTab();
         } catch(e) {
             console.error('도급비 로드 오류:', e);
-            applyBasis();
         }
     }
 
