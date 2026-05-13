@@ -915,12 +915,23 @@
         return Number(str.replace(/[^0-9.-]+/g,"")) || 0;
     };
 
-    // 안전한 차트 파괴 — 인스턴스 변수가 null이어도 canvas에 붙은 차트 제거
+    // 안전한 차트 파괴 — 캔버스 자체를 교체해서 완전 초기화
     function destroyChart(inst, canvasId) {
         if (inst) { try { inst.destroy(); } catch(e) {} }
         if (canvasId) {
-            const existing = Chart.getChart(canvasId);
-            if (existing) { try { existing.destroy(); } catch(e) {} }
+            try {
+                const existing = typeof Chart.getChart === 'function' ? Chart.getChart(canvasId) : null;
+                if (existing) existing.destroy();
+            } catch(e) {}
+            // 캔버스 자체를 새것으로 교체 — 가장 확실한 초기화
+            try {
+                const canvas = document.getElementById(canvasId);
+                if (canvas && canvas.parentNode) {
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.id = canvasId;
+                    canvas.parentNode.replaceChild(newCanvas, canvas);
+                }
+            } catch(e) {}
         }
         return null;
     }
