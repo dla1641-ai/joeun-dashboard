@@ -773,6 +773,11 @@
 
     // ── 기준 전환 ──
     function applyBasis() {
+        // 디버그: accountMonth 샘플 확인
+        const sample = window.rawDataBase.slice(0,3);
+        console.log('applyBasis 호출 - _dataBasis:', _dataBasis);
+        console.log('rawDataBase 샘플:', sample.map(d=>({month:d.month, accountMonth:d.accountMonth})));
+
         // 현재 필터 선택값 저장
         const savedFilters = {
             customer: tsCust  ? getFilterVals(tsCust)  : [],
