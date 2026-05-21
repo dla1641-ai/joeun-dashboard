@@ -3283,7 +3283,7 @@
             const C = {
                 navy:'263850', navyDark:'1a2538', gold:'EDBE35',
                 text:'464646', textLight:'8B8B8B', white:'FFFFFF',
-                bg:'F8F9FB', blue:'4A6FA5', green:'5DCAA5', red:'E24B4A', orange:'EF9F27',
+                bg:'EEF2F7', blue:'4A6FA5', green:'5DCAA5', red:'E24B4A', orange:'EF9F27',
                 cardBg:'F0F2F5'
             };
             const FONT_KO = 'NanumSquare';
@@ -3510,7 +3510,7 @@
                 // 우측 인사이트 박스
                 s.addShape(pptx.ShapeType.roundRect, {
                     x: 9.6, y: 1.2, w: 3.3, h: 5.5,
-                    fill: { color: C.bg }, line: { type: 'none' },
+                    fill: { color: C.bg }, line: { color: 'B8C5D1', width: 1.5 },
                     rectRadius: 0.12
                 });
                 s.addShape(pptx.ShapeType.rect, { x: 9.8, y: 1.4, w: 0.08, h: 0.35, fill:{color:C.gold}, line:{type:'none'} });
@@ -3572,7 +3572,7 @@ ${wMaxStr}에 발생량이 가장 많았던 만큼 해당 시기의 생산·운�
                 s.addImage({ data: cChart, x: 0.5, y: 1.2, w: 8.8, h: 5.5 });
                 s.addShape(pptx.ShapeType.roundRect, {
                     x: 9.6, y: 1.2, w: 3.3, h: 5.5,
-                    fill: { color: C.bg }, line: { type: 'none' },
+                    fill: { color: C.bg }, line: { color: 'B8C5D1', width: 1.5 },
                     rectRadius: 0.12
                 });
                 s.addShape(pptx.ShapeType.rect, { x: 9.8, y: 1.4, w: 0.08, h: 0.35, fill:{color:C.gold}, line:{type:'none'} });
