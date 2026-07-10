@@ -838,8 +838,6 @@
             'cw.shin@recokr.com',
             'jhwi@recokr.com',
             'chan@recokr.com',
-            'luke@recokr.com',
-            'jhw@recokr.com',
             'bethebest@recokr.com',
             'keehwan@recokr.com',
             'kwangil.jeon@recokr.com',
@@ -2026,7 +2024,7 @@
             borderColor:'#0d9488', backgroundColor:'#0d9488',
             borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#fff', pointBorderColor:'#0d9488', pointBorderWidth:2,
             tension:0.3, order:1, yAxisID:'y1',
-            datalabels:{display:true,anchor:'end',align:'top',font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'},color:'#0d9488',formatter:v=>v>0?v.toFixed(1)+'T':null,offset:4,clip:false}
+            datalabels:{display:false}
         });
         b4WeightInst = destroyChart(b4WeightInst, 'b4WeightChart');
         b4WeightInst = new Chart(document.getElementById('b4WeightChart'), {
@@ -2042,7 +2040,7 @@
                 },
                 scales:{
                     y:{stacked:false,beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11}},title:{display:true,text:'월 총 배출량(T)',font:{family:"'Noto Sans KR'",size:10}}},
-                    y1:{position:'right',beginAtZero:true,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:10},color:'#0d9488',callback:v=>v.toFixed(1)+'T'},title:{display:true,text:'일평균(회당)',font:{family:"'Noto Sans KR'",size:10},color:'#0d9488'}},
+                    y1:{position:'right',beginAtZero:true,max:Math.max(...dailyAvgWeightData,0.1)*2.3,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:10},color:'#0d9488',callback:v=>v.toFixed(1)+'T'},title:{display:true,text:'일평균(회당)',font:{family:"'Noto Sans KR'",size:10},color:'#0d9488'}},
                     x:{grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:11},maxRotation:45,minRotation:0}}
                 }
             }
@@ -2060,7 +2058,7 @@
             borderColor:'#f58231', backgroundColor:'#f58231',
             borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#fff', pointBorderColor:'#f58231', pointBorderWidth:2,
             tension:0.3, order:1, yAxisID:'y1',
-            datalabels:{display:true,anchor:'end',align:'top',font:{family:"'Noto Sans KR',sans-serif",size:10,weight:'bold'},color:'#e0670f',formatter:v=>{if(!v)return null;if(v>=10000)return Math.round(v/10000)+'만';return null;},offset:4,clip:false}
+            datalabels:{display:false}
         });
         b4CostInst = destroyChart(b4CostInst, 'b4CostChart');
         b4CostInst = new Chart(document.getElementById('b4CostChart'), {
@@ -2076,7 +2074,7 @@
                 },
                 scales:{
                     y:{stacked:true,beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11},callback:v=>v>=100000000?(v/100000000).toFixed(1)+'억':v>=10000000?(v/10000000).toFixed(0)+'천만':v>=10000?(v/10000).toFixed(0)+'만':v},title:{display:true,text:'월 총 비용',font:{family:"'Noto Sans KR'",size:10}}},
-                    y1:{position:'right',beginAtZero:true,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:10},color:'#e0670f',callback:v=>v>=10000?Math.round(v/10000)+'만':v},title:{display:true,text:'일평균(회당)',font:{family:"'Noto Sans KR'",size:10},color:'#e0670f'}},
+                    y1:{position:'right',beginAtZero:true,max:Math.max(...dailyAvgCostData,1)*2.3,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:10},color:'#e0670f',callback:v=>v>=10000?Math.round(v/10000)+'만':v},title:{display:true,text:'일평균(회당)',font:{family:"'Noto Sans KR'",size:10},color:'#e0670f'}},
                     x:{stacked:true,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:11},maxRotation:45,minRotation:0}}
                 }
             }
