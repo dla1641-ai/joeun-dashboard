@@ -801,6 +801,7 @@
                                 <th class="p-2 font-bold text-teal-900">년월</th>
                                 <th class="p-2 font-bold text-teal-900">차량번호</th>
                                 <th class="p-2 font-bold text-teal-900">운반자</th>
+                                <th class="p-2 font-bold text-teal-900 text-right">운반톤수</th>
                                 <th class="p-2 font-bold text-teal-900 text-right">운반건수</th>
                                 <th class="p-2 font-bold text-teal-900 text-right">총매출</th>
                                 <th class="p-2 font-bold text-teal-900 text-right">운반비매출</th>
@@ -836,14 +837,14 @@
             'dla1641@gmail.com',
             'eunbyul@recokr.com',
             'cw.shin@recokr.com',
-            'luke@recokr.com',
-            'jhw@recokr.com',
             'jhwi@recokr.com',
             'chan@recokr.com',
             'bethebest@recokr.com',
             'keehwan@recokr.com',
             'kwangil.jeon@recokr.com',
             'hyungkeon.kim@recokr.com',
+            'jhw@recokr.com',
+            'luke@recokr.com',
         ]
     };
 
@@ -960,18 +961,26 @@
             };
 
             // 원본 데이터 저장 (수행일 month + 매출인식 accountMonth + 두 일자 모두 보관)
-            window.rawDataBase = rows.slice(1).filter(r => r[idxMonth] && r[idxCust]).map(r => ({
-                month:        String(r[idxMonth]  || '').trim(),                                  // F열: 수행일 기준 년/월
-                accountMonth: dateToYYMM(r[idxAcctDate]),                                          // D열: 매출인식 기준 년/월
-                date:         idxPerformDate >= 0 ? normDate(r[idxPerformDate]) : '',              // E열: 수행 일자
-                accountDate:  idxAcctDate >= 0    ? normDate(r[idxAcctDate])    : '',              // D열: 매출인식 일자
-                customer: String(r[idxCust]   || '').trim(),
-                waste:    String(r[idxWaste]  || '미상').trim(),
-                weight:   parseNum(r[idxWeight]),
-                totalRev: parseNum(r[idxTotal]),
-                netRev:   parseNum(r[idxNet]),
-                vehicle:  String(r[idxVehicle] || '미상').trim(),
-            }));
+            // 수행월: F열(년/월)이 비어있으면 E열(수행일자)에서 역산
+            const computePerformMonth = (r) => {
+                const raw = String(r[idxMonth] || '').trim();
+                if (raw) return raw;
+                return idxPerformDate >= 0 ? dateToYYMM(r[idxPerformDate]) : '';
+            };
+            window.rawDataBase = rows.slice(1)
+                .filter(r => r[idxCust] && (r[idxMonth] || (idxPerformDate>=0 && r[idxPerformDate]) || (idxAcctDate>=0 && r[idxAcctDate])))
+                .map(r => ({
+                    month:        computePerformMonth(r),                                              // 수행일 기준 년/월 (F열 우선, 없으면 E열에서 역산)
+                    accountMonth: dateToYYMM(r[idxAcctDate]),                                          // D열: 매출인식 기준 년/월
+                    date:         idxPerformDate >= 0 ? normDate(r[idxPerformDate]) : '',              // E열: 수행 일자
+                    accountDate:  idxAcctDate >= 0    ? normDate(r[idxAcctDate])    : '',              // D열: 매출인식 일자
+                    customer: String(r[idxCust]   || '').trim(),
+                    waste:    String(r[idxWaste]  || '미상').trim(),
+                    weight:   parseNum(r[idxWeight]),
+                    totalRev: parseNum(r[idxTotal]),
+                    netRev:   parseNum(r[idxNet]),
+                    vehicle:  String(r[idxVehicle] || '미상').trim(),
+                }));
 
             applyBasis();
 
@@ -984,8 +993,9 @@
     }
 
     // ── 기사도급비현황 탭 데이터 로드 ──
+    // 시트 실제 컬럼(A~L, 12열): 년월 / 차량번호 / 기사명 / 운반톤수 / 건수 / 총매출 / 운반비매출(순매출) / 도급료 / 공제금 / 최종지급액 / 도급비율 / (예비)
     async function loadDogupData() {
-        const range = encodeURIComponent(`${CONFIG.DOGUP_TAB}!A:J`);
+        const range = encodeURIComponent(`${CONFIG.DOGUP_TAB}!A:L`);
         const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?key=${CONFIG.API_KEY}`;
         try {
             const res  = await fetch(url);
@@ -993,19 +1003,24 @@
             if (!res.ok || !json.values || json.values.length < 2) return;
             const rows = json.values;
             const parseNum = s => { if (!s) return 0; if (typeof s === 'number') return s; return Number(String(s).replace(/[^0-9.-]/g,'')) || 0; };
-            window.dogupData = rows.slice(1).filter(r => r[0] && r[1]).map(r => ({
-                month:   String(r[0]||'').trim(),
-                vehicle: String(r[1]||'').trim(),
-                driver:  String(r[2]||'').trim(),
-                trips:   parseNum(r[3]),
-                totalRev:parseNum(r[4]),
-                netRev:  parseNum(r[5]),
-                dogup:   parseNum(r[6]),
-                deduct:  parseNum(r[7]),
-                finalPay:parseNum(r[8]),
-                ratio:   parseNum(r[9]),
-                isDirect: DIRECT_VEHICLES.includes(String(r[1]||'').trim()),
-            }));
+            window.dogupData = rows.slice(1).filter(r => r[0] && r[1]).map(r => {
+                const netRev = parseNum(r[6]);
+                const dogup  = parseNum(r[7]);
+                return {
+                    month:   String(r[0]||'').trim(),
+                    vehicle: String(r[1]||'').trim(),
+                    driver:  String(r[2]||'').trim(),
+                    weight:  parseNum(r[3]),   // 운반톤수
+                    trips:   parseNum(r[4]),   // 건수
+                    totalRev:parseNum(r[5]),   // 총매출
+                    netRev:  netRev,            // 운반비매출(순매출)
+                    dogup:   dogup,              // 도급료
+                    deduct:  parseNum(r[8]),   // 공제금
+                    finalPay:parseNum(r[9]),   // 최종지급액
+                    ratio:   netRev > 0 ? (dogup/netRev*100) : 0,  // 도급비율 (직접 계산 — 시트 수식 오류 방지)
+                    isDirect: DIRECT_VEHICLES.includes(String(r[1]||'').trim()),
+                };
+            });
             // 도급비 탭 보고 있을 때만 렌더링
             if (currentTab === 5) renderDogupTab();
         } catch(e) {
@@ -1030,11 +1045,23 @@
         };
 
         // 기준에 따라 month + date 값 재설정 (dedup용 일자도 basis에 맞춰 동기화)
+        // ※ 매출인식 기준 선택 시, 매출인식 날짜가 없는 행은 제외됨 (수행월로 대체하지 않음 — 두 기준 혼합 방지)
+        const totalBefore = window.rawDataBase.length;
         window.rawData = window.rawDataBase.map(d => ({
             ...d,
-            month:    _dataBasis === 'account' ? (d.accountMonth || d.month) : d.month,
-            tripDate: _dataBasis === 'account' ? (d.accountDate  || d.date)  : d.date,  // dedup용
+            month:    _dataBasis === 'account' ? d.accountMonth : d.month,
+            tripDate: _dataBasis === 'account' ? d.accountDate  : d.date,
         })).filter(d => d.month);
+        const excluded = totalBefore - window.rawData.length;
+        if (excluded > 0) {
+            console.log(`[${_dataBasis === 'account' ? '매출인식' : '수행일'} 기준] ${excluded}건은 해당 날짜 정보가 없어 제외됨`);
+        }
+        const basisStatusEl = document.getElementById('dataStatusText');
+        if (basisStatusEl) {
+            const label = _dataBasis === 'account' ? '매출인식' : '수행일';
+            const excludedNote = excluded > 0 ? ` <span style="color:#d97706">(⚠️ ${label} 날짜 없는 ${excluded.toLocaleString()}건 제외)</span>` : '';
+            basisStatusEl.innerHTML = `✅ ${window.rawData.length.toLocaleString()}건 로드 완료 (${label} 기준)${excludedNote}`;
+        }
 
         // 필터 재구성
         initFilters();
@@ -2511,13 +2538,14 @@
     function aggregateD5(vehicle) {
         const months = getD5Months();
         const data   = (window.dogupData||[]).filter(d => d.vehicle === vehicle && months.includes(d.month));
+        const weight = data.reduce((s,d) => s + (d.weight||0), 0);
         const trips  = data.reduce((s,d) => s + (d.trips||0), 0);
         const total  = data.reduce((s,d) => s + (d.totalRev||0), 0);
         const net    = data.reduce((s,d) => s + (d.netRev||0), 0);
         const dogup  = data.reduce((s,d) => s + (d.dogup||0), 0);
         const deduct = data.reduce((s,d) => s + (d.deduct||0), 0);
         const finalP = data.reduce((s,d) => s + (d.finalPay||0), 0);
-        return { trips, total, net, dogup, deduct, final: finalP, ratio: net > 0 ? dogup/net*100 : 0 };
+        return { weight, trips, total, net, dogup, deduct, final: finalP, ratio: net > 0 ? dogup/net*100 : 0 };
     }
 
     function buildD5Dropdown() {
@@ -2906,7 +2934,7 @@
     function buildD5Ranking() {
         const drivers = getD5Drivers();
         if (!drivers.length) {
-            document.getElementById('d5RankingBody').innerHTML = '<tr><td colspan="9" class="p-6 text-center text-slate-400">기사 데이터 없음</td></tr>';
+            document.getElementById('d5RankingBody').innerHTML = '<tr><td colspan="10" class="p-6 text-center text-slate-400">기사 데이터 없음</td></tr>';
             document.getElementById('d5RankingHead').innerHTML = '';
             document.getElementById('d5RankingSummary').innerHTML = '';
             return;
@@ -2914,12 +2942,14 @@
         const rows = drivers.map(d => ({ ...d, ...aggregateD5(d.vehicle) }));
 
         // 합계 요약
+        const sumWeight = rows.reduce((s,r)=>s+r.weight,0);
         const sumTrips = rows.reduce((s,r)=>s+r.trips,0);
         const sumNet   = rows.reduce((s,r)=>s+r.net,0);
         const sumDogup = rows.reduce((s,r)=>s+r.dogup,0);
         const ratios   = rows.filter(r=>r.net>0&&!r.isDirect).map(r=>r.ratio);
         const avgRatio = ratios.length ? ratios.reduce((a,b)=>a+b,0)/ratios.length : 0;
         document.getElementById('d5RankingSummary').innerHTML = `
+            <div class="bg-emerald-50 rounded-lg p-3"><p class="text-xs text-slate-500 mb-1">총 운반톤수</p><p class="text-lg font-bold text-emerald-700">${sumWeight.toLocaleString(undefined,{maximumFractionDigits:1})}T</p></div>
             <div class="bg-slate-50 rounded-lg p-3"><p class="text-xs text-slate-500 mb-1">총 운반건수</p><p class="text-lg font-bold text-slate-800">${sumTrips.toLocaleString()}건</p></div>
             <div class="bg-blue-50 rounded-lg p-3"><p class="text-xs text-slate-500 mb-1">총 운반비매출</p><p class="text-lg font-bold text-blue-700">${fmtD5(sumNet)}원</p></div>
             <div class="bg-amber-50 rounded-lg p-3"><p class="text-xs text-slate-500 mb-1">총 도급료</p><p class="text-lg font-bold text-amber-700">${fmtD5(sumDogup)}원</p></div>
@@ -2945,6 +2975,7 @@
         const cols = [
             { k:'name',    label:'기사명',     align:'left' },
             { k:'vehicle', label:'차량',       align:'left' },
+            { k:'weight',  label:'운반톤수',   align:'right' },
             { k:'trips',   label:'운반건수',   align:'right' },
             { k:'total',   label:'총매출',     align:'right' },
             { k:'net',     label:'운반비매출', align:'right' },
@@ -2968,6 +2999,7 @@
             const deductCell = r.isDirect ? '<span class="text-slate-300">—</span>' :
                 (r.deduct > avgDeduct * 2 && r.deduct > 0 ? `<span style="background:#FAEEDA;color:#633806;font-weight:600;padding:2px 6px;border-radius:4px">${r.deduct.toLocaleString()}</span>` : r.deduct.toLocaleString());
             const tripsCell = r.trips < avgTrips/2 ? `<span style="color:#888780;background:#F1EFE8;padding:2px 6px;border-radius:4px">${r.trips}</span>` : r.trips;
+            const weightCell = r.weight.toLocaleString(undefined,{maximumFractionDigits:1});
             const dogupCell  = r.isDirect ? '<span class="text-slate-300">—</span>' : r.dogup.toLocaleString();
             const finalCell  = r.isDirect ? '<span class="text-slate-300">—</span>' : r.final.toLocaleString();
             const typeBadge = r.isDirect
@@ -2977,6 +3009,7 @@
             return `<tr style="border-bottom:0.5px solid #e2e8f0;${rowBg}" class="hover:bg-slate-50">
                 <td class="p-2.5"><span onclick="d5ToggleCompare('${r.vehicle}')" style="color:#0F6E56;font-weight:600;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer">${r.driver}</span>${typeBadge}</td>
                 <td class="p-2.5 text-xs text-slate-500">${r.vehicle}</td>
+                <td class="p-2.5 text-right">${weightCell}</td>
                 <td class="p-2.5 text-right">${tripsCell}</td>
                 <td class="p-2.5 text-right">${r.total.toLocaleString()}</td>
                 <td class="p-2.5 text-right">${r.net.toLocaleString()}</td>
@@ -3024,7 +3057,7 @@
             });
 
         if (!filtered.length) {
-            document.getElementById('d5RawBody').innerHTML = '<tr><td colspan="10" class="p-6 text-center text-slate-400">데이터 없음</td></tr>';
+            document.getElementById('d5RawBody').innerHTML = '<tr><td colspan="11" class="p-6 text-center text-slate-400">데이터 없음</td></tr>';
             document.getElementById('d5RawCount').textContent = '';
             return;
         }
@@ -3043,6 +3076,7 @@
                 <td class="p-2 font-bold ${isNewMonth ? 'text-teal-700' : 'text-slate-400'}">${isNewMonth ? ym : ''}</td>
                 <td class="p-2 text-slate-600">${d.vehicle||''}</td>
                 <td class="p-2 font-semibold">${d.driver||''}${d.isDirect?'<span class="text-xs ml-1 px-1.5 py-0.5 rounded" style="background:#E6F1FB;color:#0C447C">직</span>':'<span class="text-xs ml-1 px-1.5 py-0.5 rounded" style="background:#F1EFE8;color:#444441">외</span>'}</td>
+                <td class="p-2 text-right">${(d.weight||0).toLocaleString(undefined,{maximumFractionDigits:1})}</td>
                 <td class="p-2 text-right">${(d.trips||0).toLocaleString()}</td>
                 <td class="p-2 text-right">${fmt(d.totalRev)}</td>
                 <td class="p-2 text-right">${fmt(d.netRev)}</td>
@@ -3067,12 +3101,13 @@
                 return true;
             });
         if (!filtered.length) { alert('내보낼 데이터 없음'); return; }
-        const headers = ['년월','차량번호','운반자','유형','운반건수','총매출','운반비매출','도급료','공제금','최종지급액','도급료비율'];
+        const headers = ['년월','차량번호','운반자','유형','운반톤수','운반건수','총매출','운반비매출','도급료','공제금','최종지급액','도급료비율'];
         const rows = filtered.map(d => [
             `20${d.month.slice(0,2)}-${d.month.slice(2)}`,
             d.vehicle||'',
             d.driver||'',
             d.isDirect?'직영':'외주',
+            d.weight||0,
             d.trips||0,
             d.totalRev||0,
             d.netRev||0,
@@ -3101,6 +3136,7 @@
 
         const a = aggregateD5(veh);
         const kpiHtml = [
+            { label:'운반톤수',   v:a.weight.toLocaleString(undefined,{maximumFractionDigits:1})+'T', bg:'#ecfdf5', col:'#047857' },
             { label:'운반건수',   v:a.trips+'건',                  bg:'#f0f9ff', col:'#0369a1' },
             { label:'운반비매출', v:fmtD5(a.net)+'원',             bg:'#eff6ff', col:'#1e40af' },
             { label:'도급료',     v:fmtD5(a.dogup)+'원',           bg:'#fef3c7', col:'#854f0b' },
