@@ -228,7 +228,7 @@
             <button id="btnTab2" onclick="switchTab(2)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">고객사별 트렌드</button>
             <button id="btnTab3" onclick="switchTab(3)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">차량별 실적 현황</button>
             <button id="btnTab4" onclick="switchTab(4)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">📋 고객사 브리핑</button>
-            <button id="btnTab5" onclick="switchTab(5)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">💰 기사 도급비 현황</button>
+            <button id="btnTab5" onclick="switchTab(5)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">🚛 운반자 실적 · 도급비</button>
         </div>
     </div>
 
@@ -670,153 +670,201 @@
             </div>
         </div>
 
-        <!-- 탭5: 기사 도급비 현황 (리뉴얼) -->
+        <!-- 탭5: 운반자 실적 · 도급비 분석 (v5) -->
         <div id="tab5-content" class="hidden space-y-5">
-
-            <!-- 기사 선택 + 필터 -->
-            <div class="bg-white rounded-xl p-5 card-shadow border border-slate-100">
-                <div class="flex flex-wrap items-center gap-3 mb-3">
-                    <span class="text-sm font-bold text-slate-700">비교할 기사 선택</span>
-                    <span class="text-xs text-slate-400">최대 4명</span>
-                    <div class="ml-auto flex gap-2 items-center">
-                        <select id="d5FilterYear" onchange="renderDogupTab()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white cursor-pointer">
-                            <option value="all">전체 기간</option>
-                        </select>
-                        <select id="d5FilterMonth" onchange="renderDogupTab()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white cursor-pointer">
-                            <option value="all">전월</option>
-                        </select>
-                        <div class="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
-                            <button id="d5TypeAll"    onclick="setDriverType('all')"    class="px-3 py-1.5 text-xs font-bold rounded-md bg-white text-teal-700 shadow-sm transition-all">전체</button>
-                            <button id="d5TypeOut"    onclick="setDriverType('out')"    class="px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 transition-all">외주</button>
-                            <button id="d5TypeDirect" onclick="setDriverType('direct')" class="px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 transition-all">직영</button>
+            <!-- 헤더 / 필터 -->
+            <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                <div class="flex flex-col xl:flex-row xl:items-center gap-4">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 class="text-xl font-bold text-slate-900">🚛 운반자 실적 · 도급비 분석</h2>
+                            <span id="d5v2PeriodBadge" class="text-xs font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-full"></span>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-1">처리수입현황 &gt; 기사도급비현황 기준 · 운반자별 실적 비교와 단일 운반자 상세 분석</p>
+                    </div>
+                    <div class="flex flex-wrap items-end gap-2">
+                        <label class="flex flex-col gap-1">
+                            <span class="text-xs font-bold text-slate-500">연도</span>
+                            <select id="d5FilterYear" onchange="renderDogupTab()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 font-bold text-slate-700 bg-white cursor-pointer min-w-[110px]">
+                                <option value="all">전체 기간</option>
+                            </select>
+                        </label>
+                        <label class="flex flex-col gap-1">
+                            <span class="text-xs font-bold text-slate-500">월</span>
+                            <select id="d5FilterMonth" onchange="renderDogupTab()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 font-bold text-slate-700 bg-white cursor-pointer min-w-[96px]">
+                                <option value="all">전체 월</option>
+                            </select>
+                        </label>
+                        <div class="flex flex-col gap-1">
+                            <span class="text-xs font-bold text-slate-500">유형</span>
+                            <div class="flex bg-slate-100 rounded-lg p-1 gap-1">
+                                <button id="d5TypeAll" onclick="setDriverType('all')" class="px-3 py-2 text-xs font-bold rounded-md bg-white text-teal-700 shadow-sm">전체</button>
+                                <button id="d5TypeOut" onclick="setDriverType('out')" class="px-3 py-2 text-xs font-bold rounded-md text-slate-500">외주</button>
+                                <button id="d5TypeDirect" onclick="setDriverType('direct')" class="px-3 py-2 text-xs font-bold rounded-md text-slate-500">직영</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div id="d5ChipArea" class="flex flex-wrap gap-2 items-center min-h-[34px]"></div>
-                <div class="relative inline-block mt-2">
-                    <button onclick="toggleD5Dropdown()" class="flex items-center gap-1 text-xs font-bold text-teal-700 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors">+ 기사 추가</button>
-                    <div id="d5Dropdown" class="hidden absolute left-0 top-9 z-20 bg-white border border-slate-200 rounded-xl shadow-md p-1.5 min-w-[240px]"></div>
+
+                <!-- 비교 바구니 -->
+                <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold text-slate-500">비교 바구니</span>
+                    <div id="d5v2CompareChips" class="flex flex-wrap gap-1.5 flex-1 min-w-[180px]"></div>
+                    <button id="d5v2CompareBtn" onclick="openD5CompareV2()" class="hidden px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors">선택 운반자 비교</button>
+                    <button id="d5v2ClearBtn" onclick="clearD5SelectionV2()" class="hidden px-3 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-bold">선택 해제</button>
                 </div>
             </div>
 
-            <!-- 표시 설정 -->
-            <div class="bg-white rounded-xl card-shadow border border-slate-100">
-                <button onclick="toggleD5Settings()" class="w-full flex items-center justify-between px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors">
-                    <span>⚙️ 표시 설정</span>
-                    <span id="d5SettingsArrow" class="text-slate-400">▼</span>
-                </button>
-                <div id="d5SettingsPanel" class="hidden border-t border-slate-100 px-5 py-4">
-                    <div class="flex flex-wrap gap-3">
-                        <label class="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200"><input type="checkbox" id="d5f_table" checked onchange="renderDogupTab()"> 비교 테이블</label>
-                        <label class="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200"><input type="checkbox" id="d5f_flow" checked onchange="renderDogupTab()"> 수입 구조 바</label>
-                        <label class="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200"><input type="checkbox" id="d5f_ratio" checked onchange="renderDogupTab()"> 도급비율 추이</label>
-                        <label class="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200"><input type="checkbox" id="d5f_bar" checked onchange="renderDogupTab()"> 월별 비교 차트</label>
+            <!-- 선택기간 전체 KPI -->
+            <div id="d5v2SummaryKpis" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3"></div>
+
+            <!-- 전체 현황 -->
+            <div id="d5v2Overview" class="space-y-5">
+                <div class="grid grid-cols-1 xl:grid-cols-5 gap-5">
+                    <div class="xl:col-span-3 bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div class="flex flex-wrap items-center gap-3 mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">운반자 종합 현황</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">운반자명 클릭 → 상세 · 체크박스 → 최대 4개 비교</p>
+                            </div>
+                            <label class="ml-auto relative">
+                                <span class="sr-only">운반자 검색</span>
+                                <input id="d5v2Search" oninput="renderD5OverviewV2()" type="text" placeholder="운반자 검색" class="w-40 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500">
+                            </label>
+                        </div>
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-left border-collapse" style="font-size:12px;min-width:1100px">
+                                <thead class="bg-slate-50 text-slate-600">
+                                    <tr>
+                                        <th class="p-2.5 text-center w-12">비교</th>
+                                        <th class="p-2.5">운반자</th>
+                                        <th class="p-2.5">차량</th>
+                                        <th class="p-2.5 text-center">유형</th>
+                                        <th class="p-2.5 text-right">톤수</th>
+                                        <th class="p-2.5 text-right">건수</th>
+                                        <th class="p-2.5 text-right">운반비매출</th>
+                                        <th class="p-2.5 text-right">도급료</th>
+                                        <th class="p-2.5 text-right">공제금</th>
+                                        <th class="p-2.5 text-right">최종지급액</th>
+                                        <th class="p-2.5 text-right">도급비율</th>
+                                        <th class="p-2.5 text-right">건당 공제금</th>
+                                        <th class="p-2.5">확인</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="d5v2OverviewBody"></tbody>
+                            </table>
+                        </div>
+                        <p id="d5v2OverviewCount" class="text-xs text-slate-400 mt-2 text-right"></p>
+                    </div>
+
+                    <div class="xl:col-span-2 bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div class="flex flex-wrap items-center gap-2 mb-3">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">운반자 비교 그래프</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">선택 지표 상위 운반자 비교</p>
+                            </div>
+                        </div>
+                        <div id="d5v2OverviewMetricBtns" class="flex flex-wrap gap-1.5 mb-3"></div>
+                        <div class="relative w-full" style="height:380px"><canvas id="d5v2OverviewChart"></canvas></div>
                     </div>
                 </div>
             </div>
 
+            <!-- 단일 운반자 상세 -->
+            <div id="d5v2Detail" class="hidden space-y-5">
+                <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                    <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <button onclick="backD5OverviewV2()" class="text-xs font-bold text-slate-500 border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-50">← 전체 현황</button>
+                        <div class="min-w-0">
+                            <h3 id="d5v2DetailTitle" class="text-lg font-bold text-slate-900"></h3>
+                            <p id="d5v2DetailSub" class="text-xs text-slate-400 mt-0.5"></p>
+                        </div>
+                        <button id="d5v2DetailCompareAdd" class="ml-auto text-xs font-bold text-teal-700 border border-teal-200 bg-teal-50 rounded-lg px-3 py-2 hover:bg-teal-100">비교 바구니 담기</button>
+                    </div>
+                    <div id="d5v2DetailKpis" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3"></div>
+                </div>
 
-            <!-- 전체 기사 랭킹 -->
-            <div id="d5sec_ranking" class="bg-white rounded-xl p-5 card-shadow border border-slate-100">
-                <div class="flex flex-wrap items-center gap-3 mb-3">
-                    <h2 class="text-base font-bold text-slate-800">📋 전체 기사 랭킹</h2>
-                    <span class="text-xs text-slate-400">컬럼 클릭으로 정렬 · 기사명 클릭으로 비교 추가</span>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                    <div class="xl:col-span-2 bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div class="flex flex-wrap items-center gap-2 mb-3">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">월별 추이</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">한 번에 한 지표만 크게 확인</p>
+                            </div>
+                        </div>
+                        <div id="d5v2DetailMetricBtns" class="flex flex-wrap gap-1.5 mb-3"></div>
+                        <div class="relative w-full" style="height:330px"><canvas id="d5v2DetailChart"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <h3 class="text-base font-bold text-slate-900 mb-1">효율 지표</h3>
+                        <p class="text-xs text-slate-400 mb-4">선택기간 합계 기준 파생 지표</p>
+                        <div id="d5v2Efficiency" class="space-y-3"></div>
+                        <div id="d5v2DetailNotice" class="mt-4"></div>
+                    </div>
                 </div>
-                <div id="d5RankingSummary" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3"></div>
-                <div class="overflow-x-auto rounded-lg border border-slate-200">
-                    <table class="w-full text-left border-collapse" style="font-size:12px;min-width:760px">
-                        <thead id="d5RankingHead"></thead>
-                        <tbody id="d5RankingBody"></tbody>
-                    </table>
-                </div>
-                <div class="flex flex-wrap gap-3 mt-3 text-xs text-slate-500">
-                    <div class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#FCEBEB"></span>도급비율 70% 이상</div>
-                    <div class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#FAEEDA"></span>공제금 평균 2배 이상</div>
-                    <div class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded border border-slate-200" style="background:#F1EFE8"></span>운반건수 저조 (평균 절반 이하)</div>
-                    <div class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#E1F5EE"></span>비교 추가됨</div>
+
+                <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                    <h3 class="text-base font-bold text-slate-900 mb-3">월별 상세 데이터</h3>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-left border-collapse" style="font-size:12px;min-width:980px">
+                            <thead class="bg-slate-50 text-slate-600">
+                                <tr><th class="p-2.5">년월</th><th class="p-2.5 text-right">톤수</th><th class="p-2.5 text-right">건수</th><th class="p-2.5 text-right">총매출</th><th class="p-2.5 text-right">운반비매출</th><th class="p-2.5 text-right">도급료</th><th class="p-2.5 text-right">공제금</th><th class="p-2.5 text-right">최종지급액</th><th class="p-2.5 text-right">도급비율</th><th class="p-2.5 text-right">건당 공제금</th></tr>
+                            </thead>
+                            <tbody id="d5v2DetailTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- 기사 상세 모드 (1명 선택 시) -->
-            <div id="d5sec_detail" class="hidden bg-white rounded-xl p-5 card-shadow border border-slate-100">
-                <div class="flex items-center gap-3 mb-4">
-                    <h2 class="text-base font-bold text-slate-800">👤 기사 상세</h2>
-                    <span id="d5DetailName" class="text-sm font-bold"></span>
+            <!-- 다중 비교 -->
+            <div id="d5v2Compare" class="hidden space-y-5">
+                <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                    <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <button onclick="backD5OverviewV2()" class="text-xs font-bold text-slate-500 border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-50">← 전체 현황</button>
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">선택 운반자 비교</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">최대 4개 운반자를 같은 기준으로 비교</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-left border-collapse" style="font-size:12px;min-width:1000px">
+                            <thead class="bg-slate-50 text-slate-600">
+                                <tr><th class="p-2.5">운반자</th><th class="p-2.5">차량</th><th class="p-2.5 text-right">톤수</th><th class="p-2.5 text-right">건수</th><th class="p-2.5 text-right">운반비매출</th><th class="p-2.5 text-right">도급료</th><th class="p-2.5 text-right">공제금</th><th class="p-2.5 text-right">최종지급액</th><th class="p-2.5 text-right">도급비율</th><th class="p-2.5 text-right">건당 공제금</th></tr>
+                            </thead>
+                            <tbody id="d5v2CompareTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4" id="d5DetailKpi"></div>
-                <div class="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-slate-100">
-                    <span class="text-xs font-bold text-slate-500">📊 표시 지표:</span>
-                    <div id="d5DetailMetricBtns" class="flex flex-wrap gap-1.5"></div>
+                <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">월별 추이 비교</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">같은 지표를 운반자별 선그래프로 비교</p>
+                        </div>
+                    </div>
+                    <div id="d5v2CompareMetricBtns" class="flex flex-wrap gap-1.5 mb-3"></div>
+                    <div class="relative w-full" style="height:360px"><canvas id="d5v2CompareChart"></canvas></div>
                 </div>
-                <div class="relative w-full" style="height:300px"><canvas id="d5DetailChart" role="img" aria-label="단일 기사 월별 흐름"></canvas></div>
             </div>
 
-            <!-- 비교 테이블 -->
-            <div id="d5sec_table" class="bg-white rounded-xl p-5 card-shadow border border-slate-100">
-                <h2 class="text-base font-bold text-slate-800 mb-3">핵심 지표 비교</h2>
-                <div class="overflow-x-auto"><table id="d5CompareTable" class="w-full text-left border-collapse" style="font-size:12px;table-layout:fixed"></table></div>
-            </div>
-
-            <!-- 수입 구조 바 -->
-            <div id="d5sec_flow" class="bg-white rounded-xl p-5 card-shadow border border-slate-100">
-                <h2 class="text-base font-bold text-slate-800 mb-1">운반비매출 대비 도급료 · 최종지급액 구조</h2>
-                <p class="text-xs text-slate-400 mb-4">각 기사의 운반비매출 = 100% 기준 — 도급료(주황)와 최종지급액(초록) 비중</p>
-                <div id="d5FlowBars"></div>
-                <div class="flex gap-4 mt-3 flex-wrap">
-                    <div class="flex items-center gap-1.5 text-xs text-slate-500"><span class="w-3 h-3 rounded inline-block" style="background:#B5D4F4;opacity:.5"></span>운반비매출</div>
-                    <div class="flex items-center gap-1.5 text-xs text-slate-500"><span class="w-3 h-3 rounded inline-block" style="background:#EF9F27"></span>도급료</div>
-                    <div class="flex items-center gap-1.5 text-xs text-slate-500"><span class="w-3 h-3 rounded inline-block" style="background:#5DCAA5"></span>최종지급액</div>
+            <!-- 원본 데이터 확인 -->
+            <details id="d5v2RawDetails" class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                <summary class="cursor-pointer px-5 py-4 text-sm font-bold text-slate-700 select-none">📑 원본 행 데이터 확인</summary>
+                <div class="border-t border-slate-100 p-5">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span id="d5v2RawCount" class="text-xs text-slate-400"></span>
+                        <button onclick="d5ExportRawV2()" class="ml-auto text-xs font-bold text-teal-700 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg">CSV 내보내기</button>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200" style="max-height:420px;overflow-y:auto">
+                        <table class="w-full text-left border-collapse" style="font-size:11.5px;min-width:1050px">
+                            <thead class="sticky top-0 z-10 bg-slate-50 text-slate-600">
+                                <tr><th class="p-2">년월</th><th class="p-2">차량</th><th class="p-2">운반자</th><th class="p-2 text-right">톤수</th><th class="p-2 text-right">건수</th><th class="p-2 text-right">총매출</th><th class="p-2 text-right">운반비매출</th><th class="p-2 text-right">도급료</th><th class="p-2 text-right">공제금</th><th class="p-2 text-right">최종지급액</th><th class="p-2 text-right">도급비율</th><th class="p-2 text-right">건당 공제금</th></tr>
+                            </thead>
+                            <tbody id="d5v2RawBody"></tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-
-            <!-- 도급비율 추이 -->
-            <div id="d5sec_ratio" class="bg-white rounded-xl p-5 card-shadow border border-slate-100">
-                <h2 class="text-base font-bold text-slate-800 mb-1">도급비율 월별 추이</h2>
-                <p class="text-xs text-slate-400 mb-3">선이 올라갈수록 도급 부담 증가 — 점선은 전체 평균</p>
-                <div id="d5RatioLegend" class="flex flex-wrap gap-3 mb-3"></div>
-                <div class="relative w-full" style="height:240px"><canvas id="d5NewRatioChart" role="img" aria-label="기사별 도급비율 월별 추이">도급비율 추이</canvas></div>
-            </div>
-
-            <!-- 월별 비교 차트 -->
-            <div id="d5sec_bar" class="bg-white rounded-xl p-5 card-shadow border border-slate-100">
-                <div class="flex flex-wrap items-center gap-3 mb-3">
-                    <h2 class="text-base font-bold text-slate-800">월별 비교</h2>
-                    <div id="d5MetricBtns" class="flex gap-2 ml-auto flex-wrap"></div>
-                </div>
-                <div id="d5BarLegend" class="flex flex-wrap gap-3 mb-3"></div>
-                <div class="relative w-full" style="height:260px"><canvas id="d5NewBarChart" role="img" aria-label="기사별 월별 지표 비교">월별 비교 차트</canvas></div>
-            </div>
-
-            <!-- 월별 원본 데이터 -->
-            <div id="d5sec_raw" class="bg-white rounded-xl p-5 card-shadow border border-slate-100">
-                <div class="flex flex-wrap items-center gap-3 mb-3">
-                    <h2 class="text-base font-bold text-slate-800">📑 월별 원본 데이터</h2>
-                    <span class="text-xs text-slate-400">현재 필터 기준 행별 상세</span>
-                    <button onclick="d5ExportRaw()" class="ml-auto text-xs font-bold text-teal-700 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors">📥 CSV 내보내기</button>
-                </div>
-                <div class="overflow-x-auto rounded-lg border border-slate-200" style="max-height:500px;overflow-y:auto">
-                    <table class="w-full text-left border-collapse" style="font-size:11.5px;min-width:900px">
-                        <thead class="sticky top-0 z-10">
-                            <tr class="bg-teal-50 border-b border-slate-200">
-                                <th class="p-2 font-bold text-teal-900">년월</th>
-                                <th class="p-2 font-bold text-teal-900">차량번호</th>
-                                <th class="p-2 font-bold text-teal-900">운반자</th>
-                                <th class="p-2 font-bold text-teal-900 text-right">운반톤수</th>
-                                <th class="p-2 font-bold text-teal-900 text-right">운반건수</th>
-                                <th class="p-2 font-bold text-teal-900 text-right">총매출</th>
-                                <th class="p-2 font-bold text-teal-900 text-right">운반비매출</th>
-                                <th class="p-2 font-bold text-teal-900 text-right">도급료</th>
-                                <th class="p-2 font-bold text-teal-900 text-right">공제금</th>
-                                <th class="p-2 font-bold text-teal-900 text-right">최종지급액</th>
-                                <th class="p-2 font-bold text-teal-900 text-right">도급료비율</th>
-                            </tr>
-                        </thead>
-                        <tbody id="d5RawBody"></tbody>
-                    </table>
-                </div>
-                <p class="text-xs text-slate-400 mt-2 text-right" id="d5RawCount"></p>
-            </div>
-
+            </details>
         </div>
 
     </main>
@@ -993,7 +1041,7 @@
     }
 
     // ── 기사도급비현황 탭 데이터 로드 ──
-    // 시트 실제 컬럼(A~L, 12열): 년월 / 차량번호 / 기사명 / 운반톤수 / 건수 / 총매출 / 운반비매출(순매출) / 도급료 / 공제금 / 최종지급액 / 도급비율 / (예비)
+    // 실제 시트 헤더명 기준 매핑: 년 월 / 차량번호 / 운반자 / 운반 톤수 / 운반 건수 / 총매출 / 운반비 매출 / 도급료 / 공제금 / 최종지급액 / 도급료 비율 / 건당 공제금
     async function loadDogupData() {
         const range = encodeURIComponent(`${CONFIG.DOGUP_TAB}!A:L`);
         const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?key=${CONFIG.API_KEY}`;
@@ -1002,26 +1050,56 @@
             const json = await res.json();
             if (!res.ok || !json.values || json.values.length < 2) return;
             const rows = json.values;
-            const parseNum = s => { if (!s) return 0; if (typeof s === 'number') return s; return Number(String(s).replace(/[^0-9.-]/g,'')) || 0; };
-            window.dogupData = rows.slice(1).filter(r => r[0] && r[1]).map(r => {
-                const netRev = parseNum(r[6]);
-                const dogup  = parseNum(r[7]);
+            const normHeader = s => String(s || '').replace(/\s+/g,'').trim();
+            const headers = (rows[0] || []).map(normHeader);
+            const idx = (names, fallback) => {
+                for (const n of names) {
+                    const i = headers.indexOf(normHeader(n));
+                    if (i >= 0) return i;
+                }
+                return fallback;
+            };
+            const C = {
+                month: idx(['년월','년 월'],0), vehicle: idx(['차량번호'],1), driver: idx(['운반자','기사명'],2),
+                weight:idx(['운반톤수','운반 톤수'],3), trips:idx(['운반건수','운반 건수'],4), total:idx(['총매출'],5),
+                net:idx(['운반비매출','운반비 매출'],6), dogup:idx(['도급료'],7), deduct:idx(['공제금'],8),
+                final:idx(['최종지급액'],9), ratio:idx(['도급료비율','도급비율'],10), perDeduct:idx(['건당공제금','건당 공제금'],11)
+            };
+            const parseMaybeNum = s => {
+                if (s === undefined || s === null || s === '') return null;
+                if (typeof s === 'number') return Number.isFinite(s) ? s : null;
+                const str = String(s).trim();
+                if (!str || str.startsWith('#')) return null;
+                const n = Number(str.replace(/[^0-9.-]/g,''));
+                return Number.isFinite(n) ? n : null;
+            };
+            window.dogupData = rows.slice(1).filter(r => r[C.month] && (r[C.vehicle] || r[C.driver])).map(r => {
+                const month   = String(r[C.month] || '').replace(/\.0$/,'').trim();
+                const vehicle = String(r[C.vehicle] || '').trim();
+                const driver  = String(r[C.driver] || vehicle || '미상').trim();
+                const trips   = parseMaybeNum(r[C.trips]) ?? 0;
+                const netRev  = parseMaybeNum(r[C.net]) ?? 0;
+                const dogup   = parseMaybeNum(r[C.dogup]);
+                const deduct  = parseMaybeNum(r[C.deduct]);
+                const finalPay= parseMaybeNum(r[C.final]);
+                const isDirect= DIRECT_VEHICLES.includes(vehicle);
+                const ratio   = (!isDirect && netRev > 0 && dogup !== null) ? (dogup / netRev * 100) : null;
+                const sheetPer= parseMaybeNum(r[C.perDeduct]);
+                const deductPerTrip = sheetPer !== null ? sheetPer : (deduct !== null && trips > 0 ? deduct / trips : null);
                 return {
-                    month:   String(r[0]||'').trim(),
-                    vehicle: String(r[1]||'').trim(),
-                    driver:  String(r[2]||'').trim(),
-                    weight:  parseNum(r[3]),   // 운반톤수
-                    trips:   parseNum(r[4]),   // 건수
-                    totalRev:parseNum(r[5]),   // 총매출
-                    netRev:  netRev,            // 운반비매출(순매출)
-                    dogup:   dogup,              // 도급료
-                    deduct:  parseNum(r[8]),   // 공제금
-                    finalPay:parseNum(r[9]),   // 최종지급액
-                    ratio:   netRev > 0 ? (dogup/netRev*100) : 0,  // 도급비율 (직접 계산 — 시트 수식 오류 방지)
-                    isDirect: DIRECT_VEHICLES.includes(String(r[1]||'').trim()),
+                    month, vehicle, driver,
+                    weight: parseMaybeNum(r[C.weight]) ?? 0,
+                    trips,
+                    totalRev: parseMaybeNum(r[C.total]) ?? 0,
+                    netRev,
+                    dogup,
+                    deduct,
+                    finalPay,
+                    ratio,
+                    deductPerTrip,
+                    isDirect
                 };
             });
-            // 도급비 탭 보고 있을 때만 렌더링
             if (currentTab === 5) renderDogupTab();
         } catch(e) {
             console.error('도급비 로드 오류:', e);
@@ -4984,6 +5062,332 @@ E. YoY 변동 — 전년 대비 추세
                 <p class="text-xs text-slate-300 mt-4 text-right">분석 기준: ${window._b4AiAnalysis?.period || ''} · ${window._b4AiAnalysis?.dataCount || 0}건</p>
             </div>`;
     }
+
+    // ═══════════════════════════════════════════════════════
+    // 탭5 v5: 운반자 실적 · 도급비 분석
+    // - 기본키는 차량번호가 아니라 C열 "운반자"
+    // - 0과 미입력(null)을 구분
+    // - 전체 현황 → 운반자 상세 → 다중 비교의 3단 구조
+    // ═══════════════════════════════════════════════════════
+    const D5V2_COLORS = ['#0f766e','#2563eb','#d97706','#7c3aed','#dc2626','#0891b2'];
+    const D5V2_METRICS = {
+        net:            { label:'운반비매출', unit:'원', money:true },
+        dogup:          { label:'도급료', unit:'원', money:true, external:true },
+        ratio:          { label:'도급비율', unit:'%', percent:true, external:true },
+        weight:         { label:'운반톤수', unit:'T' },
+        trips:          { label:'운반건수', unit:'건' },
+        deduct:         { label:'공제금', unit:'원', money:true, external:true },
+        final:          { label:'최종지급액', unit:'원', money:true, external:true },
+        deductPerTrip:  { label:'건당 공제금', unit:'원/건', money:true, external:true },
+        netPerTrip:     { label:'건당 운반비매출', unit:'원/건', money:true },
+        weightPerTrip:  { label:'건당 운반톤수', unit:'T/건' }
+    };
+    let _d5v2Mode = 'overview';
+    let _d5v2Focus = null;
+    let _d5v2OverviewMetric = 'net';
+    let _d5v2DetailMetric = 'net';
+    let _d5v2CompareMetric = 'net';
+    let _d5v2OverviewChart = null, _d5v2DetailChartInst = null, _d5v2CompareChartInst = null;
+
+    function d5v2FmtMoney(v) {
+        if (v === null || v === undefined || !Number.isFinite(Number(v))) return '—';
+        const n = Number(v);
+        if (Math.abs(n) >= 100000000) return (n/100000000).toFixed(1).replace(/\.0$/,'') + '억';
+        if (Math.abs(n) >= 10000000) return (n/10000000).toFixed(1).replace(/\.0$/,'') + '천만';
+        if (Math.abs(n) >= 1000000) return (n/1000000).toFixed(1).replace(/\.0$/,'') + '백만';
+        if (Math.abs(n) >= 10000) return Math.round(n/10000).toLocaleString('ko-KR') + '만';
+        return Math.round(n).toLocaleString('ko-KR');
+    }
+    function d5v2FmtFull(v) { return (v === null || v === undefined || !Number.isFinite(Number(v))) ? '—' : Math.round(Number(v)).toLocaleString('ko-KR'); }
+    function d5v2FmtMetric(key, v, compact=true) {
+        if (v === null || v === undefined || !Number.isFinite(Number(v))) return '—';
+        if (['net','dogup','deduct','final','deductPerTrip','netPerTrip'].includes(key)) return (compact ? d5v2FmtMoney(v) : d5v2FmtFull(v)) + (compact ? '원' : '');
+        if (key === 'ratio') return Number(v).toFixed(1) + '%';
+        if (key === 'weight') return Number(v).toLocaleString('ko-KR',{maximumFractionDigits:1}) + 'T';
+        if (key === 'trips') return Math.round(v).toLocaleString('ko-KR') + '건';
+        if (key === 'weightPerTrip') return Number(v).toFixed(1) + 'T/건';
+        return Number(v).toLocaleString('ko-KR');
+    }
+    function d5v2MonthLabel(m) { return (m && m.length===4) ? `20${m.slice(0,2)}.${m.slice(2)}` : m; }
+
+    function setDriverType(type) {
+        _driverType = type;
+        ['All','Out','Direct'].forEach(t => {
+            const el = document.getElementById('d5Type'+t);
+            if (!el) return;
+            const val = t==='All'?'all':t==='Out'?'out':'direct';
+            el.className = val===type
+                ? 'px-3 py-2 text-xs font-bold rounded-md bg-white text-teal-700 shadow-sm'
+                : 'px-3 py-2 text-xs font-bold rounded-md text-slate-500';
+        });
+        _d5Selected = [];
+        _d5v2Focus = null;
+        _d5v2Mode = 'overview';
+        renderDogupTab();
+    }
+
+    function buildD5V2Filters() {
+        const data = window.dogupData || [];
+        const years = [...new Set(data.map(d => d.month && d.month.length>=4 ? '20'+d.month.slice(0,2) : '').filter(Boolean))].sort();
+        const months = [...new Set(data.map(d => d.month && d.month.length>=4 ? d.month.slice(2,4) : '').filter(Boolean))].sort();
+        const yr = document.getElementById('d5FilterYear'), mo = document.getElementById('d5FilterMonth');
+        if (!yr || !mo) return;
+        const oldYr = yr.value, oldMo = mo.value;
+        yr.innerHTML = '<option value="all">전체 기간</option>' + years.map(y=>`<option value="${y}">${y}년</option>`).join('');
+        mo.innerHTML = '<option value="all">전체 월</option>' + months.map(m=>`<option value="${m}">${parseInt(m,10)}월</option>`).join('');
+        if (years.includes(oldYr)) yr.value = oldYr;
+        else if (oldYr === 'all' && yr.dataset.initialized === '1') yr.value = 'all';
+        else if (years.length) yr.value = years[years.length-1];
+        if (months.includes(oldMo)) mo.value = oldMo; else mo.value = 'all';
+        yr.dataset.initialized = '1';
+    }
+
+    function getD5V2FilteredRows({ignoreMonth=false, ignoreYear=false}={}) {
+        const yr = document.getElementById('d5FilterYear')?.value || 'all';
+        const mo = document.getElementById('d5FilterMonth')?.value || 'all';
+        return (window.dogupData || []).filter(d => {
+            if (_driverType === 'out' && d.isDirect) return false;
+            if (_driverType === 'direct' && !d.isDirect) return false;
+            if (!ignoreYear && yr !== 'all' && ('20'+d.month.slice(0,2)) !== yr) return false;
+            if (!ignoreMonth && mo !== 'all' && d.month.slice(2,4) !== mo) return false;
+            return true;
+        });
+    }
+
+    function aggregateTransporterV2(name, rows) {
+        const data = (rows || getD5V2FilteredRows()).filter(d => d.driver === name);
+        const sum = (key, nullable=false) => {
+            const vals = data.map(d=>d[key]).filter(v=>v !== null && v !== undefined && Number.isFinite(Number(v)));
+            if (nullable && !vals.length) return null;
+            return vals.reduce((s,v)=>s+Number(v),0);
+        };
+        const weight = sum('weight'), trips = sum('trips'), total = sum('totalRev'), net = sum('netRev');
+        let dogup = sum('dogup',true), deduct = sum('deduct',true), final = sum('finalPay',true);
+        const metaRows = data.length ? data : (window.dogupData || []).filter(d=>d.driver===name);
+        const directCount = metaRows.filter(d=>d.isDirect).length;
+        const type = metaRows.length && directCount===metaRows.length ? '직영' : directCount===0 ? '외주' : '혼합';
+        const vehicles = [...new Set(metaRows.map(d=>d.vehicle).filter(Boolean))];
+        if (type === '직영') { dogup = null; deduct = null; final = null; }
+        const ratio = (type !== '직영' && net > 0 && dogup !== null) ? dogup/net*100 : null;
+        const deductPerTrip = (type !== '직영' && deduct !== null && trips > 0) ? deduct/trips : null;
+        const netPerTrip = trips > 0 ? net/trips : null;
+        const weightPerTrip = trips > 0 ? weight/trips : null;
+        return { name, vehicles, type, rows:data, weight, trips, total, net, dogup, deduct, final, ratio, deductPerTrip, netPerTrip, weightPerTrip };
+    }
+
+    function getD5V2Transporters(rows=getD5V2FilteredRows()) {
+        const names = [...new Set(rows.map(d=>d.driver).filter(Boolean))];
+        return names.map(n=>aggregateTransporterV2(n,rows));
+    }
+
+    function d5v2Status(a) {
+        if (a.type === '직영') return {text:'직영', cls:'bg-sky-50 text-sky-700 border-sky-200'};
+        if (a.net <= 0 && (a.dogup||0) > 0) return {text:'매출 0', cls:'bg-red-50 text-red-700 border-red-200'};
+        if (a.ratio !== null && a.ratio > 100) return {text:'도급료 > 매출', cls:'bg-red-50 text-red-700 border-red-200'};
+        if ((a.dogup||0) > 0 && a.deduct === null) return {text:'공제 미입력', cls:'bg-amber-50 text-amber-700 border-amber-200'};
+        return {text:'', cls:''};
+    }
+
+    function renderD5V2Summary() {
+        const rows = getD5V2FilteredRows();
+        const weight = rows.reduce((s,d)=>s+(d.weight||0),0);
+        const trips = rows.reduce((s,d)=>s+(d.trips||0),0);
+        const net = rows.reduce((s,d)=>s+(d.netRev||0),0);
+        const extRows = rows.filter(d=>!d.isDirect);
+        const dogupVals = extRows.map(d=>d.dogup).filter(v=>v!==null && v!==undefined);
+        const dogup = dogupVals.length ? dogupVals.reduce((s,v)=>s+v,0) : null;
+        const extNet = extRows.reduce((s,d)=>s+(d.netRev||0),0);
+        const ratio = extNet>0 && dogup!==null ? dogup/extNet*100 : null;
+        const alerts = getD5V2Transporters(rows).filter(a=>d5v2Status(a).text && d5v2Status(a).text!=='직영').length;
+        const kpis = [
+            ['운반톤수', weight.toLocaleString('ko-KR',{maximumFractionDigits:1})+'T', '선택기간 합계'],
+            ['운반건수', trips.toLocaleString('ko-KR')+'건', '선택기간 합계'],
+            ['운반비매출', d5v2FmtMoney(net)+'원', '운반 매출'],
+            ['외주 도급료', dogup===null?'—':d5v2FmtMoney(dogup)+'원', '직영 제외'],
+            ['외주 도급비율', ratio===null?'—':ratio.toFixed(1)+'%', '총 도급료 ÷ 총 운반비매출'],
+            ['확인 필요', alerts.toLocaleString('ko-KR')+'건', '매출0 · 도급료초과 · 공제미입력']
+        ];
+        const el = document.getElementById('d5v2SummaryKpis');
+        if (el) el.innerHTML = kpis.map((k,i)=>`<div class="bg-white rounded-xl p-4 card-shadow border border-slate-100 ${i===5&&alerts?'border-l-4 border-l-amber-400':''}"><p class="text-xs font-bold text-slate-500">${k[0]}</p><p class="text-xl font-bold text-slate-900 mt-1">${k[1]}</p><p class="text-xs text-slate-400 mt-1">${k[2]}</p></div>`).join('');
+        const yr = document.getElementById('d5FilterYear')?.value || 'all', mo = document.getElementById('d5FilterMonth')?.value || 'all';
+        const label = `${yr==='all'?'전체 기간':yr+'년'} · ${mo==='all'?'전체 월':parseInt(mo,10)+'월'}`;
+        const badge = document.getElementById('d5v2PeriodBadge'); if (badge) badge.textContent = label;
+    }
+
+    function renderD5V2Chips() {
+        const area = document.getElementById('d5v2CompareChips');
+        const btn = document.getElementById('d5v2CompareBtn'), clear = document.getElementById('d5v2ClearBtn');
+        if (!area) return;
+        area.innerHTML = _d5Selected.length ? _d5Selected.map((n,i)=>`<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold border" style="border-color:${D5V2_COLORS[i%D5V2_COLORS.length]};color:${D5V2_COLORS[i%D5V2_COLORS.length]};background:${D5V2_COLORS[i%D5V2_COLORS.length]}12">${n}<button onclick="toggleD5CompareSelectionV2('${String(n).replace(/'/g,"\\'")}')" class="opacity-50 hover:opacity-100">×</button></span>`).join('') : '<span class="text-xs text-slate-400">표의 체크박스로 2~4개 운반자를 담아 비교할 수 있습니다.</span>';
+        if (btn) { btn.classList.toggle('hidden', _d5Selected.length < 2); btn.textContent = `선택 운반자 비교 (${_d5Selected.length})`; }
+        if (clear) clear.classList.toggle('hidden', _d5Selected.length===0);
+    }
+
+    function d5v2MetricButtons(targetId, activeKey, setterName, keys) {
+        const el = document.getElementById(targetId); if (!el) return;
+        el.innerHTML = keys.map(k=>{
+            const m=D5V2_METRICS[k], on=k===activeKey;
+            return `<button onclick="${setterName}('${k}')" class="px-2.5 py-1.5 rounded-full text-xs font-bold border ${on?'bg-teal-50 text-teal-700 border-teal-300':'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}">${m.label}</button>`;
+        }).join('');
+    }
+
+    function setD5OverviewMetricV2(k){ _d5v2OverviewMetric=k; renderD5OverviewV2(); }
+    function setD5DetailMetricV2(k){ _d5v2DetailMetric=k; renderD5DetailV2(); }
+    function setD5CompareMetricV2(k){ _d5v2CompareMetric=k; renderD5CompareV2(); }
+
+    function renderD5OverviewV2() {
+        const rows = getD5V2FilteredRows();
+        let list = getD5V2Transporters(rows);
+        const q = (document.getElementById('d5v2Search')?.value || '').trim().toLowerCase();
+        if (q) list = list.filter(a=>a.name.toLowerCase().includes(q) || a.vehicles.join(' ').toLowerCase().includes(q));
+        const externalNet = list.filter(a=>a.type!=='직영').reduce((s,a)=>s+a.net,0);
+        const externalDogup = list.filter(a=>a.type!=='직영'&&a.dogup!==null).reduce((s,a)=>s+a.dogup,0);
+        const overallRatio = externalNet>0 ? externalDogup/externalNet*100 : null;
+        list.sort((a,b)=>b.net-a.net);
+        const body = document.getElementById('d5v2OverviewBody');
+        if (body) body.innerHTML = list.length ? list.map(a=>{
+            const st=d5v2Status(a), checked=_d5Selected.includes(a.name);
+            const ratioGap = a.ratio!==null && overallRatio!==null ? a.ratio-overallRatio : null;
+            const ratioHtml = a.ratio===null?'—':`${a.ratio.toFixed(1)}%${ratioGap!==null?`<span class="block text-[10px] ${ratioGap>0?'text-amber-600':'text-slate-400'}">평균 ${ratioGap>=0?'+':''}${ratioGap.toFixed(1)}%p</span>`:''}`;
+            return `<tr class="border-b border-slate-100 hover:bg-teal-50/40 transition-colors ${checked?'bg-teal-50/60':''}">
+                <td class="p-2.5 text-center"><input type="checkbox" ${checked?'checked':''} onclick="event.stopPropagation();toggleD5CompareSelectionV2('${String(a.name).replace(/'/g,"\\'")}')" class="accent-teal-600"></td>
+                <td class="p-2.5"><button onclick="openD5DetailV2('${String(a.name).replace(/'/g,"\\'")}')" class="font-bold text-slate-900 hover:text-teal-700 hover:underline text-left">${a.name}</button></td>
+                <td class="p-2.5 text-slate-500">${a.vehicles.join(', ')||'—'}</td>
+                <td class="p-2.5 text-center"><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${a.type==='직영'?'bg-sky-50 text-sky-700':'bg-slate-100 text-slate-600'}">${a.type}</span></td>
+                <td class="p-2.5 text-right">${a.weight.toLocaleString('ko-KR',{maximumFractionDigits:1})}</td>
+                <td class="p-2.5 text-right">${a.trips.toLocaleString('ko-KR')}</td>
+                <td class="p-2.5 text-right font-semibold text-blue-700">${d5v2FmtFull(a.net)}</td>
+                <td class="p-2.5 text-right">${a.dogup===null?'—':d5v2FmtFull(a.dogup)}</td>
+                <td class="p-2.5 text-right">${a.deduct===null?'—':d5v2FmtFull(a.deduct)}</td>
+                <td class="p-2.5 text-right">${a.final===null?'—':d5v2FmtFull(a.final)}</td>
+                <td class="p-2.5 text-right font-semibold">${ratioHtml}</td>
+                <td class="p-2.5 text-right">${a.deductPerTrip===null?'—':d5v2FmtFull(a.deductPerTrip)}</td>
+                <td class="p-2.5">${st.text && st.text!=='직영'?`<span class="inline-flex border rounded-full px-2 py-0.5 text-[10px] font-bold ${st.cls}">${st.text}</span>`:'<span class="text-slate-300">—</span>'}</td>
+            </tr>`;
+        }).join('') : '<tr><td colspan="13" class="p-8 text-center text-slate-400">조건에 맞는 운반자 데이터가 없습니다.</td></tr>';
+        const count = document.getElementById('d5v2OverviewCount'); if (count) count.textContent = `운반자 ${list.length}개`;
+
+        const keys = _driverType==='direct' ? ['net','weight','trips','netPerTrip','weightPerTrip'] : ['net','dogup','ratio','weight','trips','deductPerTrip'];
+        if (!keys.includes(_d5v2OverviewMetric)) _d5v2OverviewMetric = keys[0];
+        d5v2MetricButtons('d5v2OverviewMetricBtns',_d5v2OverviewMetric,'setD5OverviewMetricV2',keys);
+        renderD5OverviewChartV2(list);
+    }
+
+    function renderD5OverviewChartV2(list) {
+        if (_d5v2OverviewChart) { try{_d5v2OverviewChart.destroy();}catch(e){} _d5v2OverviewChart=null; }
+        const canvas=document.getElementById('d5v2OverviewChart'); if(!canvas||typeof Chart==='undefined') return;
+        const k=_d5v2OverviewMetric, metric=D5V2_METRICS[k];
+        let rows=list.map(a=>({a,v:a[k]})).filter(x=>x.v!==null&&x.v!==undefined&&Number.isFinite(Number(x.v)));
+        rows.sort((a,b)=>Number(b.v)-Number(a.v)); rows=rows.slice(0,8);
+        _d5v2OverviewChart = new Chart(canvas,{type:'bar',data:{labels:rows.map(x=>x.a.name),datasets:[{label:metric.label,data:rows.map(x=>x.v),backgroundColor:'#0f766ecc',borderColor:'#0f766e',borderWidth:1,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${metric.label}: ${d5v2FmtMetric(k,ctx.parsed.x)}`}},datalabels:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.12)'},ticks:{callback:v=>metric.money?d5v2FmtMoney(v):metric.percent?v+'%':v}},y:{grid:{display:false},ticks:{font:{size:11,weight:'bold'}}}}}});
+    }
+
+    function toggleD5CompareSelectionV2(name) {
+        if (_d5Selected.includes(name)) _d5Selected=_d5Selected.filter(n=>n!==name);
+        else {
+            if (_d5Selected.length>=4) { alert('최대 4개 운반자까지 비교할 수 있습니다.'); return; }
+            _d5Selected.push(name);
+        }
+        renderD5V2Chips();
+        if (_d5v2Mode==='overview') renderD5OverviewV2();
+        else if (_d5v2Mode==='compare') renderD5CompareV2();
+    }
+    function clearD5SelectionV2(){ _d5Selected=[]; renderD5V2Chips(); if(_d5v2Mode==='compare') backD5OverviewV2(); else renderD5OverviewV2(); }
+
+    function openD5DetailV2(name){ _d5v2Focus=name; _d5v2Mode='detail'; renderDogupTab(); }
+    function openD5CompareV2(){ if(_d5Selected.length<2){alert('비교할 운반자를 2개 이상 선택해주세요.');return;} _d5v2Mode='compare'; _d5v2Focus=null; renderDogupTab(); }
+    function backD5OverviewV2(){ _d5v2Mode='overview'; _d5v2Focus=null; renderDogupTab(); }
+
+    function renderD5DetailV2() {
+        const name=_d5v2Focus; if(!name) return;
+        const rows=getD5V2FilteredRows(); const a=aggregateTransporterV2(name,rows);
+        const title=document.getElementById('d5v2DetailTitle'), sub=document.getElementById('d5v2DetailSub');
+        if(title) title.textContent=name; if(sub) sub.textContent=`${a.vehicles.join(', ')||'차량 미상'} · ${a.type} · 선택기간 합계`;
+        const kpis=[['운반톤수',d5v2FmtMetric('weight',a.weight)],['운반건수',d5v2FmtMetric('trips',a.trips)],['총매출',d5v2FmtMoney(a.total)+'원'],['운반비매출',d5v2FmtMoney(a.net)+'원'],['도급료',a.dogup===null?'—':d5v2FmtMoney(a.dogup)+'원'],['공제금',a.deduct===null?'—':d5v2FmtMoney(a.deduct)+'원'],['최종지급액',a.final===null?'—':d5v2FmtMoney(a.final)+'원'],['도급비율',a.ratio===null?'—':a.ratio.toFixed(1)+'%']];
+        const ke=document.getElementById('d5v2DetailKpis'); if(ke) ke.innerHTML=kpis.map(k=>`<div class="rounded-xl bg-slate-50 border border-slate-100 p-3"><p class="text-xs font-bold text-slate-500">${k[0]}</p><p class="text-base font-bold text-slate-900 mt-1">${k[1]}</p></div>`).join('');
+        const add=document.getElementById('d5v2DetailCompareAdd'); if(add){ add.textContent=_d5Selected.includes(name)?'✓ 비교 바구니에 있음':'비교 바구니 담기'; add.onclick=()=>toggleD5CompareSelectionV2(name); }
+
+        const eff=[['건당 운반톤수',a.weightPerTrip===null?'—':a.weightPerTrip.toFixed(1)+'T/건'],['건당 운반비매출',a.netPerTrip===null?'—':d5v2FmtMoney(a.netPerTrip)+'원/건'],['건당 도급료',a.dogup===null||a.trips<=0?'—':d5v2FmtMoney(a.dogup/a.trips)+'원/건'],['건당 공제금',a.deductPerTrip===null?'—':d5v2FmtMoney(a.deductPerTrip)+'원/건']];
+        const ee=document.getElementById('d5v2Efficiency'); if(ee) ee.innerHTML=eff.map(e=>`<div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-3"><span class="text-sm text-slate-500">${e[0]}</span><strong class="text-sm text-slate-900">${e[1]}</strong></div>`).join('');
+        const st=d5v2Status(a), notice=document.getElementById('d5v2DetailNotice'); if(notice) notice.innerHTML=st.text&&st.text!=='직영'?`<div class="rounded-xl border px-3 py-3 text-xs font-bold ${st.cls}">확인 필요: ${st.text}</div>`:(a.type==='직영'?'<div class="rounded-xl bg-sky-50 border border-sky-100 px-3 py-3 text-xs text-sky-700">직영 운반자는 도급료·공제금·최종지급액 지표를 비교 대상에서 제외합니다.</div>':'');
+
+        const keys=a.type==='직영'?['net','weight','trips','netPerTrip','weightPerTrip']:['net','dogup','ratio','weight','trips','deduct','final','deductPerTrip'];
+        if(!keys.includes(_d5v2DetailMetric)) _d5v2DetailMetric=keys[0];
+        d5v2MetricButtons('d5v2DetailMetricBtns',_d5v2DetailMetric,'setD5DetailMetricV2',keys);
+        renderD5DetailChartV2(name);
+        renderD5DetailTableV2(name);
+    }
+
+    function getD5V2TimelineRows(name) {
+        // 상세/비교 추이는 연도 필터는 유지하되, 월 필터를 해제해 흐름을 보이도록 함.
+        return getD5V2FilteredRows({ignoreMonth:true}).filter(d=>d.driver===name);
+    }
+    function aggregateRowsV2(rows,name='') { return aggregateTransporterV2(name||'__tmp__', name ? rows : rows.map(r=>({...r,driver:'__tmp__'}))); }
+
+    function valueForMetricV2(rows,key) {
+        const fake=rows.map(r=>({...r,driver:'__tmp__'})); const a=aggregateTransporterV2('__tmp__',fake); return a[key];
+    }
+
+    function renderD5DetailChartV2(name) {
+        if(_d5v2DetailChartInst){try{_d5v2DetailChartInst.destroy();}catch(e){} _d5v2DetailChartInst=null;}
+        const canvas=document.getElementById('d5v2DetailChart'); if(!canvas||typeof Chart==='undefined') return;
+        const rows=getD5V2TimelineRows(name); const months=[...new Set(rows.map(r=>r.month))].sort(); const k=_d5v2DetailMetric, m=D5V2_METRICS[k];
+        const vals=months.map(mon=>valueForMetricV2(rows.filter(r=>r.month===mon),k));
+        _d5v2DetailChartInst=new Chart(canvas,{type:'line',data:{labels:months.map(d5v2MonthLabel),datasets:[{label:m.label,data:vals,borderColor:'#0f766e',backgroundColor:'#0f766e18',pointBackgroundColor:'#0f766e',pointRadius:4,borderWidth:2.5,tension:.25,fill:true,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${m.label}: ${d5v2FmtMetric(k,ctx.parsed.y)}`}},datalabels:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.12)'},ticks:{callback:v=>m.money?d5v2FmtMoney(v):m.percent?v+'%':v}}}}});
+    }
+
+    function renderD5DetailTableV2(name) {
+        const rows=getD5V2TimelineRows(name); const months=[...new Set(rows.map(r=>r.month))].sort().reverse();
+        const body=document.getElementById('d5v2DetailTableBody'); if(!body) return;
+        body.innerHTML=months.map(mon=>{const a=aggregateTransporterV2(name,rows.filter(r=>r.month===mon));return `<tr class="border-b border-slate-100"><td class="p-2.5 font-bold text-slate-700">${d5v2MonthLabel(mon)}</td><td class="p-2.5 text-right">${a.weight.toLocaleString('ko-KR',{maximumFractionDigits:1})}</td><td class="p-2.5 text-right">${a.trips.toLocaleString('ko-KR')}</td><td class="p-2.5 text-right">${d5v2FmtFull(a.total)}</td><td class="p-2.5 text-right">${d5v2FmtFull(a.net)}</td><td class="p-2.5 text-right">${a.dogup===null?'—':d5v2FmtFull(a.dogup)}</td><td class="p-2.5 text-right">${a.deduct===null?'—':d5v2FmtFull(a.deduct)}</td><td class="p-2.5 text-right">${a.final===null?'—':d5v2FmtFull(a.final)}</td><td class="p-2.5 text-right font-semibold">${a.ratio===null?'—':a.ratio.toFixed(1)+'%'}</td><td class="p-2.5 text-right">${a.deductPerTrip===null?'—':d5v2FmtFull(a.deductPerTrip)}</td></tr>`;}).join('')||'<tr><td colspan="10" class="p-8 text-center text-slate-400">월별 데이터가 없습니다.</td></tr>';
+    }
+
+    function renderD5CompareV2() {
+        const rows=getD5V2FilteredRows();
+        const list=_d5Selected.map(n=>aggregateTransporterV2(n,rows)).filter(a=>a.rows.length);
+        const body=document.getElementById('d5v2CompareTableBody');
+        if(body) body.innerHTML=list.map((a,i)=>`<tr class="border-b border-slate-100"><td class="p-2.5 font-bold" style="color:${D5V2_COLORS[i%D5V2_COLORS.length]}">${a.name}</td><td class="p-2.5 text-slate-500">${a.vehicles.join(', ')||'—'}</td><td class="p-2.5 text-right">${a.weight.toLocaleString('ko-KR',{maximumFractionDigits:1})}</td><td class="p-2.5 text-right">${a.trips.toLocaleString('ko-KR')}</td><td class="p-2.5 text-right font-semibold">${d5v2FmtFull(a.net)}</td><td class="p-2.5 text-right">${a.dogup===null?'—':d5v2FmtFull(a.dogup)}</td><td class="p-2.5 text-right">${a.deduct===null?'—':d5v2FmtFull(a.deduct)}</td><td class="p-2.5 text-right">${a.final===null?'—':d5v2FmtFull(a.final)}</td><td class="p-2.5 text-right">${a.ratio===null?'—':a.ratio.toFixed(1)+'%'}</td><td class="p-2.5 text-right">${a.deductPerTrip===null?'—':d5v2FmtFull(a.deductPerTrip)}</td></tr>`).join('');
+        const hasOnlyDirect=list.length&&list.every(a=>a.type==='직영');
+        const keys=hasOnlyDirect?['net','weight','trips','netPerTrip','weightPerTrip']:['net','dogup','ratio','weight','trips','deductPerTrip'];
+        if(!keys.includes(_d5v2CompareMetric)) _d5v2CompareMetric=keys[0];
+        d5v2MetricButtons('d5v2CompareMetricBtns',_d5v2CompareMetric,'setD5CompareMetricV2',keys);
+        renderD5CompareChartV2();
+    }
+
+    function renderD5CompareChartV2() {
+        if(_d5v2CompareChartInst){try{_d5v2CompareChartInst.destroy();}catch(e){} _d5v2CompareChartInst=null;}
+        const canvas=document.getElementById('d5v2CompareChart'); if(!canvas||typeof Chart==='undefined') return;
+        const allRows=getD5V2FilteredRows({ignoreMonth:true}); const months=[...new Set(allRows.filter(r=>_d5Selected.includes(r.driver)).map(r=>r.month))].sort(); const k=_d5v2CompareMetric, m=D5V2_METRICS[k];
+        const ds=_d5Selected.map((name,i)=>({label:name,data:months.map(mon=>valueForMetricV2(allRows.filter(r=>r.driver===name&&r.month===mon),k)),borderColor:D5V2_COLORS[i%D5V2_COLORS.length],backgroundColor:D5V2_COLORS[i%D5V2_COLORS.length]+'18',pointRadius:3,borderWidth:2.2,tension:.25,fill:false,spanGaps:true}));
+        _d5v2CompareChartInst=new Chart(canvas,{type:'line',data:{labels:months.map(d5v2MonthLabel),datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11,weight:'bold'}}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${d5v2FmtMetric(k,ctx.parsed.y)}`}},datalabels:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.12)'},ticks:{callback:v=>m.money?d5v2FmtMoney(v):m.percent?v+'%':v}}}}});
+    }
+
+    function renderD5RawV2(){
+        const rows=getD5V2FilteredRows().slice().sort((a,b)=>b.month.localeCompare(a.month)||(a.driver||'').localeCompare(b.driver||'')); const body=document.getElementById('d5v2RawBody'); if(!body)return;
+        body.innerHTML=rows.map(d=>`<tr class="border-b border-slate-100"><td class="p-2 font-bold">${d5v2MonthLabel(d.month)}</td><td class="p-2">${d.vehicle||'—'}</td><td class="p-2 font-semibold">${d.driver||'—'}</td><td class="p-2 text-right">${(d.weight||0).toLocaleString('ko-KR',{maximumFractionDigits:1})}</td><td class="p-2 text-right">${(d.trips||0).toLocaleString('ko-KR')}</td><td class="p-2 text-right">${d5v2FmtFull(d.totalRev)}</td><td class="p-2 text-right">${d5v2FmtFull(d.netRev)}</td><td class="p-2 text-right">${d.dogup===null?'—':d5v2FmtFull(d.dogup)}</td><td class="p-2 text-right">${d.deduct===null?'—':d5v2FmtFull(d.deduct)}</td><td class="p-2 text-right">${d.finalPay===null?'—':d5v2FmtFull(d.finalPay)}</td><td class="p-2 text-right">${d.ratio===null?'—':d.ratio.toFixed(1)+'%'}</td><td class="p-2 text-right">${d.deductPerTrip===null?'—':d5v2FmtFull(d.deductPerTrip)}</td></tr>`).join('')||'<tr><td colspan="12" class="p-8 text-center text-slate-400">데이터가 없습니다.</td></tr>';
+        const c=document.getElementById('d5v2RawCount'); if(c)c.textContent=`현재 필터 기준 ${rows.length.toLocaleString('ko-KR')}행`;
+    }
+
+    function d5ExportRawV2(){
+        const rows=getD5V2FilteredRows(); if(!rows.length){alert('내보낼 데이터가 없습니다.');return;}
+        const headers=['년월','차량번호','운반자','유형','운반톤수','운반건수','총매출','운반비매출','도급료','공제금','최종지급액','도급료비율','건당공제금'];
+        const body=rows.map(d=>[d.month,d.vehicle,d.driver,d.isDirect?'직영':'외주',d.weight,d.trips,d.totalRev,d.netRev,d.dogup??'',d.deduct??'',d.finalPay??'',d.ratio===null?'':d.ratio.toFixed(2)+'%',d.deductPerTrip??'']);
+        const csv='\ufeff'+[headers,...body].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');a.href=url;a.download=`운반자도급비_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);
+    }
+
+    function renderDogupTab() {
+        if(!window.dogupData || !window.dogupData.length) return;
+        buildD5V2Filters();
+        // 현재 필터/유형에 없는 비교 대상은 자동 제거
+        const validNames=new Set(getD5V2Transporters(getD5V2FilteredRows({ignoreMonth:true})).map(a=>a.name));
+        _d5Selected=_d5Selected.filter(n=>validNames.has(n));
+        if(_d5v2Focus && !validNames.has(_d5v2Focus)){_d5v2Focus=null;_d5v2Mode='overview';}
+        renderD5V2Summary(); renderD5V2Chips(); renderD5RawV2();
+        const ov=document.getElementById('d5v2Overview'), dt=document.getElementById('d5v2Detail'), cp=document.getElementById('d5v2Compare');
+        if(ov) ov.classList.toggle('hidden',_d5v2Mode!=='overview'); if(dt)dt.classList.toggle('hidden',_d5v2Mode!=='detail'); if(cp)cp.classList.toggle('hidden',_d5v2Mode!=='compare');
+        if(_d5v2Mode==='detail') renderD5DetailV2(); else if(_d5v2Mode==='compare') renderD5CompareV2(); else renderD5OverviewV2();
+    }
+
 </script>
 </body>
 </html>
