@@ -1066,7 +1066,7 @@
                             </div>
                             <div class="md:col-span-3">
                                 <label class="ct-label" for="ctCaution">취급 시 주의사항</label>
-                                <textarea id="ctCaution" class="ct-input min-h-[74px] resize-y" placeholder="필요 시 입력 (줄바꿈 최대 2줄 반영)" oninput="ctUpdateSummary()"></textarea>
+                                <textarea id="ctCaution" class="ct-input min-h-[74px] resize-y" placeholder="필요 시 입력 (줄바꿈 최대 2줄 반영)" oninput="ctUpdateSummary()">이물질 혼합되지 않도록 분리배출 주의</textarea>
                             </div>
                         </div>
                     </section>
@@ -5705,7 +5705,9 @@ const CONTRACT_PROCESSORS = [
     { id:'youngheung', label:'영흥산업환경', name:'(주)영흥산업환경', bizNo:'312-81-26289', rep:'공진국', address:'충청남도 천안시 동남구 목천읍 학수소사길 142-42' },
     { id:'ochang', label:'오창환경', name:'주식회사 오창환경', bizNo:'266-81-00098', rep:'이종균', address:'충청북도 청주시 청원구 오창읍 후기길 483' },
     { id:'ecotop', label:'에코탑', name:'(주)에코탑', bizNo:'544-81-02375', rep:'신성철', address:'경기도 화성시 우정읍 매바위로237번길 46-315' },
-    { id:'biopost', label:'바이오포스트', name:'농업회사법인 주식회사 바이오포스트', bizNo:'312-81-70427', rep:'정민용', address:'충청남도 천안시 동남구 동면 화복로 256-35' }
+    { id:'biopost', label:'바이오포스트', name:'농업회사법인 주식회사 바이오포스트', bizNo:'312-81-70427', rep:'정민용', address:'충청남도 천안시 동남구 동면 화복로 256-35' },
+    { id:'greenecho_hs1', label:'그린에코사이클 화성1사업소', name:'그린에코사이클(주)화성1사업소', bizNo:'761-85-01867', rep:'이의진', address:'경기도 화성시 마도면 석교남길 37-21' },
+    { id:'greenecho_hs2', label:'그린에코사이클 화성2사업소', name:'그린에코사이클(주)화성2사업소', bizNo:'755-85-01955', rep:'이의진', address:'경기도 화성시 우정읍 사기말길27번길 87-14' }
 ];
 
 let _contractTabInitialized = false;
@@ -5911,6 +5913,7 @@ function initContractTab() {
     ctSet('ctStartDate',ctTodayLocal());
     ctSet('ctEndDate',ctAddOneYearMinusDay(ctTodayLocal()));
     ctSet('ctUnit','T');
+    ctSet('ctCaution','이물질 혼합되지 않도록 분리배출 주의');
     ctToggleEmitterSite();
     ctUpdateSummary();
     ctRefreshTemplateStatus();
@@ -6065,7 +6068,8 @@ async function ctDownloadContract() {
 
 function ctResetForm() {
     if(!confirm('입력한 계약서 정보를 모두 초기화할까요?')) return;
-    ['ctEmitterName','ctEmitterBizNo','ctEmitterRep','ctEmitterAddress','ctActualSiteName','ctActualSiteAddress','ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctAnnualVolume','ctWasteForm','ctTransportRate','ctTreatmentRate','ctTreatmentMethod','ctCaution'].forEach(id=>ctSet(id,''));
+    ['ctEmitterName','ctEmitterBizNo','ctEmitterRep','ctEmitterAddress','ctActualSiteName','ctActualSiteAddress','ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctAnnualVolume','ctWasteForm','ctTransportRate','ctTreatmentRate','ctTreatmentMethod'].forEach(id=>ctSet(id,''));
+    ctSet('ctCaution','이물질 혼합되지 않도록 분리배출 주의');
     ctSet('ctProcessorSelect',''); ctSet('ctUnit','T');
     const chk=ctEl('ctSameEmitterSite'); if(chk) chk.checked=true;
     ctSet('ctStartDate',ctTodayLocal()); ctSet('ctEndDate',ctAddOneYearMinusDay(ctTodayLocal()));
