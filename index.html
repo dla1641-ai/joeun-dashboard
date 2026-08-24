@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.default.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -107,6 +108,22 @@
         }
         #btnResetFilters:hover { background: #fecaca; }
         #btnResetFilters.visible { display: inline-flex; }
+    
+
+        /* ── 계약서 자동 생성 ── */
+        .ct-input {
+            width: 100%; border: 1px solid #cbd5e1; border-radius: .65rem;
+            padding: .62rem .75rem; font-size: .875rem; background: #fff;
+            color: #0f172a; outline: none; transition: .15s ease;
+        }
+        .ct-input:focus { border-color:#0f766e; box-shadow:0 0 0 2px rgba(13,148,136,.12); }
+        .ct-input[readonly] { background:#f8fafc; color:#475569; }
+        .ct-label { display:block; font-size:.75rem; font-weight:700; color:#475569; margin-bottom:.35rem; }
+        .ct-required::after { content:' *'; color:#dc2626; }
+        .ct-section-title { font-size:1rem; font-weight:800; color:#0f172a; }
+        .ct-help { font-size:.72rem; color:#94a3b8; margin-top:.3rem; line-height:1.45; }
+        .ct-missing { border-color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,.15) !important; }
+
     </style>
 </head>
 <body class="text-slate-800">
@@ -125,7 +142,7 @@
                     <p class="text-sm text-teal-600 font-medium">배출시설계사업팀 (전체 현황 및 고객사/차량 분석)</p>
                 </div>
                 <!-- 매출 기준 토글 -->
-                <div class="flex flex-col gap-1 ml-2">
+                <div id="basisControl" class="flex flex-col gap-1 ml-2">
                     <p class="text-xs font-bold text-slate-400">매출 기준</p>
                     <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
                         <button id="btnBasisPerform" onclick="setBasis('perform')"
@@ -141,7 +158,7 @@
             </div>
 
             <!-- 필터 + 업로드 -->
-            <div class="flex flex-col w-full xl:w-auto gap-3">
+            <div id="globalFilterPanel" class="flex flex-col w-full xl:w-auto gap-3">
                 <div class="flex flex-wrap items-start gap-3 bg-teal-50/50 p-3 rounded-xl border border-teal-100">
                     <!-- 업체명 -->
                     <div class="flex flex-col gap-1">
@@ -229,6 +246,7 @@
             <button id="btnTab3" onclick="switchTab(3)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">차량별 실적 현황</button>
             <button id="btnTab4" onclick="switchTab(4)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">📋 고객사 브리핑</button>
             <button id="btnTab5" onclick="switchTab(5)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">🚛 운반자 실적 · 도급비</button>
+            <button id="btnTab6" onclick="switchTab(6)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">📄 계약서 자동 생성</button>
         </div>
     </div>
 
@@ -867,6 +885,216 @@
             </details>
         </div>
 
+        <!-- 탭6: 폐기물 표준계약서 자동 생성 -->
+        <div id="tab6-content" class="hidden space-y-5">
+            <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 class="text-xl font-bold text-slate-900">📄 폐기물 표준계약서 자동 생성</h2>
+                            <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">원본 Word 양식 그대로</span>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-1">등록한 회사 표준 「폐기물 수집운반·처리계약서」 원본을 그대로 사용하며, 아래 입력값만 원본 문서의 해당 위치에 치환합니다.</p>
+                    </div>
+                    <div class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 leading-6">
+                        <b class="text-slate-700">고정:</b> 조은환경 정보 · 계좌 · 계약 조항 · 문서 서식<br>
+                        <b class="text-slate-700">변경:</b> 날짜 · 배출자 · 처리자 · 폐기물/단가 정보
+                    </div>
+                </div>
+            </div>
+
+            <!-- 원본 계약서 템플릿: 브라우저 로컬 보관 (GitHub/서버 미업로드) -->
+            <section class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h3 class="ct-section-title">🔒 회사 표준계약서 원본</h3>
+                            <span id="ctTemplateBadge" class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">확인 중</span>
+                        </div>
+                        <p id="ctTemplateMeta" class="text-sm text-slate-500 mt-1">등록된 원본을 확인하고 있습니다.</p>
+                        <p class="ct-help mt-1">원본 DOCX는 GitHub나 외부 서버에 포함하지 않고, 이 브라우저의 로컬 저장소(IndexedDB)에만 보관합니다. 계약서 생성 시 원본 문서에서 지정된 변경값만 치환합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <input id="ctTemplateFile" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="hidden" onchange="ctRegisterTemplate(this)">
+                        <button type="button" onclick="ctEl('ctTemplateFile').click()" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold transition">원본 계약서 등록/교체</button>
+                        <button id="ctDeleteTemplateBtn" type="button" onclick="ctDeleteTemplate()" class="hidden px-4 py-2.5 rounded-xl bg-white hover:bg-red-50 text-red-600 border border-red-200 text-sm font-bold transition">등록 원본 삭제</button>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
+                <div class="xl:col-span-2 space-y-5">
+                    <!-- 계약 정보 -->
+                    <section class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-sm">1</span>
+                            <h3 class="ct-section-title">계약 정보</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="ct-label ct-required" for="ctStartDate">계약 시작일</label>
+                                <input id="ctStartDate" class="ct-input" type="date" onchange="ctOnStartDateChange()">
+                                <p class="ct-help">마지막 장의 계약 체결일도 동일한 날짜로 자동 반영됩니다.</p>
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctEndDate">계약 종료일</label>
+                                <input id="ctEndDate" class="ct-input" type="date" oninput="ctUpdateSummary()">
+                                <p class="ct-help">시작일 기준 1년 - 1일로 자동 계산되며 필요하면 직접 수정할 수 있습니다.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 배출자 -->
+                    <section class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-sm">2</span>
+                            <div>
+                                <h3 class="ct-section-title">배출자 정보</h3>
+                                <p class="ct-help mt-0">고객사 사업자등록증 기준 정보를 입력합니다.</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="ct-label ct-required" for="ctEmitterName">상호</label>
+                                <input id="ctEmitterName" class="ct-input" type="text" placeholder="예: 주식회사 파라" oninput="ctSyncActualSite();ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctEmitterBizNo">사업자번호</label>
+                                <input id="ctEmitterBizNo" class="ct-input" type="text" placeholder="000-00-00000" onblur="ctFormatBizInput(this)" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctEmitterRep">대표자</label>
+                                <input id="ctEmitterRep" class="ct-input" type="text" placeholder="대표자 성명" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctEmitterAddress">사업자등록상 주소</label>
+                                <input id="ctEmitterAddress" class="ct-input" type="text" placeholder="사업자등록증 소재지" oninput="ctSyncActualSite();ctUpdateSummary()">
+                            </div>
+                        </div>
+                        <label class="mt-4 flex items-center gap-2 cursor-pointer select-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                            <input id="ctSameEmitterSite" type="checkbox" checked onchange="ctToggleEmitterSite()" class="w-4 h-4 accent-teal-600">
+                            <span class="text-sm font-bold text-slate-700">실제 배출장소가 사업자등록상 주소와 동일</span>
+                        </label>
+                        <div id="ctEmitterSiteExtra" class="hidden mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-amber-50/50 border border-amber-100 rounded-xl p-4">
+                            <div>
+                                <label class="ct-label ct-required" for="ctActualSiteName">사업장명(실제배출장소)</label>
+                                <input id="ctActualSiteName" class="ct-input" type="text" placeholder="예: ○○공장" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctActualSiteAddress">사업장 주소(실제배출장소)</label>
+                                <input id="ctActualSiteAddress" class="ct-input" type="text" placeholder="실제 폐기물 배출장소" oninput="ctUpdateSummary()">
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 처리자 -->
+                    <section class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="w-7 h-7 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center font-bold text-sm">3</span>
+                            <div class="flex-1">
+                                <h3 class="ct-section-title">처리자 정보</h3>
+                                <p class="ct-help mt-0">처리장을 선택하면 저장된 사업자 정보가 자동 입력됩니다. 처리장 주소는 사업자등록상 주소와 동일하게 계약서에 반영됩니다.</p>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="ct-label ct-required" for="ctProcessorSelect">처리장 선택</label>
+                            <select id="ctProcessorSelect" class="ct-input" onchange="ctOnProcessorChange()"></select>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="ct-label ct-required" for="ctProcessorName">계약서상 상호</label>
+                                <input id="ctProcessorName" class="ct-input" type="text" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctProcessorBizNo">사업자번호</label>
+                                <input id="ctProcessorBizNo" class="ct-input" type="text" onblur="ctFormatBizInput(this)" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctProcessorRep">대표자</label>
+                                <input id="ctProcessorRep" class="ct-input" type="text" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctProcessorAddress">사업자등록상 주소 = 실제 처리장 주소</label>
+                                <input id="ctProcessorAddress" class="ct-input" type="text" oninput="ctUpdateSummary()">
+                            </div>
+                        </div>
+                        <div id="ctProcessorWarning" class="hidden mt-3 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"></div>
+                    </section>
+
+                    <!-- 폐기물/단가 -->
+                    <section class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div class="flex flex-wrap items-center gap-2 mb-4">
+                            <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-sm">4</span>
+                            <div class="flex-1">
+                                <h3 class="ct-section-title">폐기물 · 단가 정보</h3>
+                                <p class="ct-help mt-0">처리장별 기본 폐기물 정보가 등록된 경우 폐기물 종류·코드·처리방법이 자동 입력됩니다.</p>
+                            </div>
+                            <span id="ctWasteDefaultBadge" class="hidden text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full"></span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="ct-label ct-required" for="ctWasteName">폐기물 종류</label>
+                                <input id="ctWasteName" class="ct-input" type="text" placeholder="예: 폐합성수지" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctWasteCode">폐기물 코드</label>
+                                <input id="ctWasteCode" class="ct-input" type="text" placeholder="51-03-01" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctUnit">단위</label>
+                                <input id="ctUnit" class="ct-input" type="text" value="T" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctAnnualVolume">예상 배출량(톤/년)</label>
+                                <input id="ctAnnualVolume" class="ct-input" type="number" min="0" step="0.01" placeholder="300" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctWasteForm">성상</label>
+                                <input id="ctWasteForm" class="ct-input" type="text" placeholder="예: 고상" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctTransportRate">운반단가</label>
+                                <input id="ctTransportRate" class="ct-input" type="number" min="0" step="1" placeholder="100000" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctTreatmentRate">처리단가</label>
+                                <input id="ctTreatmentRate" class="ct-input" type="number" min="0" step="1" placeholder="150000" oninput="ctUpdateSummary()">
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="ctTreatmentMethod">처리방법</label>
+                                <input id="ctTreatmentMethod" class="ct-input" type="text" placeholder="예: 2010" oninput="ctUpdateSummary()">
+                            </div>
+                            <div class="md:col-span-3">
+                                <label class="ct-label" for="ctCaution">취급 시 주의사항</label>
+                                <textarea id="ctCaution" class="ct-input min-h-[74px] resize-y" placeholder="필요 시 입력 (줄바꿈 최대 2줄 반영)" oninput="ctUpdateSummary()"></textarea>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 우측 요약/다운로드 -->
+                <aside class="xl:sticky xl:top-[150px] space-y-4">
+                    <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div class="flex items-center justify-between gap-2 mb-4">
+                            <h3 class="ct-section-title">계약서 반영 미리보기</h3>
+                            <span class="text-[11px] font-bold text-slate-400">문서 내용 요약</span>
+                        </div>
+                        <div id="ctSummary" class="space-y-3 text-sm"></div>
+                    </div>
+                    <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-lg">
+                        <p class="text-sm font-bold">원본 Word 파일을 기반으로 생성합니다</p>
+                        <p class="text-xs text-slate-300 mt-1 leading-5">새 문서를 다시 그리지 않고, 최초 계약서의 OOXML/표/서식/직인/조항을 그대로 유지한 채 지정된 값만 교체합니다.</p>
+                        <button id="ctDownloadBtn" onclick="ctDownloadContract()" class="mt-4 w-full bg-teal-500 hover:bg-teal-400 text-white font-bold rounded-xl px-4 py-3 transition-colors flex items-center justify-center gap-2">
+                            <span>⬇</span><span>Word 계약서 다운로드</span>
+                        </button>
+                        <button onclick="ctResetForm()" class="mt-2 w-full border border-slate-600 hover:bg-slate-800 text-slate-300 font-bold rounded-xl px-4 py-2.5 text-sm transition-colors">입력 초기화</button>
+                        <p id="ctDownloadStatus" class="mt-3 text-xs text-slate-400 text-center"></p>
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+
     </main>
 </div>
 
@@ -1306,7 +1534,7 @@
 
     // ── 애니메이션 트리거 ──
     function animateDashboard() {
-        const containers = ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content'];
+        const containers = ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content'];
         containers.forEach(id => {
             const el = document.getElementById(id);
             if (!el.classList.contains('hidden')) {
@@ -1335,14 +1563,29 @@
         currentTab = tabId;
         const active = "px-6 py-3 font-bold text-teal-700 bg-white border border-b-0 border-teal-200 rounded-t-xl transition-all -mb-[1px]";
         const inactive = "px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]";
-        [1,2,3,4,5].forEach(i => {
-            document.getElementById(`btnTab${i}`).className = i === tabId ? active : inactive;
-            document.getElementById(`tab${i}-content`).classList.toggle('hidden', i !== tabId);
+        [1,2,3,4,5,6].forEach(i => {
+            const btn = document.getElementById(`btnTab${i}`);
+            const pane = document.getElementById(`tab${i}-content`);
+            if (btn) btn.className = i === tabId ? active : inactive;
+            if (pane) pane.classList.toggle('hidden', i !== tabId);
         });
-        // 탭5 진입 시 필터 표시 전환
-        const filterCust = document.querySelector('label[for="filterCustomer"]')?.closest('.flex.flex-col.gap-1');
-        const filterWaste = document.querySelector('label[for="filterWaste"]')?.closest('.flex.flex-col.gap-1') || document.querySelectorAll('.flex.flex-col.gap-1')[2];
-        [filterCust, filterWaste].forEach(el => { if(el) el.style.display = tabId === 5 ? 'none' : ''; });
+
+        // 계약서 탭은 매출 필터/기준과 무관하므로 헤더 필터를 숨김
+        const basis = document.getElementById('basisControl');
+        const globalFilters = document.getElementById('globalFilterPanel');
+        if (basis) basis.style.display = tabId === 6 ? 'none' : '';
+        if (globalFilters) globalFilters.style.display = tabId === 6 ? 'none' : '';
+
+        // 탭5에서는 업체/폐기물 공통 필터를 사용하지 않음 (기존 동작 유지)
+        if (tabId !== 6) {
+            const filterBlocks = document.querySelectorAll('#globalFilterPanel > div:first-child > .flex.flex-col');
+            filterBlocks.forEach((el, idx) => {
+                // 업체명(0), 폐기물명(2)만 탭5에서 숨김
+                if (idx === 0 || idx === 2) el.style.display = tabId === 5 ? 'none' : '';
+                else el.style.display = '';
+            });
+        }
+
         renderDashboard();
     }
 
@@ -1506,7 +1749,7 @@
         if (loginGuide) {
             if (!_currentUserEmail) {
                 loginGuide.classList.remove('hidden');
-                ['tab1-content','tab2-content','tab3-content','tab4-content'].forEach(id => {
+                ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content'].forEach(id => {
                     const el = document.getElementById(id); if(el) el.classList.add('hidden');
                 });
                 return;
@@ -1514,6 +1757,20 @@
                 loginGuide.classList.add('hidden');
             }
         }
+
+        // 계약서 자동생성은 매출 데이터 유무와 독립적으로 사용
+        if (currentTab === 6) {
+            const noDataMsg = document.getElementById('noDataMessage');
+            if (noDataMsg) noDataMsg.classList.add('hidden');
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.classList.add('hidden');
+            });
+            const ct = document.getElementById('tab6-content');
+            if (ct) ct.classList.remove('hidden');
+            initContractTab();
+            return;
+        }
+
         const custVals  = getFilterVals(tsCust);
         const vehVals   = getFilterVals(tsVeh);
         const wasteVals = getFilterVals(tsWaste);
@@ -1531,7 +1788,7 @@
         const noDataMsg = document.getElementById('noDataMessage');
         if (filtered.length === 0) {
             noDataMsg.classList.remove('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
             return;
         }
         noDataMsg.classList.add('hidden');
@@ -5389,6 +5646,436 @@ E. YoY 변동 — 전년 대비 추세
     }
 
 </script>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  탭6 · 폐기물 표준계약서 자동 생성
+//  원본 DOCX를 Base64로 내장하고 word/document.xml의 지정 토큰만 치환
+// ════════════════════════════════════════════════════════════════
+const CT_TEMPLATE_DB_NAME = 'je_contract_template_db_v1';
+const CT_TEMPLATE_STORE = 'templates';
+const CT_TEMPLATE_KEY = 'waste_standard_contract';
+const CT_DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+// 회사 표준계약서 원본에서 "변경 허용값"만 지정합니다.
+// 원본 Word의 다른 문구/표/폰트/직인/조항은 건드리지 않습니다.
+const CT_TEMPLATE_PATCHES = [
+    {p:4,   old:'2026 년7월 29일   ~   2027년 7월 28일', token:'{{CONTRACT_PERIOD}}'},
+    {p:10,  old:'주식회사 파라', token:'{{EMITTER_NAME}}'},
+    {p:11,  old:'㈜한강이앰피 화성지점', token:'{{PROCESSOR_NAME}}'},
+    {p:21,  old:'폐합성수지', token:'{{WASTE_NAME}}'},
+    {p:22,  old:'(51 – 03 – 01)', token:'{{WASTE_CODE_FMT}}'},
+    {p:23,  old:'T', token:'{{UNIT}}'},
+    {p:24,  old:'300', token:'{{ANNUAL_VOLUME}}'},
+    {p:25,  old:'고상', token:'{{WASTE_FORM}}'},
+    {p:26,  old:'100,000', token:'{{TRANSPORT_RATE}}'},
+    {p:27,  old:'150,000', token:'{{TREATMENT_RATE}}'},
+    {p:28,  old:'2010', token:'{{TREATMENT_METHOD}}'},
+    {p:29,  old:'이물질 혼합되지', token:'{{CAUTION_LINE1}}'},
+    {p:30,  old:'않도록 분리배출 주의', token:'{{CAUTION_LINE2}}'},
+    {p:36,  old:'주식회사 파라', token:'{{ACTUAL_SITE_NAME}}'},
+    {p:37,  old:'경기도 화성시 마도면 마도공단로 1길 38', token:'{{ACTUAL_SITE_ADDRESS}}'},
+    {p:40,  old:'㈜한강이앰피 화성지점', token:'{{PROCESSOR_NAME}}'},
+    {p:41,  old:'경기도 화성시 장안면 포승장안로1120번길 42-15', token:'{{PROCESSOR_SITE_ADDRESS}}'},
+    {p:121, old:'2026년  7월29일', token:'{{CONTRACT_DATE}}'},
+    {p:128, old:'129-81-27328', token:'{{EMITTER_BIZNO}}'},
+    {p:132, old:'주식회사 파라', token:'{{EMITTER_NAME}}'},
+    {p:136, old:'경기도 화성시 마도면 마도공단로 1길 38', token:'{{EMITTER_ADDRESS}}'},
+    {p:140, old:'대표이사', token:'{{EMITTER_REP}}'},
+    {p:167, old:'605-85-46899', token:'{{PROCESSOR_BIZNO}}'},
+    {p:171, old:'㈜한강이앰피 화성지점', token:'{{PROCESSOR_NAME}}'},
+    {p:175, old:'경기도 화성시 장안면 포승장안로 1120번길 42-15', token:'{{PROCESSOR_ADDRESS}}'},
+    {p:179, old:'대표이사', token:'{{PROCESSOR_REP}}'}
+];
+const CONTRACT_PROCESSORS = [
+    { id:'samhee', label:'삼희개발', name:'삼희개발주식회사', bizNo:'124-86-01522', rep:'이영원', address:'경기도 화성시 마도면 쌍송북로27번길 12-16', waste:{name:'폐합성수지',code:'51-03-01',method:'2010'} },
+    { id:'jungwoo', label:'정우리사이클링', name:'정우리사이클링(주)', bizNo:'124-81-55270', rep:'오준희, 오청호', address:'경기도 화성시 팔탄면 노하길454번길 23', waste:{name:'폐합성수지',code:'51-03-01',method:'2010'} },
+    { id:'geodan', label:'거단산업', name:'(주)거단산업', bizNo:'125-81-58192', rep:'박형남', address:'경기도 평택시 청북읍 청북중앙로 692-23', waste:{name:'폐합성수지',code:'51-03-01',method:'2010'} },
+    { id:'seocheong', label:'서청', name:'주식회사 서청', bizNo:'240-86-01159', rep:'강병기', address:'경기도 평택시 청북읍 고잔2길 100-17', waste:{name:'폐합성수지',code:'51-03-01',method:'2010'} },
+    { id:'hangang', label:'한강이엠피 화성지점', name:'(주)한강이엠피 화성지점', bizNo:'605-85-46899', rep:'김선태', address:'경기도 화성시 장안면 포승장안로1120번길 42-15', waste:{name:'폐합성수지',code:'51-03-01',method:'2010'} },
+    { id:'daekwang', label:'대광이앤씨', name:'(주)대광이앤씨', bizNo:'131-81-70167', rep:'박재용', address:'충청남도 예산군 대술면 대술로 697-39', waste:{name:'그밖의폐수처리오니',code:'51-01-08',method:'2005'} },
+    { id:'giwon', label:'기원', name:'주식회사 기원', bizNo:'885-81-00773', rep:'황순덕', address:'세종특별자치시 전동면 덕용골길 5', waste:{name:'그밖의폐수처리오니',code:'51-01-08',method:'2005'} },
+    { id:'jentec', label:'제이엔텍', name:'주식회사 제이엔텍', bizNo:'398-88-00735', rep:'최동찬', address:'충청남도 당진시 송산면 가곡로 250' },
+    { id:'haein', label:'혜인이엔씨', name:'주식회사 혜인이엔씨', bizNo:'261-86-01200', rep:'손범석', address:'경기도 화성시 팔탄면 노하길 472-11' },
+    { id:'yidoosan', label:'이도에코오산', name:'이도에코오산 주식회사', bizNo:'124-87-14169', rep:'박성진', address:'경기도 오산시 황새로149번길 55(누읍동)' },
+    { id:'energysejong', label:'에너지세종', name:'(주)에너지세종', bizNo:'307-81-36771', rep:'윤명근', address:'세종특별자치시 전동면 솔티로 341' },
+    { id:'shindaehan', label:'신대한정유산업', name:'신대한정유산업㈜', bizNo:'136-81-22490', rep:'박대규', address:'경기도 화성시 정남면 가장로 334-10' },
+    { id:'sechang', label:'세창이엔텍', name:'(주)세창이엔텍', bizNo:'312-81-56935', rep:'윤성민', address:'충청남도 천안시 동남구 광덕면 차령고개로 682-11' },
+    { id:'samwoo', label:'삼우자원개발 (정보확인 필요)', name:'삼우자원개발', bizNo:'', rep:'', address:'충청남도 서산시 장동오남길 54(장동)', incomplete:true },
+    { id:'youngheung', label:'영흥산업환경', name:'(주)영흥산업환경', bizNo:'312-81-26289', rep:'공진국', address:'충청남도 천안시 동남구 목천읍 학수소사길 142-42' },
+    { id:'ochang', label:'오창환경', name:'주식회사 오창환경', bizNo:'266-81-00098', rep:'이종균', address:'충청북도 청주시 청원구 오창읍 후기길 483' },
+    { id:'ecotop', label:'에코탑', name:'(주)에코탑', bizNo:'544-81-02375', rep:'신성철', address:'경기도 화성시 우정읍 매바위로237번길 46-315' },
+    { id:'biopost', label:'바이오포스트', name:'농업회사법인 주식회사 바이오포스트', bizNo:'312-81-70427', rep:'정민용', address:'충청남도 천안시 동남구 동면 화복로 256-35' }
+];
+
+let _contractTabInitialized = false;
+
+function ctEl(id) { return document.getElementById(id); }
+function ctVal(id) { return (ctEl(id)?.value || '').trim(); }
+function ctSet(id, value) { const el=ctEl(id); if(el) el.value=value ?? ''; }
+function ctTodayLocal() {
+    const d=new Date();
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+}
+function ctAddOneYearMinusDay(iso) {
+    const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return '';
+    const d=new Date(+m[1]+1,+m[2]-1,+m[3]); d.setDate(d.getDate()-1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function ctOnStartDateChange() {
+    const start=ctVal('ctStartDate');
+    if(start) ctSet('ctEndDate',ctAddOneYearMinusDay(start));
+    ctUpdateSummary();
+}
+function ctFormatBizNo(v) {
+    const d=String(v||'').replace(/\D/g,'').slice(0,10);
+    return d.length===10 ? `${d.slice(0,3)}-${d.slice(3,5)}-${d.slice(5)}` : String(v||'').trim();
+}
+function ctFormatBizInput(el) { if(el) el.value=ctFormatBizNo(el.value); ctUpdateSummary(); }
+function ctFormatMoney(v) {
+    const n=Number(String(v||'').replace(/,/g,''));
+    return Number.isFinite(n) && String(v).trim()!=='' ? Math.round(n).toLocaleString('ko-KR') : String(v||'').trim();
+}
+function ctFormatCode(code) {
+    const d=String(code||'').replace(/\D/g,'');
+    if(d.length===6) return `(${d.slice(0,2)} – ${d.slice(2,4)} – ${d.slice(4,6)})`;
+    const raw=String(code||'').trim(); return raw ? `(${raw})` : '';
+}
+function ctParseDate(iso) { const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?{y:+m[1],m:+m[2],d:+m[3]}:null; }
+function ctContractPeriod(start,end) {
+    const a=ctParseDate(start), b=ctParseDate(end); if(!a||!b) return '';
+    return `${a.y} 년${a.m}월 ${a.d}일   ~   ${b.y}년 ${b.m}월 ${b.d}일`;
+}
+function ctContractDate(start) {
+    const a=ctParseDate(start); if(!a) return '';
+    return `${a.y}년  ${a.m}월${a.d}일`;
+}
+function ctXmlEscape(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;'); }
+function ctSafeFilename(s) { return String(s||'계약서').replace(/[\/:*?"<>|]/g,'_').replace(/\s+/g,'_').slice(0,60); }
+
+
+function ctOpenTemplateDb() {
+    return new Promise((resolve,reject)=>{
+        if(!('indexedDB' in window)) { reject(new Error('이 브라우저는 로컬 계약서 저장소(IndexedDB)를 지원하지 않습니다.')); return; }
+        const req=indexedDB.open(CT_TEMPLATE_DB_NAME,1);
+        req.onupgradeneeded=()=>{
+            const db=req.result;
+            if(!db.objectStoreNames.contains(CT_TEMPLATE_STORE)) db.createObjectStore(CT_TEMPLATE_STORE,{keyPath:'id'});
+        };
+        req.onsuccess=()=>resolve(req.result);
+        req.onerror=()=>reject(req.error || new Error('로컬 계약서 저장소를 열 수 없습니다.'));
+    });
+}
+async function ctGetTemplateRecord() {
+    const db=await ctOpenTemplateDb();
+    try { return await new Promise((resolve,reject)=>{ const tx=db.transaction(CT_TEMPLATE_STORE,'readonly'); const r=tx.objectStore(CT_TEMPLATE_STORE).get(CT_TEMPLATE_KEY); r.onsuccess=()=>resolve(r.result||null); r.onerror=()=>reject(r.error); }); }
+    finally { db.close(); }
+}
+async function ctSaveTemplateRecord(record) {
+    const db=await ctOpenTemplateDb();
+    try { await new Promise((resolve,reject)=>{ const tx=db.transaction(CT_TEMPLATE_STORE,'readwrite'); tx.objectStore(CT_TEMPLATE_STORE).put(record); tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error); }); }
+    finally { db.close(); }
+}
+async function ctRemoveTemplateRecord() {
+    const db=await ctOpenTemplateDb();
+    try { await new Promise((resolve,reject)=>{ const tx=db.transaction(CT_TEMPLATE_STORE,'readwrite'); tx.objectStore(CT_TEMPLATE_STORE).delete(CT_TEMPLATE_KEY); tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error); }); }
+    finally { db.close(); }
+}
+async function ctSha256(buffer) {
+    try {
+        if(!window.crypto?.subtle) return '';
+        const hash=await crypto.subtle.digest('SHA-256',buffer.slice(0));
+        return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    } catch(_) { return ''; }
+}
+
+// paragraph XML 안에서 여러 w:t run에 나뉜 문자열도 정확히 치환한다.
+// paragraph의 나머지 XML/서식은 그대로 보존한다.
+function ctReplaceAcrossTextNodes(paragraphXml, oldText, newText) {
+    const re=/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g;
+    const nodes=[...paragraphXml.matchAll(re)];
+    if(!nodes.length) throw new Error(`원본 계약서 문단에서 텍스트 노드를 찾을 수 없습니다: ${oldText}`);
+    const texts=nodes.map(m=>m[1]||'');
+    const full=texts.join('');
+    const start=full.indexOf(oldText);
+    if(start<0) throw new Error(`회사 표준계약서 원본값을 찾지 못했습니다: ${oldText}`);
+    const end=start+oldText.length;
+    let cur=0, first=-1, last=-1;
+    const spans=texts.map((t,i)=>{ const s=cur, e=cur+t.length; cur=e; if(e>start && s<end){ if(first<0) first=i; last=i; } return {s,e}; });
+    if(first<0) throw new Error(`회사 표준계약서 치환 위치를 계산하지 못했습니다: ${oldText}`);
+    const escaped=ctXmlEscape(newText);
+    const patches=[];
+    for(let i=first;i<=last;i++) {
+        const m=nodes[i], sp=spans[i], text=texts[i];
+        const openEnd=m[0].indexOf('>')+1;
+        const closeStart=m[0].lastIndexOf('</w:t>');
+        const innerStart=m.index+openEnd;
+        const innerEnd=m.index+closeStart;
+        let value='';
+        if(first===last) {
+            value=text.slice(0,Math.max(0,start-sp.s))+escaped+text.slice(Math.max(0,end-sp.s));
+        } else if(i===first) {
+            value=text.slice(0,Math.max(0,start-sp.s))+escaped;
+        } else if(i===last) {
+            value=text.slice(Math.max(0,end-sp.s));
+        }
+        patches.push({start:innerStart,end:innerEnd,value});
+    }
+    let out=paragraphXml;
+    patches.sort((a,b)=>b.start-a.start).forEach(p=>{ out=out.slice(0,p.start)+p.value+out.slice(p.end); });
+    return out;
+}
+function ctPrepareOriginalDocumentXml(xml) {
+    let out=xml;
+    for(const patch of CT_TEMPLATE_PATCHES) {
+        const paras=[...out.matchAll(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g)];
+        const p=paras[patch.p];
+        if(!p) throw new Error(`회사 표준계약서 구조가 다릅니다. 문단 ${patch.p}을 찾지 못했습니다.`);
+        const oldPara=p[0];
+        const newPara=ctReplaceAcrossTextNodes(oldPara,patch.old,patch.token);
+        out=out.slice(0,p.index)+newPara+out.slice(p.index+oldPara.length);
+    }
+    const expected=[...new Set(CT_TEMPLATE_PATCHES.map(x=>x.token))];
+    const missing=expected.filter(t=>!out.includes(t));
+    if(missing.length) throw new Error('회사 표준계약서 자동화 항목 검증에 실패했습니다: '+missing.join(', '));
+    return out;
+}
+async function ctValidateOriginalDocx(buffer) {
+    if(typeof JSZip==='undefined') throw new Error('Word 처리 라이브러리(JSZip)를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.');
+    const zip=await JSZip.loadAsync(buffer);
+    const file=zip.file('word/document.xml');
+    if(!file) throw new Error('유효한 Word(.docx) 계약서가 아닙니다.');
+    const xml=await file.async('string');
+    ctPrepareOriginalDocumentXml(xml); // 표준 원본 여부 검증
+    return true;
+}
+async function ctRegisterTemplate(input) {
+    const file=input?.files?.[0];
+    if(!file) return;
+    const badge=ctEl('ctTemplateBadge'), meta=ctEl('ctTemplateMeta');
+    try {
+        if(!/\.docx$/i.test(file.name)) throw new Error('회사 표준계약서 DOCX 파일을 선택해주세요.');
+        if(badge){ badge.textContent='검증 중'; badge.className='text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full'; }
+        if(meta) meta.textContent='선택한 파일이 최초 제공된 회사 표준계약서 구조와 일치하는지 확인하고 있습니다.';
+        const buffer=await file.arrayBuffer();
+        await ctValidateOriginalDocx(buffer);
+        const hash=await ctSha256(buffer);
+        await ctSaveTemplateRecord({id:CT_TEMPLATE_KEY,name:file.name,size:file.size,lastModified:file.lastModified||0,savedAt:Date.now(),hash,data:buffer});
+        await ctRefreshTemplateStatus();
+        alert('회사 표준계약서 원본이 이 브라우저에만 등록되었습니다.\nGitHub나 외부 서버에는 업로드되지 않습니다.');
+    } catch(e) {
+        console.error(e);
+        alert('원본 계약서 등록 실패\n'+e.message);
+        await ctRefreshTemplateStatus();
+    } finally { if(input) input.value=''; }
+}
+async function ctRefreshTemplateStatus() {
+    const badge=ctEl('ctTemplateBadge'), meta=ctEl('ctTemplateMeta'), del=ctEl('ctDeleteTemplateBtn'), btn=ctEl('ctDownloadBtn');
+    try {
+        const rec=await ctGetTemplateRecord();
+        if(rec) {
+            if(badge){ badge.textContent='원본 등록됨'; badge.className='text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full'; }
+            const kb=(Number(rec.size||0)/1024).toFixed(1);
+            const fp=rec.hash ? ` · SHA-256 ${rec.hash.slice(0,12)}…` : '';
+            if(meta) meta.textContent=`${rec.name} · ${kb}KB${fp} · 이 브라우저에만 저장`;
+            del?.classList.remove('hidden');
+            if(btn) btn.disabled=false;
+            return true;
+        }
+        if(badge){ badge.textContent='원본 미등록'; badge.className='text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full'; }
+        if(meta) meta.textContent='최초 제공한 「폐기물표준계약서_조은환경.docx」 원본을 한 번 등록해주세요.';
+        del?.classList.add('hidden');
+        if(btn) btn.disabled=true;
+        return false;
+    } catch(e) {
+        if(badge){ badge.textContent='저장소 오류'; badge.className='text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full'; }
+        if(meta) meta.textContent=e.message;
+        if(btn) btn.disabled=true;
+        return false;
+    }
+}
+async function ctDeleteTemplate() {
+    if(!confirm('이 브라우저에 등록된 회사 표준계약서 원본을 삭제할까요?')) return;
+    await ctRemoveTemplateRecord();
+    await ctRefreshTemplateStatus();
+}
+
+function initContractTab() {
+    if(_contractTabInitialized) { ctUpdateSummary(); return; }
+    _contractTabInitialized=true;
+    const sel=ctEl('ctProcessorSelect');
+    if(sel) {
+        sel.innerHTML='<option value="">처리장을 선택하세요</option>'+CONTRACT_PROCESSORS.map(p=>`<option value="${p.id}">${p.label}</option>`).join('');
+    }
+    ctSet('ctStartDate',ctTodayLocal());
+    ctSet('ctEndDate',ctAddOneYearMinusDay(ctTodayLocal()));
+    ctSet('ctUnit','T');
+    ctToggleEmitterSite();
+    ctUpdateSummary();
+    ctRefreshTemplateStatus();
+}
+
+function ctToggleEmitterSite() {
+    const same=!!ctEl('ctSameEmitterSite')?.checked;
+    const box=ctEl('ctEmitterSiteExtra'); if(box) box.classList.toggle('hidden',same);
+    if(same) ctSyncActualSite();
+    ctUpdateSummary();
+}
+function ctSyncActualSite() {
+    if(!ctEl('ctSameEmitterSite')?.checked) return;
+    ctSet('ctActualSiteName',ctVal('ctEmitterName'));
+    ctSet('ctActualSiteAddress',ctVal('ctEmitterAddress'));
+}
+
+function ctOnProcessorChange() {
+    const id=ctVal('ctProcessorSelect');
+    const p=CONTRACT_PROCESSORS.find(x=>x.id===id);
+    const warning=ctEl('ctProcessorWarning');
+    const badge=ctEl('ctWasteDefaultBadge');
+    if(!p) {
+        ['ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctTreatmentMethod'].forEach(x=>ctSet(x,''));
+        if(warning) warning.classList.add('hidden');
+        if(badge) badge.classList.add('hidden');
+        ctUpdateSummary(); return;
+    }
+    ctSet('ctProcessorName',p.name); ctSet('ctProcessorBizNo',p.bizNo); ctSet('ctProcessorRep',p.rep); ctSet('ctProcessorAddress',p.address);
+    // 처리장별 폐기물 기본값이 없는 업체는 이전 선택값이 남지 않도록 비움
+    ctSet('ctWasteName',p.waste?.name||''); ctSet('ctWasteCode',p.waste?.code||''); ctSet('ctTreatmentMethod',p.waste?.method||'');
+    if(badge) {
+        if(p.waste) { badge.textContent=`기본값: ${p.waste.name} · ${p.waste.method}`; badge.classList.remove('hidden'); }
+        else badge.classList.add('hidden');
+    }
+    if(warning) {
+        if(p.incomplete) { warning.textContent='⚠️ 이 업체는 전달받은 사업자등록증 이미지에서 사업자번호·대표자 확인이 어려워 직접 입력이 필요합니다.'; warning.classList.remove('hidden'); }
+        else warning.classList.add('hidden');
+    }
+    ctUpdateSummary();
+}
+
+function ctActualSite() {
+    const same=!!ctEl('ctSameEmitterSite')?.checked;
+    return {
+        name: same ? ctVal('ctEmitterName') : ctVal('ctActualSiteName'),
+        address: same ? ctVal('ctEmitterAddress') : ctVal('ctActualSiteAddress')
+    };
+}
+
+function ctUpdateSummary() {
+    const box=ctEl('ctSummary'); if(!box) return;
+    const site=ctActualSite();
+    const processor=ctVal('ctProcessorName')||'처리장 미선택';
+    const start=ctVal('ctStartDate'), end=ctVal('ctEndDate');
+    const rows=[
+        ['계약기간', start&&end?`${start} ~ ${end}`:'미입력'],
+        ['배출자', ctVal('ctEmitterName')||'미입력'],
+        ['실제 배출장소', site.name||site.address?`${site.name||'-'} · ${site.address||'-'}`:'미입력'],
+        ['처리자', processor],
+        ['처리장 주소', ctVal('ctProcessorAddress')||'미입력'],
+        ['폐기물', ctVal('ctWasteName') ? `${ctVal('ctWasteName')} (${ctVal('ctWasteCode')||'-'})` : '미입력'],
+        ['처리방법', ctVal('ctTreatmentMethod')||'미입력'],
+        ['단가', (ctVal('ctTransportRate')||ctVal('ctTreatmentRate')) ? `운반 ${ctFormatMoney(ctVal('ctTransportRate'))||'-'} / 처리 ${ctFormatMoney(ctVal('ctTreatmentRate'))||'-'}` : '미입력']
+    ];
+    box.innerHTML=rows.map(([k,v])=>`<div class="border-b border-slate-100 pb-2.5 last:border-0 last:pb-0"><div class="text-[11px] font-bold text-slate-400 mb-1">${k}</div><div class="text-sm font-bold text-slate-700 break-words">${ctXmlEscape(v)}</div></div>`).join('');
+}
+
+function ctClearMissing() { document.querySelectorAll('#tab6-content .ct-missing').forEach(el=>el.classList.remove('ct-missing')); }
+function ctValidate() {
+    ctClearMissing();
+    const same=!!ctEl('ctSameEmitterSite')?.checked;
+    const required=[
+        ['ctStartDate','계약 시작일'],['ctEndDate','계약 종료일'],['ctEmitterName','배출자 상호'],['ctEmitterBizNo','배출자 사업자번호'],['ctEmitterRep','배출자 대표자'],['ctEmitterAddress','배출자 사업자등록 주소'],
+        ['ctProcessorSelect','처리장 선택'],['ctProcessorName','처리자 상호'],['ctProcessorBizNo','처리자 사업자번호'],['ctProcessorRep','처리자 대표자'],['ctProcessorAddress','처리자 주소'],
+        ['ctWasteName','폐기물 종류'],['ctWasteCode','폐기물 코드'],['ctUnit','단위'],['ctAnnualVolume','예상 배출량'],['ctWasteForm','성상'],['ctTransportRate','운반단가'],['ctTreatmentRate','처리단가'],['ctTreatmentMethod','처리방법']
+    ];
+    if(!same) required.push(['ctActualSiteName','실제 배출장소 사업장명'],['ctActualSiteAddress','실제 배출장소 주소']);
+    const missing=[];
+    required.forEach(([id,label])=>{ const el=ctEl(id); if(!ctVal(id)) {missing.push(label); if(el) el.classList.add('ct-missing');} });
+    if(missing.length) { alert('다음 필수값을 입력해주세요.\n\n- '+missing.join('\n- ')); return false; }
+    return true;
+}
+
+function ctBuildReplacements() {
+    const site=ctActualSite();
+    const caution=ctVal('ctCaution').replace(/\r/g,'').split('\n');
+    let line1=caution[0]||'', line2=caution.slice(1).join(' ')||'';
+    return {
+        '{{CONTRACT_PERIOD}}': ctContractPeriod(ctVal('ctStartDate'),ctVal('ctEndDate')),
+        '{{CONTRACT_DATE}}': ctContractDate(ctVal('ctStartDate')),
+        '{{EMITTER_NAME}}': ctVal('ctEmitterName'),
+        '{{EMITTER_BIZNO}}': ctFormatBizNo(ctVal('ctEmitterBizNo')),
+        '{{EMITTER_REP}}': ctVal('ctEmitterRep'),
+        '{{EMITTER_ADDRESS}}': ctVal('ctEmitterAddress'),
+        '{{ACTUAL_SITE_NAME}}': site.name,
+        '{{ACTUAL_SITE_ADDRESS}}': site.address,
+        '{{PROCESSOR_NAME}}': ctVal('ctProcessorName'),
+        '{{PROCESSOR_BIZNO}}': ctFormatBizNo(ctVal('ctProcessorBizNo')),
+        '{{PROCESSOR_REP}}': ctVal('ctProcessorRep'),
+        '{{PROCESSOR_ADDRESS}}': ctVal('ctProcessorAddress'),
+        '{{PROCESSOR_SITE_ADDRESS}}': ctVal('ctProcessorAddress'),
+        '{{WASTE_NAME}}': ctVal('ctWasteName'),
+        '{{WASTE_CODE_FMT}}': ctFormatCode(ctVal('ctWasteCode')),
+        '{{UNIT}}': ctVal('ctUnit'),
+        '{{ANNUAL_VOLUME}}': ctVal('ctAnnualVolume'),
+        '{{WASTE_FORM}}': ctVal('ctWasteForm'),
+        '{{TRANSPORT_RATE}}': ctFormatMoney(ctVal('ctTransportRate')),
+        '{{TREATMENT_RATE}}': ctFormatMoney(ctVal('ctTreatmentRate')),
+        '{{TREATMENT_METHOD}}': ctVal('ctTreatmentMethod'),
+        '{{CAUTION_LINE1}}': line1,
+        '{{CAUTION_LINE2}}': line2
+    };
+}
+
+async function ctDownloadContract() {
+    if(!ctValidate()) return;
+    const btn=ctEl('ctDownloadBtn'), status=ctEl('ctDownloadStatus');
+    const oldHtml=btn?.innerHTML;
+    try {
+        if(typeof JSZip==='undefined') throw new Error('Word 생성 라이브러리(JSZip)를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.');
+        const template=await ctGetTemplateRecord();
+        if(!template?.data) throw new Error('회사 표준계약서 원본이 등록되지 않았습니다. 먼저 「원본 계약서 등록/교체」에서 최초 제공한 DOCX를 등록해주세요.');
+        if(btn) { btn.disabled=true; btn.innerHTML='<span class="inline-block animate-spin">⟳</span><span>계약서 생성 중...</span>'; }
+        if(status) status.textContent='브라우저에 보관된 회사 표준계약서 원본에 입력값을 반영하고 있습니다.';
+        const zip=await JSZip.loadAsync(template.data);
+        const file=zip.file('word/document.xml');
+        if(!file) throw new Error('원본 계약서 document.xml을 찾을 수 없습니다.');
+        let xml=await file.async('string');
+        xml=ctPrepareOriginalDocumentXml(xml);
+        const repl=ctBuildReplacements();
+        Object.entries(repl).forEach(([token,value])=>{ xml=xml.split(token).join(ctXmlEscape(value)); });
+        const unresolved=xml.match(/\{\{[A-Z0-9_]+\}\}/g);
+        if(unresolved) throw new Error('치환되지 않은 계약서 항목이 있습니다: '+[...new Set(unresolved)].join(', '));
+        zip.file('word/document.xml',xml);
+        const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6},mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;
+        const dt=ctVal('ctStartDate').replace(/-/g,'');
+        a.download=`폐기물표준계약서_${ctSafeFilename(ctVal('ctEmitterName'))}_${dt}.docx`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1500);
+        if(status) status.textContent='✅ 회사 표준계약서 원본 양식 기준 Word 계약서 생성 완료';
+    } catch(e) {
+        console.error(e); alert('계약서 생성 중 오류가 발생했습니다.\n'+e.message);
+        if(status) status.textContent='❌ '+e.message;
+    } finally {
+        if(btn) { btn.disabled=false; btn.innerHTML=oldHtml; }
+    }
+}
+
+function ctResetForm() {
+    if(!confirm('입력한 계약서 정보를 모두 초기화할까요?')) return;
+    ['ctEmitterName','ctEmitterBizNo','ctEmitterRep','ctEmitterAddress','ctActualSiteName','ctActualSiteAddress','ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctAnnualVolume','ctWasteForm','ctTransportRate','ctTreatmentRate','ctTreatmentMethod','ctCaution'].forEach(id=>ctSet(id,''));
+    ctSet('ctProcessorSelect',''); ctSet('ctUnit','T');
+    const chk=ctEl('ctSameEmitterSite'); if(chk) chk.checked=true;
+    ctSet('ctStartDate',ctTodayLocal()); ctSet('ctEndDate',ctAddOneYearMinusDay(ctTodayLocal()));
+    ctEl('ctProcessorWarning')?.classList.add('hidden'); ctEl('ctWasteDefaultBadge')?.classList.add('hidden');
+    ctToggleEmitterSite(); ctClearMissing();
+    if(ctEl('ctDownloadStatus')) ctEl('ctDownloadStatus').textContent='';
+    ctUpdateSummary();
+}
+</script>
+
 </body>
 </html>
 
