@@ -161,7 +161,30 @@
         #stCalOverlay { position:absolute; inset:0; cursor:crosshair; touch-action:none; }
         .st-template-row { display:flex; flex-wrap:wrap; align-items:center; gap:.45rem; }
 
-    </style>
+            .ts-dropdown .option.active { background: #f0fdfa !important; color: #0f766e !important; }
+
+        /* 계약서 처리장 검색형 단일선택 */
+        .ct-processor-search .ts-control {
+            min-height: 42px !important;
+            border-radius: 0.75rem !important;
+            padding: 0.55rem 0.8rem !important;
+        }
+        .ct-processor-search .ts-control .item {
+            display: inline-flex !important;
+            align-items: center;
+            font-size: 0.9rem !important;
+            font-weight: 600 !important;
+        }
+        .ct-processor-search .ts-control > input {
+            min-width: 160px !important;
+            font-size: 0.9rem !important;
+            font-weight: 500 !important;
+        }
+        .ct-processor-search .ts-dropdown {
+            font-size: 0.9rem !important;
+            z-index: 120 !important;
+        }
+</style>
 </head>
 <body class="text-slate-800">
 <div class="min-h-screen flex flex-col">
@@ -1103,8 +1126,8 @@
                             </div>
                         </div>
                         <div class="mb-4">
-                            <label class="ct-label ct-required" for="ctProcessorSelect">처리장 선택</label>
-                            <select id="ctProcessorSelect" class="ct-input" onchange="ctOnProcessorChange()"></select>
+                            <label class="ct-label ct-required" for="ctProcessorSelect">처리장 선택 <span class="text-slate-400">(검색 가능)</span></label>
+                            <select id="ctProcessorSelect" class="ct-input"></select>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
@@ -1160,7 +1183,7 @@
                             </div>
                             <div>
                                 <label class="ct-label ct-required" for="ctWasteForm">성상</label>
-                                <input id="ctWasteForm" class="ct-input" type="text" placeholder="예: 고상" oninput="ctUpdateSummary()">
+                                <input id="ctWasteForm" class="ct-input" type="text" value="고상" placeholder="고상" oninput="ctUpdateSummary()">
                             </div>
                             <div>
                                 <label class="ct-label ct-required" for="ctTransportRate">운반단가</label>
@@ -1195,9 +1218,10 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label class="ct-label ct-required" for="stTemplateSelect">수탁 처리장 양식</label>
-                                <select id="stTemplateSelect" class="ct-input" onchange="stOnTemplateChange()"></select>
-                                <p id="stTemplateHelp" class="ct-help">계약서의 처리장 선택값과 자동 연동됩니다.</p>
+                                <label class="ct-label">수탁 처리장 양식</label>
+                                <input id="stTemplateNameDisplay" class="ct-input bg-slate-50 text-slate-600" type="text" value="" placeholder="위 처리장 선택과 자동 연동" readonly>
+                                <select id="stTemplateSelect" class="hidden" tabindex="-1" aria-hidden="true"></select>
+                                <p id="stTemplateHelp" class="ct-help">위의 「처리자 정보 → 처리장 선택」과 자동 연동됩니다. 여기서 다시 선택할 필요가 없습니다.</p>
                             </div>
                             <div>
                                 <label class="ct-label ct-required" for="stIssueDate">작성일</label>
@@ -6462,6 +6486,7 @@ function ctOnProcessorChange() {
 
     if(!id) {
         ['ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctTreatmentMethod'].forEach(x=>ctSet(x,''));
+        ctSet('ctWasteForm','고상');
         if(warning) warning.classList.add('hidden');
         if(badge) badge.classList.add('hidden');
         ctUpdateSummary(); return;
@@ -6477,12 +6502,14 @@ function ctOnProcessorChange() {
     const p=CONTRACT_PROCESSORS.find(x=>x.id===id);
     if(!p) {
         ['ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctTreatmentMethod'].forEach(x=>ctSet(x,''));
+        ctSet('ctWasteForm','고상');
         if(warning) warning.classList.add('hidden');
         if(badge) badge.classList.add('hidden');
         ctUpdateSummary(); return;
     }
     ctSet('ctProcessorName',p.name); ctSet('ctProcessorBizNo',p.bizNo); ctSet('ctProcessorRep',p.rep); ctSet('ctProcessorAddress',p.address);
     ctSet('ctWasteName',p.waste?.name||''); ctSet('ctWasteCode',p.waste?.code||''); ctSet('ctTreatmentMethod',p.waste?.method||'');
+    ctSet('ctWasteForm','고상');
     if(badge) {
         badge.textContent='임시 fallback 값';
         badge.classList.remove('hidden');
@@ -6607,7 +6634,7 @@ function ctResetForm() {
     if(!confirm('입력한 계약서 정보를 모두 초기화할까요?')) return;
     ['ctEmitterName','ctEmitterBizNo','ctEmitterRep','ctEmitterAddress','ctActualSiteName','ctActualSiteAddress','ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctAnnualVolume','ctWasteForm','ctTransportRate','ctTreatmentRate','ctTreatmentMethod','stConsignorCorpNo'].forEach(id=>ctSet(id,''));
     ctSet('ctCaution','이물질 혼합되지 않도록 분리배출 주의');
-    ctSet('ctProcessorSelect',''); ctSet('ctUnit','T');
+    ctSetProcessorSelection('',true); ctSet('ctUnit','T'); ctSet('ctWasteForm','고상');
     const chk=ctEl('ctSameEmitterSite'); if(chk) chk.checked=true;
     ctSet('ctStartDate',ctTodayLocal()); ctSet('ctEndDate',ctAddOneYearMinusDay(ctTodayLocal()));
     ctEl('ctProcessorWarning')?.classList.add('hidden'); ctEl('ctWasteDefaultBadge')?.classList.add('hidden');
@@ -6891,6 +6918,7 @@ const CT_PROCESSOR_DB_URL='https://docs.google.com/spreadsheets/d/190EcaIJ_XUm7V
 const CT_CONTRACT_DB_TAB='계약_처리장DB';
 const CT_CAPACITY_DB_TAB='수탁_처리능력DB';
 let _ctProcessorDb={}, _ctCapacityDb={}, _ctDbLoadedAt=0, _ctDbLoading=null;
+let _ctProcessorTom=null;
 // 수탁 공용 설정은 대시보드 로그인 허용자 전체가 관리 가능
 // 실제 공용 저장은 Google Sheet 편집 권한이 있는 사용자만 성공합니다.
 let _stDriveToken=null, _stSheetsToken=null;
@@ -7045,13 +7073,43 @@ async function ctLoadProcessorDb(force=false){
  try{return await _ctDbLoading;}
  finally{_ctDbLoading=null;}
 }
+function ctSetProcessorSelection(value,silent=true){
+ const v=String(value||'');
+ if(_ctProcessorTom){
+   _ctProcessorTom.setValue(v,silent);
+ } else {
+   const sel=ctEl('ctProcessorSelect'); if(sel) sel.value=v;
+ }
+}
 function ctRenderProcessorOptionsFromDb(){
  const sel=ctEl('ctProcessorSelect'); if(!sel) return;
- const current=sel.value;
+ const current=String(_ctProcessorTom?.getValue?.() || sel.value || '');
  const rows=Object.values(_ctProcessorDb).filter(r=>ctDbActive(r.active));
  rows.sort((a,b)=>String(a.처리장명||'').localeCompare(String(b.처리장명||''),'ko'));
- sel.innerHTML='<option value="">처리장을 선택하세요</option>'+rows.map(r=>`<option value="${String(r.processor_id).replace(/"/g,'&quot;')}">${r.처리장명||r.계약서상상호||r.processor_id}</option>`).join('');
- if(current && _ctProcessorDb[current]) sel.value=current;
+
+ if(_ctProcessorTom){
+   _ctProcessorTom.destroy();
+   _ctProcessorTom=null;
+ }
+ sel.innerHTML='<option value=""></option>'+rows.map(r=>`<option value="${String(r.processor_id).replace(/"/g,'&quot;')}">${r.처리장명||r.계약서상상호||r.processor_id}</option>`).join('');
+
+ if(window.TomSelect){
+   _ctProcessorTom=new window.TomSelect(sel,{
+     create:false,
+     maxItems:1,
+     maxOptions:null,
+     allowEmptyOption:true,
+     placeholder:'처리장명 검색 또는 선택',
+     searchField:['text'],
+     sortField:{field:'text',direction:'asc'},
+     closeAfterSelect:true,
+     onChange(){ ctOnProcessorChange(); }
+   });
+   _ctProcessorTom.wrapper?.classList.add('ct-processor-search');
+   if(current && _ctProcessorDb[current]) _ctProcessorTom.setValue(current,true);
+ } else if(current && _ctProcessorDb[current]){
+   sel.value=current;
+ }
 }
 function ctApplyProcessorDbDefaults(id){
  const row=_ctProcessorDb[id]; if(!row) return false;
@@ -7071,6 +7129,8 @@ function ctApplyProcessorDbDefaults(id){
    ctCaution:'취급시주의사항'
  };
  Object.entries(map).forEach(([fieldId,col])=>ctSet(fieldId,row[col]??''));
+ // 조은환경 계약 폐기물 성상은 기본적으로 고상. 화면에서는 필요 시 수정 가능.
+ if(!ctVal('ctWasteForm')) ctSet('ctWasteForm','고상');
  const warning=ctEl('ctProcessorWarning');
  if(warning){
    const miss=[];
@@ -7099,7 +7159,7 @@ async function ctRefreshProcessorDb(){
    const pid=ctVal('ctProcessorSelect');
    await ctLoadProcessorDb(true);
    if(pid && _ctProcessorDb[pid]){
-     ctSet('ctProcessorSelect',pid);
+     ctSetProcessorSelection(pid,true);
      ctApplyProcessorDbDefaults(pid);
    }
    stSyncFromContract(true);
@@ -7221,7 +7281,14 @@ async function stInitSutakSection(){
  stUpdateAdminUi(); stSyncFromContract(false); stRecalculateCapacity(); await stRefreshStatus();
 }
 function stSyncFromContract(resetDynamic=false){
- const pid=ctVal('ctProcessorSelect'), tid=stProcessorToTemplateId(pid), sel=ctEl('stTemplateSelect'); if(tid&&sel) sel.value=tid;
+ const pid=ctVal('ctProcessorSelect'), tid=stProcessorToTemplateId(pid), sel=ctEl('stTemplateSelect');
+ if(sel) sel.value=tid||'';
+ const display=ctEl('stTemplateNameDisplay');
+ if(display){
+   const processorName=_ctProcessorDb?.[pid]?.처리장명 || ctVal('ctProcessorName') || '';
+   const tplName=tid ? (stTemplate(tid)?.name||processorName) : '';
+   display.value=tplName || (pid ? '수탁 양식 미등록' : '');
+ }
  if(resetDynamic) stClearDynamicValues(false);
  stApplyFixedDefaults();
  stToggleMode();
@@ -7480,7 +7547,7 @@ if(typeof ctOnProcessorChange==='function'){
        const selectedBefore=ctVal('ctProcessorSelect');
        await ctLoadProcessorDb(true);
        if(selectedBefore && _ctProcessorDb[selectedBefore]){
-         ctSet('ctProcessorSelect',selectedBefore);
+         ctSetProcessorSelection(selectedBefore,true);
          ctApplyProcessorDbDefaults(selectedBefore);
        }
      }catch(e){
