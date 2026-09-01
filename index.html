@@ -320,7 +320,7 @@
                     <h2 class="text-lg font-bold text-slate-800">📆 이번 달 현황 <span id="cmMonthLabel" class="text-teal-600 text-base font-semibold"></span></h2>
                     <span id="cmProgressBadge" class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full"></span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-gradient-to-br from-teal-600 to-teal-800 rounded-xl p-5 text-white">
                         <p class="text-teal-100 text-sm font-semibold mb-1">이번 달 총매출 <span class="text-teal-200 text-xs">(현재까지)</span></p>
                         <h3 id="cmTotalRev" class="text-3xl font-bold">0<span class="text-lg font-normal text-teal-200 ml-1">원</span></h3>
@@ -1099,7 +1099,7 @@
                             <span class="w-7 h-7 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center font-bold text-sm">3</span>
                             <div class="flex-1">
                                 <h3 class="ct-section-title">처리자 정보</h3>
-                                <p class="ct-help mt-0">처리장을 선택하면 저장된 사업자 정보가 자동 입력됩니다. 처리장 주소는 사업자등록상 주소와 동일하게 계약서에 반영됩니다.</p>
+                                <p class="ct-help mt-0">처리장을 선택하면 팀 공용 <b>조은환경_처리장DB</b>에서 상호·사업자번호·대표자·주소를 불러옵니다. 시트의 값을 수정한 뒤 다시 선택하거나 DB 새로고침하면 변경값이 반영됩니다.</p>
                             </div>
                         </div>
                         <div class="mb-4">
@@ -1133,9 +1133,13 @@
                             <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-sm">4</span>
                             <div class="flex-1">
                                 <h3 class="ct-section-title">폐기물 · 단가 정보</h3>
-                                <p class="ct-help mt-0">처리장별 기본 폐기물 정보가 등록된 경우 폐기물 종류·코드·처리방법이 자동 입력됩니다.</p>
+                                <p class="ct-help mt-0">처리장을 선택하면 팀 공용 <b>조은환경_처리장DB</b>의 폐기물·단가 기본값을 불러옵니다. DB를 수정한 뒤 다시 선택하거나 새로고침하면 변경값이 반영됩니다.</p>
                             </div>
-                            <span id="ctWasteDefaultBadge" class="hidden text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full"></span>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" onclick="ctOpenProcessorDb()" class="st-mini-btn bg-white hover:bg-slate-50 text-slate-600 border border-slate-200">처리장 DB 열기</button>
+                                <button type="button" onclick="ctRefreshProcessorDb()" class="st-mini-btn bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200">DB 새로고침</button>
+                                <span id="ctWasteDefaultBadge" class="hidden text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full"></span>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div class="md:col-span-2">
@@ -1175,6 +1179,7 @@
                                 <textarea id="ctCaution" class="ct-input min-h-[74px] resize-y" placeholder="필요 시 입력 (줄바꿈 최대 2줄 반영)" oninput="ctUpdateSummary()">이물질 혼합되지 않도록 분리배출 주의</textarea>
                             </div>
                         </div>
+                        <p id="ctProcessorDbStatus" class="ct-help mt-3">팀 공용 처리장 DB를 동기화합니다.</p>
                     </section>
 
                     <!-- 수탁처리능력확인서 자동 생성 -->
@@ -1183,7 +1188,7 @@
                             <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-sm">5</span>
                             <div class="flex-1 min-w-0">
                                 <h3 class="ct-section-title">수탁처리능력확인서 자동 생성</h3>
-                                <p class="ct-help mt-0">수탁 원본 PDF는 GitHub에 올리지 않고 이 브라우저에만 저장합니다. 생성 시 원본 PDF 페이지를 그대로 보존하고 변경값만 위에 반영합니다.</p>
+                                <p class="ct-help mt-0">수탁 원본 PDF는 팀 공유 Drive에서 불러오고, 처리능력 기본 숫자는 팀 공용 처리장 DB에서 불러옵니다. 원본 PDF 페이지는 그대로 보존하고 변경값만 위에 반영합니다.</p>
                             </div>
                             <span id="stTemplateBadge" class="st-badge bg-slate-100 text-slate-600 border border-slate-200">원본 미등록</span>
                         </div>
@@ -1203,6 +1208,11 @@
                                 <label class="ct-label" for="stConsignorPhone">배출자 전화번호</label>
                                 <input id="stConsignorPhone" class="ct-input" type="text" placeholder="선택 입력">
                                 <p class="ct-help">계약서 입력값에 없는 항목이라 필요 시 직접 입력합니다.</p>
+                            </div>
+                            <div>
+                                <label class="ct-label" for="stConsignorCorpNo">법인등록번호 <span class="text-slate-400">(생년월일 칸)</span></label>
+                                <input id="stConsignorCorpNo" class="ct-input" type="text" placeholder="예: 123456-1234567" onblur="stFormatCorpInput(this)">
+                                <p class="ct-help">수탁확인서의 ‘생년월일’ 칸에 법인등록번호를 입력합니다.</p>
                             </div>
                         </div>
 
@@ -1226,7 +1236,7 @@
                                 <div>
                                     <p class="text-sm font-extrabold text-slate-800">처리능력 입력값</p>
                                     <p class="ct-help mt-0">
-                                        처리장 원본에 기재된 값은 <b>기본값으로 자동 입력</b>되며 언제든 수정할 수 있습니다.
+                                        팀 공용 DB의 숫자는 <b>기본값으로 자동 입력</b>되며 화면에서도 언제든 수정할 수 있습니다.
                                         금회 폐기물 수탁량은 <b>계약서 위탁량 ÷ 360</b>, 전체 폐기물 보관량은
                                         <b>현재보관량 + 1일평균반입량 + (금회수탁량 - 1일처리량)</b>으로 자동 계산됩니다.
                                     </p>
@@ -6447,9 +6457,24 @@ function ctSyncActualSite() {
 
 function ctOnProcessorChange() {
     const id=ctVal('ctProcessorSelect');
-    const p=CONTRACT_PROCESSORS.find(x=>x.id===id);
     const warning=ctEl('ctProcessorWarning');
     const badge=ctEl('ctWasteDefaultBadge');
+
+    if(!id) {
+        ['ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctTreatmentMethod'].forEach(x=>ctSet(x,''));
+        if(warning) warning.classList.add('hidden');
+        if(badge) badge.classList.add('hidden');
+        ctUpdateSummary(); return;
+    }
+
+    // 팀 공용 처리장 DB가 로드되어 있으면 DB를 최우선으로 사용
+    if(_ctProcessorDb && _ctProcessorDb[id]) {
+        ctApplyProcessorDbDefaults(id);
+        return;
+    }
+
+    // 네트워크/권한 문제로 DB를 읽지 못한 경우에만 기존 코드 정보를 fallback으로 사용
+    const p=CONTRACT_PROCESSORS.find(x=>x.id===id);
     if(!p) {
         ['ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctTreatmentMethod'].forEach(x=>ctSet(x,''));
         if(warning) warning.classList.add('hidden');
@@ -6457,19 +6482,17 @@ function ctOnProcessorChange() {
         ctUpdateSummary(); return;
     }
     ctSet('ctProcessorName',p.name); ctSet('ctProcessorBizNo',p.bizNo); ctSet('ctProcessorRep',p.rep); ctSet('ctProcessorAddress',p.address);
-    // 처리장별 폐기물 기본값이 없는 업체는 이전 선택값이 남지 않도록 비움
     ctSet('ctWasteName',p.waste?.name||''); ctSet('ctWasteCode',p.waste?.code||''); ctSet('ctTreatmentMethod',p.waste?.method||'');
     if(badge) {
-        if(p.waste) { badge.textContent=`기본값: ${p.waste.name} · ${p.waste.method}`; badge.classList.remove('hidden'); }
-        else badge.classList.add('hidden');
+        badge.textContent='임시 fallback 값';
+        badge.classList.remove('hidden');
     }
     if(warning) {
-        if(p.incomplete) { warning.textContent='⚠️ 이 업체는 전달받은 사업자등록증 이미지에서 사업자번호·대표자 확인이 어려워 직접 입력이 필요합니다.'; warning.classList.remove('hidden'); }
-        else warning.classList.add('hidden');
+        warning.textContent='⚠️ 팀 공용 처리장 DB를 불러오지 못해 코드의 예비값을 사용 중입니다.';
+        warning.classList.remove('hidden');
     }
     ctUpdateSummary();
 }
-
 function ctActualSite() {
     const same=!!ctEl('ctSameEmitterSite')?.checked;
     return {
@@ -6582,7 +6605,7 @@ async function ctDownloadContract() {
 
 function ctResetForm() {
     if(!confirm('입력한 계약서 정보를 모두 초기화할까요?')) return;
-    ['ctEmitterName','ctEmitterBizNo','ctEmitterRep','ctEmitterAddress','ctActualSiteName','ctActualSiteAddress','ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctAnnualVolume','ctWasteForm','ctTransportRate','ctTreatmentRate','ctTreatmentMethod'].forEach(id=>ctSet(id,''));
+    ['ctEmitterName','ctEmitterBizNo','ctEmitterRep','ctEmitterAddress','ctActualSiteName','ctActualSiteAddress','ctProcessorName','ctProcessorBizNo','ctProcessorRep','ctProcessorAddress','ctWasteName','ctWasteCode','ctAnnualVolume','ctWasteForm','ctTransportRate','ctTreatmentRate','ctTreatmentMethod','stConsignorCorpNo'].forEach(id=>ctSet(id,''));
     ctSet('ctCaution','이물질 혼합되지 않도록 분리배출 주의');
     ctSet('ctProcessorSelect',''); ctSet('ctUnit','T');
     const chk=ctEl('ctSameEmitterSite'); if(chk) chk.checked=true;
@@ -6797,7 +6820,7 @@ const SUTAK_CONFIG = {
     },
     "bio_post": {
       "name": "바이오포스트",
-      "file": "수탁처리능력확인서.pdf",
+      "file": "바이오포스트_수탁처리능력확인서.pdf",
       "mode": "storage",
       "profile": "standard",
       "fixed": {
@@ -6813,15 +6836,13 @@ const SUTAK_CONFIG = {
     },
     "youngheung": {
       "name": "영흥산업환경",
-      "file": "영흥산업환경_수탁양식_변환본.pdf",
-      "source": "영흥산업환경_수탁양식(최신)_260706.xlsx",
+      "file": "영흥산업환경_수탁처리능력확인서.pdf",
       "mode": "storage",
       "profile": "standard",
       "fixed": {
         "process_method": "2101 일반소각",
         "accept_method": "수시"
-      },
-      "note": "원본 Excel을 PDF로 변환한 뒤 등록하세요."
+      }
     },
     "sechang_dried_sludge_hwp": {
       "name": "세창이엔텍 HWP 건조오니",
@@ -6860,10 +6881,16 @@ const SUTAK_CONFIG = {
   }
 };
 
-const ST_SHARED_FOLDER_ID='1aDyEPpgWTb62EO_0vmxsWwUbiflqgDZ8'; // RECO Team Drive > 사업 본부 > 3. 배출시설계 사업팀 > 수탁확인서_원본
+const ST_SHARED_FOLDER_ID='1uUs1FKzaqubXoyHftYa7_e_y_SIQTiB4'; // 실제 팀 공유드라이브 > 수탁확인서_원본
 const ST_CONFIG_SHEET_ID='1QobgFD3_orZhiTCXoVk7tJzJeyJoiTISx7mm7s1HHhY'; // 같은 공유 드라이브의 대시보드_수탁공용설정
 const ST_MASTER_TAB='수탁_처리장마스터';
 const ST_LAYOUT_TAB='수탁_양식좌표';
+
+const CT_PROCESSOR_DB_SHEET_ID='190EcaIJ_XUm7VS0uUK3ZPsDFGnGIgwx2JlRNQb_CGHQ';
+const CT_PROCESSOR_DB_URL='https://docs.google.com/spreadsheets/d/190EcaIJ_XUm7VS0uUK3ZPsDFGnGIgwx2JlRNQb_CGHQ/edit';
+const CT_CONTRACT_DB_TAB='계약_처리장DB';
+const CT_CAPACITY_DB_TAB='수탁_처리능력DB';
+let _ctProcessorDb={}, _ctCapacityDb={}, _ctDbLoadedAt=0, _ctDbLoading=null;
 // 수탁 공용 설정은 대시보드 로그인 허용자 전체가 관리 가능
 // 실제 공용 저장은 Google Sheet 편집 권한이 있는 사용자만 성공합니다.
 let _stDriveToken=null, _stSheetsToken=null;
@@ -6877,7 +6904,7 @@ let _stCalScale=1, _stCalDrag=null;
 
 const ST_FIELD_LABELS={
   p1_consignor_company:'1p · 위탁자 상호', p1_consignor_biz_no:'1p · 위탁자 사업자번호', p1_consignor_rep:'1p · 위탁자 대표자',
-  p1_consignor_birth:'1p · 위탁자 생년월일(공란)', p1_consignor_address:'1p · 위탁자 주소', p1_consignor_phone:'1p · 위탁자 전화번호',
+  p1_consignor_birth:'1p · 위탁자 생년월일/법인등록번호', p1_consignor_address:'1p · 위탁자 주소', p1_consignor_phone:'1p · 위탁자 전화번호',
   p1_waste_name_code:'1p · 폐기물명/코드', p1_waste_state:'1p · 성질·상태', p1_annual_amount:'1p · 위탁량(톤/년)',
   p1_allow_storage:'1p · 허용보관량', p1_current_storage:'1p · 현재보관량', p1_daily_in:'1p · 1일평균반입량',
   p1_current_accept:'1p · 금회수탁량', p1_total_storage:'1p · 전체보관량', p1_daily_process:'1p · 1일처리량',
@@ -6924,6 +6951,17 @@ function stFmt(v,decimals=2){ const s=String(v??'').trim(); if(!s) return ''; co
 function stDateKo(iso){ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${Number(m[1])} 년 ${Number(m[2])} 월 ${Number(m[3])} 일`:''; }
 function stWasteNameCode(){ const n=ctVal('ctWasteName'),c=ctVal('ctWasteCode'); return n&&c?`${n}\n(${c})`:(n||(c?`(${c})`:'')); }
 function stNormName(s){ return String(s||'').toLowerCase().replace(/\.[^.]+$/,'').replace(/[\s_()\-·.,]/g,''); }
+function stSharedPdfAliases(id,tpl){
+ const aliases=[tpl?.file||''];
+ if(id==='bio_post') aliases.push('바이오포스트_수탁처리능력확인서.pdf','수탁처리능력확인서.pdf');
+ if(id==='youngheung') aliases.push('영흥산업환경_수탁처리능력확인서.pdf','영흥산업환경_수탁양식_변환본.pdf');
+ if(id==='sechang_dried_sludge_hwp') aliases.push('수탁처리능력확인서-건조오니_변환본.pdf','세창이엔텍_수탁처리능력확인서-건조오니_변환본.pdf');
+ return [...new Set(aliases.filter(Boolean).map(stNormName))];
+}
+function stFindSharedPdfForTemplate(id,tpl,files){
+ const aliases=stSharedPdfAliases(id,tpl);
+ return files.find(f=>aliases.includes(stNormName(f.name)))||null;
+}
 function stSeedLayout(tpl){ return stClone(ST_LAYOUT_PROFILES[tpl?.profile]||ST_LAYOUT_STANDARD); }
 function stMode(){ return stSelectedTemplate()?.mode||'storage'; }
 
@@ -6943,6 +6981,140 @@ async function stFetchSheetValues(range){
  const j=await r.json(); if(!r.ok) throw new Error(j?.error?.message||`공용 설정 시트 읽기 오류 ${r.status}`); return j.values||[];
 }
 function stRowsToObjects(rows){ if(!rows?.length)return[]; const h=rows[0]; return rows.slice(1).map((r,i)=>{const o={__row:i+2};h.forEach((k,idx)=>o[k]=r[idx]??'');return o;}); }
+
+function ctDbActive(v){ const s=String(v??'').trim().toUpperCase(); return v===true||s===''||s==='TRUE'||s==='1'||s==='Y'||s==='YES'; }
+function ctOpenProcessorDb(){ window.open(CT_PROCESSOR_DB_URL,'_blank','noopener'); }
+async function ctFetchProcessorDbRange(range){
+ const tok=await stEnsureSheetsToken();
+ const url=`https://sheets.googleapis.com/v4/spreadsheets/${CT_PROCESSOR_DB_SHEET_ID}/values/${encodeURIComponent(range)}`;
+ const r=await fetch(url,{headers:{Authorization:`Bearer ${tok}`}});
+ const j=await r.json();
+ if(!r.ok) throw new Error(j?.error?.message||`처리장 DB 읽기 오류 ${r.status}`);
+ return j.values||[];
+}
+function ctApplyCapacityDbToTemplates(){
+ const numMap={
+   '허용보관량':'allow_storage',
+   '현재폐기물보관량':'current_storage',
+   '1일평균폐기물반입량':'daily_in',
+   '1일폐기물처리량':'daily_process',
+   '매립허가용량':'landfill_allow',
+   '매립1일평균반입량':'landfill_daily_in',
+   '남은매립용량':'landfill_remain'
+ };
+ for(const [tid,row] of Object.entries(_ctCapacityDb)){
+   if(!ctDbActive(row.active)) continue;
+   const tpl=SUTAK_CONFIG.templates[tid]; if(!tpl) continue;
+   tpl.fixed=tpl.fixed||{};
+   Object.values(numMap).forEach(k=>delete tpl.fixed[k]);
+   for(const [col,key] of Object.entries(numMap)){
+     const raw=row[col];
+     if(raw===''||raw==null) continue;
+     const n=Number(String(raw).replace(/,/g,''));
+     if(Number.isFinite(n)) tpl.fixed[key]=n;
+   }
+ }
+}
+async function ctLoadProcessorDb(force=false){
+ const now=Date.now();
+ if(!force && _ctDbLoadedAt && now-_ctDbLoadedAt<30000) return true;
+ if(_ctDbLoading) return _ctDbLoading;
+ _ctDbLoading=(async()=>{
+   const status=ctEl('ctProcessorDbStatus');
+   if(status) status.textContent='팀 공용 처리장 DB 불러오는 중...';
+   const [contractRows,capacityRows]=await Promise.all([
+     ctFetchProcessorDbRange(`${CT_CONTRACT_DB_TAB}!A:R`),
+     ctFetchProcessorDbRange(`${CT_CAPACITY_DB_TAB}!A:M`)
+   ]);
+   _ctProcessorDb={};
+   for(const r of stRowsToObjects(contractRows)){
+     if(!r.processor_id||!ctDbActive(r.active)) continue;
+     _ctProcessorDb[r.processor_id]=r;
+   }
+   _ctCapacityDb={};
+   for(const r of stRowsToObjects(capacityRows)){
+     if(!r.template_id||!ctDbActive(r.active)) continue;
+     _ctCapacityDb[r.template_id]=r;
+   }
+   ctApplyCapacityDbToTemplates();
+   ctRenderProcessorOptionsFromDb();
+   _ctDbLoadedAt=Date.now();
+   if(status) status.textContent=`✅ 처리장 DB 동기화 완료 · 처리장 ${Object.keys(_ctProcessorDb).length}개 / 수탁 숫자 ${Object.keys(_ctCapacityDb).length}개`;
+   return true;
+ })();
+ try{return await _ctDbLoading;}
+ finally{_ctDbLoading=null;}
+}
+function ctRenderProcessorOptionsFromDb(){
+ const sel=ctEl('ctProcessorSelect'); if(!sel) return;
+ const current=sel.value;
+ const rows=Object.values(_ctProcessorDb).filter(r=>ctDbActive(r.active));
+ rows.sort((a,b)=>String(a.처리장명||'').localeCompare(String(b.처리장명||''),'ko'));
+ sel.innerHTML='<option value="">처리장을 선택하세요</option>'+rows.map(r=>`<option value="${String(r.processor_id).replace(/"/g,'&quot;')}">${r.처리장명||r.계약서상상호||r.processor_id}</option>`).join('');
+ if(current && _ctProcessorDb[current]) sel.value=current;
+}
+function ctApplyProcessorDbDefaults(id){
+ const row=_ctProcessorDb[id]; if(!row) return false;
+ const map={
+   ctProcessorName:'계약서상상호',
+   ctProcessorBizNo:'사업자번호',
+   ctProcessorRep:'대표자',
+   ctProcessorAddress:'주소',
+   ctWasteName:'폐기물종류',
+   ctWasteCode:'폐기물코드',
+   ctUnit:'단위',
+   ctAnnualVolume:'예상배출량_톤년',
+   ctWasteForm:'성상',
+   ctTransportRate:'운반단가',
+   ctTreatmentRate:'처리단가',
+   ctTreatmentMethod:'처리방법',
+   ctCaution:'취급시주의사항'
+ };
+ Object.entries(map).forEach(([fieldId,col])=>ctSet(fieldId,row[col]??''));
+ const warning=ctEl('ctProcessorWarning');
+ if(warning){
+   const miss=[];
+   if(!row.계약서상상호) miss.push('상호');
+   if(!row.사업자번호) miss.push('사업자번호');
+   if(!row.대표자) miss.push('대표자');
+   if(!row.주소) miss.push('주소');
+   if(miss.length){
+     warning.textContent=`⚠️ 처리장 DB에서 ${miss.join('·')} 정보가 비어 있습니다. 시트에서 입력하거나 화면에서 직접 입력해주세요.`;
+     warning.classList.remove('hidden');
+   } else {
+     warning.classList.add('hidden');
+   }
+ }
+ const badge=ctEl('ctWasteDefaultBadge');
+ if(badge){
+   badge.textContent='팀 공용 DB 적용';
+   badge.classList.remove('hidden');
+ }
+ ctUpdateSummary();
+ stRecalculateCapacity();
+ return true;
+}
+async function ctRefreshProcessorDb(){
+ try{
+   const pid=ctVal('ctProcessorSelect');
+   await ctLoadProcessorDb(true);
+   if(pid && _ctProcessorDb[pid]){
+     ctSet('ctProcessorSelect',pid);
+     ctApplyProcessorDbDefaults(pid);
+   }
+   stSyncFromContract(true);
+   alert('팀 공용 처리장 DB의 최신값을 다시 불러왔습니다.');
+ }catch(e){
+   console.error(e);
+   alert('처리장 DB 새로고침에 실패했습니다.\n'+e.message);
+ }
+}
+function stFormatCorpNo(v){
+ const raw=String(v||'').trim(), d=raw.replace(/\D/g,'');
+ return d.length===13 ? `${d.slice(0,6)}-${d.slice(6)}` : raw;
+}
+function stFormatCorpInput(el){ if(el) el.value=stFormatCorpNo(el.value); }
+
 async function stLoadSharedConfig(){
  try{
    const [mrows,lrows]=await Promise.all([stFetchSheetValues(`${ST_MASTER_TAB}!A:X`),stFetchSheetValues(`${ST_LAYOUT_TAB}!A:H`)]);
@@ -6954,14 +7126,14 @@ async function stLoadSharedConfig(){
       const nums=['allow_storage','current_storage','daily_in','daily_process','landfill_allow','landfill_daily_in','landfill_remain'];
       nums.forEach(k=>{ if(r[k]!==''&&r[k]!=null){ const n=Number(String(r[k]).replace(/,/g,'')); if(Number.isFinite(n))fixed[k]=n; } });
       ['process_method','facility_type','facility_capacity','accept_method'].forEach(k=>{ if(r[k]!==''&&r[k]!=null)fixed[k]=r[k]; });
-      tpl.fixed=fixed; if(r.파일명)tpl.file=r.파일명; if(r.mode)tpl.mode=r.mode; if(r.profile)tpl.profile=r.profile; if(r.source)tpl.source=r.source; if(r.note)tpl.note=r.note;
+      tpl.fixed=fixed; if(r.파일명)tpl.file=r.파일명; if(r.mode)tpl.mode=r.mode; if(r.profile)tpl.profile=r.profile; tpl.source=String(r.source||''); tpl.note=String(r.note||'');
    }
    _stSharedLayouts={};
    for(const r of stRowsToObjects(lrows)){
       if(!r.template_id)continue; let layout=null; try{layout=r.layout_json?JSON.parse(r.layout_json):null;}catch(e){}
       _stSharedLayouts[r.template_id]={...r,layout,verified:String(r.검수상태||'').toUpperCase()==='TRUE'||r.검수상태==='완료'};
    }
-   const help=ctEl('stSharedHelp'); if(help)help.textContent=`팀 공유 드라이브 설정 동기화 완료 · 처리장 ${Object.keys(_stSharedMaster).length}개`;
+   const help=ctEl('stSharedHelp'); if(help)help.textContent=`팀 공유 드라이브 설정 동기화 완료 · 처리장 ${Object.keys(_stSharedMaster).length}개 · 원본 폴더 ID 확인됨`;
  }catch(e){ console.warn('공용 수탁 설정 로드 실패',e); const help=ctEl('stSharedHelp'); if(help)help.textContent='공용 설정을 불러오지 못해 로컬 설정으로 동작합니다. '+e.message; }
  stUpdateAdminUi();
 }
@@ -7017,8 +7189,14 @@ async function stAdminMatchDriveFiles(){
    const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=200&supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,name,modifiedTime,size,mimeType,driveId)`,{headers:{Authorization:`Bearer ${tok}`}}); const j=await r.json(); if(!r.ok)throw new Error(j?.error?.message||'Drive 목록 조회 실패');
    const files=(j.files||[]).filter(f=>f.mimeType==='application/pdf'); let matched=0,miss=[];
    for(const [id,tpl] of Object.entries(SUTAK_CONFIG.templates)){
-     const target=stNormName(tpl.file), f=files.find(x=>stNormName(x.name)===target)||files.find(x=>{const n=stNormName(x.name);return target&& (n.includes(target)||target.includes(n));});
-     if(!f){miss.push(tpl.name);continue;} const row=_stSharedRows[id]; if(!row)continue;
+     const row=_stSharedRows[id]; if(!row)continue;
+     const f=stFindSharedPdfForTemplate(id,tpl,files);
+     if(!f){
+       // 공용 폴더에 파일이 없으면 과거의 잘못된/삭제된 Drive ID를 그대로 쓰지 않음
+       await stSheetsPutRange(`${ST_MASTER_TAB}!H${row}:I${row}`,[['','']]);
+       miss.push(tpl.name);
+       continue;
+     }
      await stSheetsPutRange(`${ST_MASTER_TAB}!H${row}:I${row}`,[[f.id,f.modifiedTime||'']]); matched++;
    }
    await stLoadSharedConfig(); await stRefreshStatus(); alert(`공용 Drive 원본 자동매칭 완료: ${matched}개${miss.length?`\n\n미매칭 ${miss.length}개: ${miss.join(', ')}`:''}`);
@@ -7035,6 +7213,7 @@ async function stSaveSharedLayout(id,layout,hash,verified){
 async function stInitSutakSection(){
  if(!_stInitialized){
    await stLoadSharedConfig();
+   await ctLoadProcessorDb(true);
    const sel=ctEl('stTemplateSelect'); if(sel){ sel.innerHTML='<option value="">처리장 양식 선택</option>'+Object.entries(SUTAK_CONFIG.templates).map(([id,t])=>`<option value="${id}">${t.name}</option>`).join(''); }
    const d=ctEl('stIssueDate'); if(d&&!d.value)d.value=ctTodayLocal();
    _stInitialized=true;
@@ -7247,7 +7426,7 @@ function stValidateSutakInputs(){
 
 function stBuildFields(){
  const t=stSelectedTemplate(),d=t?.fixed||{},annual=ctVal('ctAnnualVolume'),pm=ctVal('ctTreatmentMethod')||d.process_method||'';
- const base={p1_consignor_company:ctVal('ctEmitterName'),p1_consignor_biz_no:ctFormatBizNo(ctVal('ctEmitterBizNo')),p1_consignor_rep:ctVal('ctEmitterRep'),p1_consignor_birth:'',p1_consignor_address:ctVal('ctEmitterAddress'),p1_consignor_phone:ctVal('stConsignorPhone'),p1_waste_name_code:stWasteNameCode(),p1_waste_state:ctVal('ctWasteForm')||'고상',p1_annual_amount:annual,
+ const base={p1_consignor_company:ctVal('ctEmitterName'),p1_consignor_biz_no:ctFormatBizNo(ctVal('ctEmitterBizNo')),p1_consignor_rep:ctVal('ctEmitterRep'),p1_consignor_birth:stFormatCorpNo(ctVal('stConsignorCorpNo')),p1_consignor_address:ctVal('ctEmitterAddress'),p1_consignor_phone:ctVal('stConsignorPhone'),p1_waste_name_code:stWasteNameCode(),p1_waste_state:ctVal('ctWasteForm')||'고상',p1_annual_amount:annual,
  p2_waste_name_code:stWasteNameCode(),p2_process_method:pm,p2_facility_type:ctVal('stFacilityType')||d.facility_type||'',p2_facility_capacity:ctVal('stFacilityCapacity')||d.facility_capacity||'',p2_annual_amount:annual,p2_accept_method:ctVal('stAcceptMethod')||d.accept_method||'수시',p2_date:stDateKo(ctVal('stIssueDate')),p2_consignor_company:ctVal('ctEmitterName'),p2_consignor_rep:ctVal('ctEmitterRep'),p2_applicant:`${ctVal('ctEmitterName')} ${ctVal('ctEmitterRep')}`.trim()};
  if(t?.mode==='landfill') Object.assign(base,{p1_landfill_allow:stFmt(ctVal('stLandfillAllow')),p1_landfill_daily_in:stFmt(ctVal('stLandfillDailyIn')),p1_landfill_current_accept:stFmt(ctVal('stLandfillCurrentAccept')),p1_landfill_remain:stFmt(ctVal('stLandfillRemain'))});
  else Object.assign(base,{p1_allow_storage:stFmt(ctVal('stAllowStorage')),p1_current_storage:stFmt(ctVal('stCurrentStorage')),p1_daily_in:stFmt(ctVal('stDailyIn')),p1_current_accept:stFmt(ctVal('stCurrentAccept')),p1_total_storage:stFmt(ctVal('stTotalStorage')),p1_daily_process:stFmt(ctVal('stDailyProcess'))});
@@ -7282,8 +7461,36 @@ async function stDownloadSutakPdf(){
 }
 
 // 기존 계약서 탭 초기화/처리장 선택과 수탁 기능 연동
-if(typeof initContractTab==='function'){ const _orig=initContractTab; initContractTab=function(){_orig();stInitSutakSection();}; }
-if(typeof ctOnProcessorChange==='function'){ const _origP=ctOnProcessorChange; ctOnProcessorChange=function(){_origP();setTimeout(()=>stSyncFromContract(true),0);}; }
+if(typeof initContractTab==='function'){
+ const _orig=initContractTab;
+ initContractTab=function(){
+   _orig();
+   stInitSutakSection().then(()=>{
+     const pid=ctVal('ctProcessorSelect');
+     if(pid) ctApplyProcessorDbDefaults(pid);
+   }).catch(e=>console.error('처리장 DB 초기화 실패',e));
+ };
+}
+if(typeof ctOnProcessorChange==='function'){
+ const _origP=ctOnProcessorChange;
+ ctOnProcessorChange=function(){
+   _origP();
+   (async()=>{
+     try{
+       const selectedBefore=ctVal('ctProcessorSelect');
+       await ctLoadProcessorDb(true);
+       if(selectedBefore && _ctProcessorDb[selectedBefore]){
+         ctSet('ctProcessorSelect',selectedBefore);
+         ctApplyProcessorDbDefaults(selectedBefore);
+       }
+     }catch(e){
+       console.error('처리장 DB 불러오기 실패',e);
+       const status=ctEl('ctProcessorDbStatus'); if(status) status.textContent='⚠️ 처리장 DB 불러오기 실패 · 기존 기본값 사용';
+     }
+     stSyncFromContract(true);
+   })();
+ };
+}
 
 </script>
 
