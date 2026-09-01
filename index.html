@@ -11,6 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <!-- 계약서 탭: 사업자등록증 로컬 인식용. 파일은 외부 서버에 업로드하지 않음 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
@@ -783,6 +784,80 @@
                     <div id="d5v2CompareChips" class="flex flex-wrap gap-1.5 flex-1 min-w-[180px]"></div>
                     <button id="d5v2CompareBtn" onclick="openD5CompareV2()" class="hidden px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors">선택 운반자 비교</button>
                     <button id="d5v2ClearBtn" onclick="clearD5SelectionV2()" class="hidden px-3 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-bold">선택 해제</button>
+                </div>
+            </div>
+
+            <!-- 월 도급비 정산 XLSX -->
+            <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                <div class="flex flex-col xl:flex-row xl:items-start gap-4">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h3 class="text-base font-bold text-slate-900">📥 월 도급비 정산 엑셀</h3>
+                            <span class="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-full px-2 py-0.5">DB → XLSX</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">
+                            <b>DB배출시설계사업팀_은별</b>에서 도급사별 정산기준열(D/F)·차량을 기준으로
+                            일자(E) / 위탁업체(G) / 폐기물(H) / 운반톤수(I) / 처리장(M) / 단가(R) / 수수료(S)를 가져옵니다.
+                        </p>
+                        <p class="text-[11px] text-slate-400 mt-1">
+                            법인카드·하이패스는 회계팀 자료 수령 전이므로 빈 탭과 공제 입력란만 생성합니다.
+                            동일 사장 복수 차량·정산 기준열(D/F)·표시명은 「도급정산_차량그룹」에서, 고정도급료·캐피탈·회당 특수단가는 「도급정산_추가규칙」에서 관리합니다.
+                        </p>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                        <button type="button" onclick="d5OpenVehicleGroupSheet()"
+                            class="text-xs font-bold text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 px-3 py-2 rounded-lg">
+                            차량그룹 DB
+                        </button>
+                        <button type="button" onclick="d5OpenSpecialRuleSheet()"
+                            class="text-xs font-bold text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 px-3 py-2 rounded-lg">
+                            추가규칙 DB
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mt-4">
+                    <label class="flex flex-col gap-1">
+                        <span class="text-xs font-bold text-slate-500">정산월 <span class="text-red-500">*</span></span>
+                        <select id="d5SettleMonth" onchange="d5SettleMonthChanged()"
+                            class="text-sm border border-slate-200 rounded-lg px-3 py-2.5 bg-white font-semibold text-slate-700">
+                            <option value="">월 선택</option>
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-1">
+                        <span class="text-xs font-bold text-slate-500">정산 대상 <span class="text-red-500">*</span></span>
+                        <select id="d5SettleDriver" onchange="d5SettleTargetChanged()"
+                            class="text-sm border border-slate-200 rounded-lg px-3 py-2.5 bg-white font-semibold text-slate-700">
+                            <option value="">운반자 선택</option>
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-1">
+                        <span class="text-xs font-bold text-slate-500">시작일 <span class="font-normal text-slate-400">(선택)</span></span>
+                        <input id="d5SettleStartDate" type="date" onchange="d5SettleUpdatePreview()"
+                            class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700">
+                    </label>
+                    <label class="flex flex-col gap-1">
+                        <span class="text-xs font-bold text-slate-500">종료일 <span class="font-normal text-slate-400">(선택)</span></span>
+                        <input id="d5SettleEndDate" type="date" onchange="d5SettleUpdatePreview()"
+                            class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700">
+                    </label>
+                    <div class="flex items-end">
+                        <button id="d5SettleDownloadBtn" type="button" onclick="d5ExportSettlementXlsx()"
+                            class="w-full px-4 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled>
+                            ↓ 도급비 정산 XLSX
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-3 rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-5">
+                    <div class="text-xs"><span class="font-bold text-slate-500">적용 차량</span> <span id="d5SettleVehicles" class="text-slate-700 ml-1">—</span></div>
+                    <div class="text-xs"><span class="font-bold text-slate-500">정산 기준</span> <span id="d5SettleBasis" class="text-slate-700 ml-1">—</span></div>
+                    <div class="text-xs"><span class="font-bold text-slate-500">특수 규칙</span> <span id="d5SettleSpecialRules" class="text-slate-700 ml-1">—</span></div>
+                    <div class="text-xs"><span class="font-bold text-slate-500">DB 행</span> <span id="d5SettleRowCount" class="text-slate-700 ml-1">—</span></div>
+                    <div class="text-xs"><span class="font-bold text-slate-500">운반톤수</span> <span id="d5SettleWeight" class="text-slate-700 ml-1">—</span></div>
+                    <div class="text-xs"><span class="font-bold text-slate-500">수수료</span> <span id="d5SettleFee" class="text-slate-700 ml-1">—</span></div>
+                    <div id="d5SettleStatus" class="text-xs text-slate-400 lg:ml-auto">정산월과 운반자를 선택하세요.</div>
                 </div>
             </div>
 
@@ -1731,6 +1806,7 @@
                     isDirect
                 };
             });
+            d5InitSettlementExporter();
             if (currentTab === 5) renderDogupTab();
         } catch(e) {
             console.error('도급비 로드 오류:', e);
@@ -6026,6 +6102,616 @@ E. YoY 변동 — 전년 대비 추세
         const rows=getD5V2FilteredRows().slice().sort((a,b)=>b.month.localeCompare(a.month)||(a.driver||'').localeCompare(b.driver||'')); const body=document.getElementById('d5v2RawBody'); if(!body)return;
         body.innerHTML=rows.map(d=>`<tr class="border-b border-slate-100"><td class="p-2 font-bold">${d5v2MonthLabel(d.month)}</td><td class="p-2">${d.vehicle||'—'}</td><td class="p-2 font-semibold">${d.driver||'—'}</td><td class="p-2 text-right">${(d.weight||0).toLocaleString('ko-KR',{maximumFractionDigits:1})}</td><td class="p-2 text-right">${(d.trips||0).toLocaleString('ko-KR')}</td><td class="p-2 text-right">${d5v2FmtFull(d.totalRev)}</td><td class="p-2 text-right">${d5v2FmtFull(d.netRev)}</td><td class="p-2 text-right">${d.dogup===null?'—':d5v2FmtFull(d.dogup)}</td><td class="p-2 text-right">${d.deduct===null?'—':d5v2FmtFull(d.deduct)}</td><td class="p-2 text-right">${d.finalPay===null?'—':d5v2FmtFull(d.finalPay)}</td><td class="p-2 text-right">${d.ratio===null?'—':d.ratio.toFixed(1)+'%'}</td><td class="p-2 text-right">${d.deductPerTrip===null?'—':d5v2FmtFull(d.deductPerTrip)}</td></tr>`).join('')||'<tr><td colspan="12" class="p-8 text-center text-slate-400">데이터가 없습니다.</td></tr>';
         const c=document.getElementById('d5v2RawCount'); if(c)c.textContent=`현재 필터 기준 ${rows.length.toLocaleString('ko-KR')}행`;
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    // 월 도급비 정산 XLSX
+    // 기준:
+    // F열 마감월 / C 차량 / E 일자 / G 위탁업체 / H 폐기물 / I 운반톤수
+    // M 처리장 / R 단가 / S 수수료
+    // ═══════════════════════════════════════════════════════
+    const D5_SETTLE_DB_TAB = 'DB배출시설계사업팀_은별';
+    const D5_SETTLE_GROUP_TAB = '도급정산_차량그룹';
+    const D5_SETTLE_GROUP_SHEET_GID = '1976278911';
+    const D5_SETTLE_RULE_TAB = '도급정산_추가규칙';
+    const D5_SETTLE_RULE_SHEET_GID = '846921600';
+    let _d5SettleGroups = {};
+    let _d5SettleRules = [];
+    let _d5SettleRawCache = null;
+    let _d5SettleRawCacheAt = 0;
+    let _d5SettleInitDone = false;
+
+    function d5SettleNormVehicle(v){
+        return String(v||'').replace(/\s+/g,'').trim();
+    }
+    function d5SettleNum(v){
+        if(v===null || v===undefined || v==='') return null;
+        if(typeof v==='number') return Number.isFinite(v)?v:null;
+        const s=String(v).trim();
+        if(!s || s.startsWith('#')) return null;
+        const n=Number(s.replace(/,/g,'').replace(/[^\d.-]/g,''));
+        return Number.isFinite(n)?n:null;
+    }
+    function d5SettleYYMMLabel(v){
+        const s=String(v||'');
+        return /^\d{4}$/.test(s) ? `20${s.slice(0,2)}년 ${parseInt(s.slice(2),10)}월` : s;
+    }
+    function d5SettleDateIso(v){
+        const s=String(v||'').trim();
+        if(!s) return '';
+        const m=s.match(/(\d{4})[.\-\/\s]+(\d{1,2})[.\-\/\s]+(\d{1,2})/);
+        if(!m) return '';
+        return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+    }
+    function d5SettleDateDisplay(iso){
+        const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return m ? `${m[1]}. ${parseInt(m[2],10)}. ${parseInt(m[3],10)}` : iso;
+    }
+    function d5SettleSafeName(v){
+        return String(v||'정산').replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,' ').trim();
+    }
+    function d5OpenVehicleGroupSheet(){
+        window.open(`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/edit#gid=${D5_SETTLE_GROUP_SHEET_GID}`,'_blank','noopener');
+    }
+    function d5OpenSpecialRuleSheet(){
+        window.open(`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/edit#gid=${D5_SETTLE_RULE_SHEET_GID}`,'_blank','noopener');
+    }
+
+    async function d5SettleFetchRange(a1){
+        const tok = await stEnsureSheetsToken();
+        const url=`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(a1)}`;
+        const r=await fetch(url,{headers:{Authorization:`Bearer ${tok}`}});
+        const j=await r.json();
+        if(!r.ok) throw new Error(j?.error?.message||`시트 읽기 오류 ${r.status}`);
+        return j.values||[];
+    }
+
+    async function d5LoadSettlementGroups(force=false){
+        if(!force && Object.keys(_d5SettleGroups).length) return _d5SettleGroups;
+        try{
+            const rows=await d5SettleFetchRange(`${D5_SETTLE_GROUP_TAB}!A:K`);
+            _d5SettleGroups={};
+            if(rows.length){
+                const h=rows[0].map(x=>String(x||'').trim());
+                const idx=k=>h.indexOf(k);
+                for(const r of rows.slice(1)){
+                    const active=String(r[idx('active')]??'').trim().toUpperCase();
+                    if(active && !['TRUE','1','Y','YES'].includes(active)) continue;
+                    const driver=String(r[idx('운반자')]||'').trim();
+                    if(!driver) continue;
+                    const vehicles=String(r[idx('포함차량')]||r[idx('대표차량')]||'')
+                        .split(/[,;/\n]+/).map(d5SettleNormVehicle).filter(Boolean);
+                    if(!vehicles.length) continue;
+                    _d5SettleGroups[driver]={
+                        groupId:String(r[idx('group_id')]||'').trim(),
+                        driver,
+                        representative:d5SettleNormVehicle(r[idx('대표차량')]),
+                        vehicles:[...new Set(vehicles)],
+                        note:String(r[idx('note')]||'').trim(),
+                        basis:(String(r[idx('정산기준열')]||'F').trim().toUpperCase()==='D'?'D':'F'),
+                        displayName:String(r[idx('정산표시명')]||driver).trim()||driver,
+                        detailMode:(String(r[idx('상세출력')]||'ALL').trim().toUpperCase()==='NONZERO'?'NONZERO':'ALL')
+                    };
+                }
+            }
+        }catch(e){
+            console.warn('도급정산 차량그룹 로드 실패',e);
+            _d5SettleGroups={};
+        }
+        return _d5SettleGroups;
+    }
+
+    function d5SettlementBasis(driver){
+        const override=_d5SettleGroups[driver];
+        return override?.basis==='D' ? 'D' : 'F';
+    }
+    function d5SettlementDisplayName(driver){
+        return _d5SettleGroups[driver]?.displayName || driver;
+    }
+    function d5SettlementDetailMode(driver){
+        return _d5SettleGroups[driver]?.detailMode || 'ALL';
+    }
+
+    async function d5LoadSettlementRules(force=false){
+        if(!force && _d5SettleRules.length) return _d5SettleRules;
+        try{
+            const rows=await d5SettleFetchRange(`${D5_SETTLE_RULE_TAB}!A:N`);
+            _d5SettleRules=[];
+            if(!rows.length) return _d5SettleRules;
+            const h=rows[0].map(x=>String(x||'').trim());
+            const idx=k=>h.indexOf(k);
+            for(const r of rows.slice(1)){
+                const active=String(r[idx('active')]??'').trim().toUpperCase();
+                if(active && !['TRUE','1','Y','YES'].includes(active)) continue;
+                const ruleId=String(r[idx('rule_id')]||'').trim();
+                if(!ruleId) continue;
+                _d5SettleRules.push({
+                    ruleId,
+                    driver:String(r[idx('운반자')]||'').trim(),
+                    vehicle:d5SettleNormVehicle(r[idx('차량번호')]),
+                    type:String(r[idx('rule_type')]||'').trim().toUpperCase(),
+                    label:String(r[idx('항목명')]||'').trim(),
+                    amount:d5SettleNum(r[idx('금액')])??0,
+                    conditionCustomer:String(r[idx('조건업체')]||'').trim(),
+                    startMonth:String(r[idx('시작월')]||'').trim(),
+                    endMonth:String(r[idx('종료월')]||'').trim(),
+                    installmentStart:String(r[idx('할부시작월')]||'').trim(),
+                    installmentTotal:d5SettleNum(r[idx('총회차')])||0,
+                    note:String(r[idx('note')]||'').trim()
+                });
+            }
+        }catch(e){
+            console.warn('도급정산 추가규칙 로드 실패',e);
+            _d5SettleRules=[];
+        }
+        return _d5SettleRules;
+    }
+
+    function d5YYMMToIndex(yymm){
+        const s=String(yymm||'');
+        if(!/^\d{4}$/.test(s)) return null;
+        const yy=2000+Number(s.slice(0,2)), mm=Number(s.slice(2));
+        if(mm<1||mm>12) return null;
+        return yy*12+(mm-1);
+    }
+
+    function d5ApplicableRules(driver,month){
+        const vehicles=new Set(d5SettlementVehicles(driver));
+        const mi=d5YYMMToIndex(month);
+        return (_d5SettleRules||[]).filter(rule=>{
+            const matchTarget=(rule.driver && rule.driver===driver) || (rule.vehicle && vehicles.has(rule.vehicle));
+            if(!matchTarget) return false;
+            const si=d5YYMMToIndex(rule.startMonth), ei=d5YYMMToIndex(rule.endMonth);
+            if(mi!==null && si!==null && mi<si) return false;
+            if(mi!==null && ei!==null && mi>ei) return false;
+            return true;
+        });
+    }
+
+    function d5RuleDisplayLabel(rule,month){
+        let label=rule.label||rule.type;
+        if(rule.type==='MONTHLY_DEDUCT' && rule.installmentStart && rule.installmentTotal){
+            const cur=d5YYMMToIndex(month), start=d5YYMMToIndex(rule.installmentStart);
+            if(cur!==null && start!==null){
+                const n=cur-start+1;
+                if(n>=1 && n<=rule.installmentTotal) label+=` (${n}/${rule.installmentTotal})`;
+            }
+        }
+        return label;
+    }
+
+    function d5ApplyPerJobOverrides(rows,rules){
+        const perJob=rules.filter(r=>r.type==='PER_JOB_OVERRIDE' && r.conditionCustomer);
+        if(!perJob.length) return rows;
+        return rows.map(row=>{
+            let out={...row};
+            for(const rule of perJob){
+                if(String(out.customer||'').trim()===rule.conditionCustomer){
+                    out.fee=rule.amount;
+                    out.feeRaw=rule.amount;
+                    out.rateRaw=`${Math.round(rule.amount)}원/회`;
+                    out._specialRule=rule.ruleId;
+                }
+            }
+            return out;
+        });
+    }
+
+    function d5SettlementVehicles(driver){
+        const override=_d5SettleGroups[driver];
+        if(override?.vehicles?.length) return override.vehicles;
+        const vehicles=(window.dogupData||[])
+            .filter(d=>d.driver===driver && !d.isDirect)
+            .map(d=>d5SettleNormVehicle(d.vehicle))
+            .filter(Boolean);
+        return [...new Set(vehicles)];
+    }
+
+    async function d5GetSettlementRaw(force=false){
+        if(!force && _d5SettleRawCache && Date.now()-_d5SettleRawCacheAt<60000) return _d5SettleRawCache;
+        // C:S만 읽음.
+        // 0 C차량, 1 D정산월, 2 E일자, 3 F정산월, 4 G업체, 5 H폐기물, 6 I톤수,
+        // 10 M처리장, 15 R단가, 16 S수수료
+        const rows=await d5SettleFetchRange(`${D5_SETTLE_DB_TAB}!C:S`);
+        _d5SettleRawCache=(rows||[]).slice(1).map(r=>({
+            vehicle:String(r[0]||'').trim(),
+            vehicleKey:d5SettleNormVehicle(r[0]),
+            dateRaw:String(r[2]||'').trim(),
+            date:d5SettleDateIso(r[2]),
+            monthD:String(r[1]||'').replace(/\.0$/,'').trim(),
+            monthF:String(r[3]||'').replace(/\.0$/,'').trim(),
+            customer:String(r[4]||'').trim(),
+            waste:String(r[5]||'').trim(),
+            weight:d5SettleNum(r[6])??0,
+            processor:String(r[10]||'').trim(),
+            rateRaw:r[15]??'',
+            feeRaw:r[16]??'',
+            fee:d5SettleNum(r[16])
+        })).filter(r=>(r.monthD||r.monthF) && r.vehicleKey);
+        _d5SettleRawCacheAt=Date.now();
+        return _d5SettleRawCache;
+    }
+
+    function d5BuildSettlementSelectors(){
+        const data=(window.dogupData||[]).filter(d=>!d.isDirect && d.driver);
+        const months=[...new Set(data.map(d=>String(d.month||'')).filter(m=>/^\d{4}$/.test(m)))].sort();
+        const drivers=[...new Set(data.map(d=>d.driver))].sort((a,b)=>a.localeCompare(b,'ko'));
+        const mo=document.getElementById('d5SettleMonth');
+        const dr=document.getElementById('d5SettleDriver');
+        if(!mo||!dr) return;
+
+        const oldMonth=mo.value, oldDriver=dr.value;
+        mo.innerHTML='<option value="">월 선택</option>'+months.map(m=>`<option value="${m}">${d5SettleYYMMLabel(m)}</option>`).join('');
+        dr.innerHTML='<option value="">운반자 선택</option>'+drivers.map(d=>`<option value="${String(d).replace(/"/g,'&quot;')}">${d}</option>`).join('');
+
+        if(months.includes(oldMonth)) mo.value=oldMonth;
+        else if(months.length) mo.value=months[months.length-1];
+
+        if(drivers.includes(oldDriver)) dr.value=oldDriver;
+    }
+
+    async function d5InitSettlementExporter(){
+        if(_d5SettleInitDone){
+            d5BuildSettlementSelectors();
+            return;
+        }
+        _d5SettleInitDone=true;
+        d5BuildSettlementSelectors();
+        await Promise.all([d5LoadSettlementGroups(),d5LoadSettlementRules()]);
+        d5SettleUpdateVehicleLabel();
+    }
+
+    function d5SettleUpdateVehicleLabel(){
+        const driver=document.getElementById('d5SettleDriver')?.value||'';
+        const v=driver?d5SettlementVehicles(driver):[];
+        const el=document.getElementById('d5SettleVehicles');
+        if(el) el.textContent=v.length?v.join(', '):'—';
+        const basisEl=document.getElementById('d5SettleBasis');
+        if(basisEl) basisEl.textContent=driver?`${d5SettlementBasis(driver)}열 기준`:'—';
+        const ruleEl=document.getElementById('d5SettleSpecialRules');
+        if(ruleEl){
+            const month=document.getElementById('d5SettleMonth')?.value||'';
+            const rules=(driver&&month)?d5ApplicableRules(driver,month):[];
+            const labels=rules.filter(r=>r.type!=='PER_JOB_OVERRIDE').map(r=>d5RuleDisplayLabel(r,month));
+            const per=rules.filter(r=>r.type==='PER_JOB_OVERRIDE').map(r=>`${r.conditionCustomer} ${Math.round(r.amount).toLocaleString('ko-KR')}원/회`);
+            ruleEl.textContent=[...labels,...per].join(' · ')||'없음';
+        }
+    }
+
+    async function d5SettleMonthChanged(){
+        // 새 마감월 선택 시 날짜 범위를 실제 DB의 최소~최대 수행일로 자동 맞춤
+        document.getElementById('d5SettleStartDate').value='';
+        document.getElementById('d5SettleEndDate').value='';
+        await d5SettleUpdatePreview(true);
+    }
+    async function d5SettleTargetChanged(){
+        d5SettleUpdateVehicleLabel();
+        document.getElementById('d5SettleStartDate').value='';
+        document.getElementById('d5SettleEndDate').value='';
+        await d5SettleUpdatePreview(true);
+    }
+
+    async function d5SettlementFilteredRows({autoDates=false}={}){
+        const month=document.getElementById('d5SettleMonth')?.value||'';
+        const driver=document.getElementById('d5SettleDriver')?.value||'';
+        if(!month||!driver) return [];
+        await Promise.all([d5LoadSettlementGroups(),d5LoadSettlementRules()]);
+        const vehicles=new Set(d5SettlementVehicles(driver));
+        const basis=d5SettlementBasis(driver);
+        const all=await d5GetSettlementRaw();
+        const rules=d5ApplicableRules(driver,month);
+
+        let rows=all.filter(r=>(basis==='D'?r.monthD:r.monthF)===month && vehicles.has(r.vehicleKey));
+        rows=d5ApplyPerJobOverrides(rows,rules);
+        rows.sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999')||a.vehicle.localeCompare(b.vehicle,'ko'));
+
+        const startEl=document.getElementById('d5SettleStartDate');
+        const endEl=document.getElementById('d5SettleEndDate');
+
+        if(autoDates && rows.length){
+            const dates=rows.map(r=>r.date).filter(Boolean).sort();
+            if(dates.length){
+                if(startEl && !startEl.value) startEl.value=dates[0];
+                if(endEl && !endEl.value) endEl.value=dates[dates.length-1];
+            }
+        }
+
+        const start=startEl?.value||'';
+        const end=endEl?.value||'';
+        if(start) rows=rows.filter(r=>!r.date || r.date>=start);
+        if(end) rows=rows.filter(r=>!r.date || r.date<=end);
+
+        // 고정도급료가 본체인 업체는 0원 상세 운행을 정산서에서 생략
+        if(d5SettlementDetailMode(driver)==='NONZERO'){
+            rows=rows.filter(r=>(r.fee!==null && Math.abs(Number(r.fee)||0)>0) || (r.fee===null && String(r.feeRaw||'').trim()));
+        }
+        return rows;
+    }
+
+    async function d5SettleUpdatePreview(autoDates=false){
+        const status=document.getElementById('d5SettleStatus');
+        const btn=document.getElementById('d5SettleDownloadBtn');
+        const month=document.getElementById('d5SettleMonth')?.value||'';
+        const driver=document.getElementById('d5SettleDriver')?.value||'';
+        d5SettleUpdateVehicleLabel();
+
+        if(!month||!driver){
+            if(status)status.textContent='정산월과 운반자를 선택하세요.';
+            if(btn)btn.disabled=true;
+            ['d5SettleRowCount','d5SettleWeight','d5SettleFee'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});
+            return;
+        }
+
+        try{
+            if(status)status.textContent='처리수입현황 DB 확인 중...';
+            const rows=await d5SettlementFilteredRows({autoDates});
+            const weight=rows.reduce((s,r)=>s+(Number(r.weight)||0),0);
+            const rules=d5ApplicableRules(driver,month);
+            const monthlyAdd=rules.filter(r=>r.type==='MONTHLY_ADD').reduce((s,r)=>s+(Number(r.amount)||0),0);
+            const monthlyDeduct=rules.filter(r=>r.type==='MONTHLY_DEDUCT').reduce((s,r)=>s+(Number(r.amount)||0),0);
+            const fee=rows.reduce((s,r)=>s+(Number(r.fee)||0),0)+monthlyAdd;
+            const errors=rows.filter(r=>r.fee===null && String(r.feeRaw||'').trim()).length;
+            document.getElementById('d5SettleRowCount').textContent=`${rows.length.toLocaleString('ko-KR')}건`;
+            document.getElementById('d5SettleWeight').textContent=`${weight.toLocaleString('ko-KR',{maximumFractionDigits:2})}T`;
+            document.getElementById('d5SettleFee').textContent=`${Math.round(fee).toLocaleString('ko-KR')}원`;
+            const basis=d5SettlementBasis(driver);
+            const hasFixed=rules.some(r=>r.type==='MONTHLY_ADD');
+            const hasAny=rows.length||hasFixed;
+            if(status) status.textContent=hasAny
+                ? `✅ ${basis}열 기준 · 다운로드 가능${monthlyAdd?` · 고정도급 ${Math.round(monthlyAdd).toLocaleString('ko-KR')}원`:''}${monthlyDeduct?` · 자동공제 ${Math.round(monthlyDeduct).toLocaleString('ko-KR')}원`:''}${errors?` · 수수료 확인 필요 ${errors}건`:''}`
+                : `⚠️ ${basis}열 기준으로 선택 조건에 해당하는 정산 항목이 없습니다.`;
+            if(btn)btn.disabled=!hasAny;
+        }catch(e){
+            console.error(e);
+            if(status)status.textContent='❌ DB 조회 실패: '+e.message;
+            if(btn)btn.disabled=true;
+        }
+    }
+
+    function d5ExcelValue(raw){
+        const s=String(raw??'').trim();
+        if(!s) return '';
+        // "/회", "단가없음", 오류문자 등은 원문 보존
+        if(/[^\d,.-]/.test(s)) return s;
+        const n=Number(s.replace(/,/g,''));
+        return Number.isFinite(n)?n:s;
+    }
+
+    function d5StyleSettlementSheet(ws,lastDataRow){
+        ws.views=[{state:'frozen',ySplit:1}];
+        ws.columns=[
+            {key:'vehicle',width:15},{key:'date',width:15},{key:'customer',width:27},{key:'waste',width:22},
+            {key:'weight',width:13},{key:'rate',width:15},{key:'fee',width:17},{key:'processor',width:25}
+        ];
+        const header=ws.getRow(1);
+        header.height=24;
+        header.eachCell(c=>{
+            c.font={bold:true,color:{argb:'FF111827'}};
+            c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF4B183'}};
+            c.alignment={horizontal:'center',vertical:'middle'};
+            c.border={top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}};
+        });
+        for(let r=2;r<=lastDataRow;r++){
+            const row=ws.getRow(r);
+            row.height=20;
+            row.eachCell(c=>{
+                c.border={bottom:{style:'hair'}};
+                c.alignment={vertical:'middle'};
+            });
+            row.getCell(5).numFmt='0.00';
+            row.getCell(6).numFmt='#,##0.##';
+            row.getCell(7).numFmt='#,##0';
+        }
+        ws.autoFilter={from:'A1',to:`H${Math.max(1,lastDataRow)}`};
+    }
+
+    async function d5ExportSettlementXlsx(){
+        const btn=document.getElementById('d5SettleDownloadBtn');
+        const status=document.getElementById('d5SettleStatus');
+        const month=document.getElementById('d5SettleMonth')?.value||'';
+        const driver=document.getElementById('d5SettleDriver')?.value||'';
+        if(!month||!driver){alert('정산월과 운반자를 선택해주세요.');return;}
+        if(typeof ExcelJS==='undefined'){alert('엑셀 생성 라이브러리를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');return;}
+
+        const old=btn?.innerHTML;
+        try{
+            if(btn){btn.disabled=true;btn.innerHTML='⟳ XLSX 생성 중...';}
+            if(status)status.textContent='선택한 마감월 DB를 엑셀 형식으로 변환 중...';
+
+            const rows=await d5SettlementFilteredRows({autoDates:true});
+            const rules=d5ApplicableRules(driver,month);
+            const monthlyAdds=rules.filter(r=>r.type==='MONTHLY_ADD');
+            const monthlyDeducts=rules.filter(r=>r.type==='MONTHLY_DEDUCT');
+            if(!rows.length && !monthlyAdds.length) throw new Error('선택 조건에 해당하는 정산 항목이 없습니다.');
+
+            const vehicles=d5SettlementVehicles(driver);
+            const displayName=d5SettlementDisplayName(driver);
+            const wb=new ExcelJS.Workbook();
+            wb.creator='조은환경 운영 지표 대시보드';
+            wb.created=new Date();
+
+            const yy=month.slice(0,2);
+            const mm=String(parseInt(month.slice(2),10));
+            const mainName=`${yy}년${mm}월`;
+            const ws=wb.addWorksheet(mainName);
+            ws.addRow(['차량','일자','위탁업체','폐기물명','운반톤수','단가','수수료','처리장']);
+
+            let feeErrorCount=0;
+
+            // 월 고정 도급료 등 DB에 없는 월 고정 지급 항목
+            for(const rule of monthlyAdds){
+                const amount=Number(rule.amount)||0;
+                const rr=ws.addRow([
+                    _d5SettleGroups[driver]?.representative || vehicles[0] || '',
+                    '',
+                    '',
+                    d5RuleDisplayLabel(rule,month),
+                    '-',
+                    amount,
+                    amount,
+                    ''
+                ]);
+                rr.getCell(4).font={bold:true};
+                rr.getCell(6).numFmt='#,##0';
+                rr.getCell(7).numFmt='#,##0';
+                rr.getCell(7).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE2F0D9'}};
+            }
+
+            for(const r of rows){
+                const excelRate=d5ExcelValue(r.rateRaw);
+                const excelFee=r.fee!==null ? r.fee : String(r.feeRaw||'');
+                if(r.fee===null && String(r.feeRaw||'').trim()) feeErrorCount++;
+                const row=ws.addRow([
+                    r.vehicle,
+                    d5SettleDateDisplay(r.date)||r.dateRaw,
+                    r.customer,
+                    r.waste,
+                    r.weight,
+                    excelRate,
+                    excelFee,
+                    r.processor
+                ]);
+                if(r.fee===null && String(r.feeRaw||'').trim()){
+                    row.getCell(7).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFE4E6'}};
+                    row.getCell(7).font={color:{argb:'FFB91C1C'},bold:true};
+                }
+            }
+
+            const lastDataRow=ws.rowCount;
+            d5StyleSettlementSheet(ws,lastDataRow);
+
+            const totalWeight=rows.reduce((s,r)=>s+(Number(r.weight)||0),0);
+            const totalFee=rows.reduce((s,r)=>s+(Number(r.fee)||0),0)
+                + monthlyAdds.reduce((s,r)=>s+(Number(r.amount)||0),0);
+
+            ws.addRow([]);
+            const totalRow=ws.addRow(['','','합계','',totalWeight,'',totalFee,'']);
+            totalRow.font={bold:true};
+            totalRow.getCell(5).numFmt='0.00';
+            totalRow.getCell(7).numFmt='#,##0';
+            totalRow.eachCell(c=>c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF2CC'}});
+
+            ws.addRow([]);
+            const deductTitle=ws.addRow(['','공제 내역','','','','','','']);
+            deductTitle.getCell(2).font={bold:true,size:12};
+
+            const deductionRows=[];
+
+            // 캐피탈 등 매월 자동 공제 항목
+            for(const rule of monthlyDeducts){
+                const amount=-Math.abs(Number(rule.amount)||0);
+                const rr=ws.addRow(['',d5RuleDisplayLabel(rule,month),'','','','',amount,'']);
+                rr.getCell(2).font={bold:true};
+                rr.getCell(7).numFmt='#,##0';
+                rr.getCell(7).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE0F2FE'}};
+                deductionRows.push(rr.number);
+            }
+
+            const deductionLabels=[
+                `${mm}월 법인카드(주유) 사용내역`,
+                `${mm}월 법인카드(하이패스) 사용내역`,
+                '보험패널티 정책 월 부담금',
+                '차고지 지원',
+                '차고지 중개비 지원',
+                '과태료'
+            ];
+            for(const label of deductionLabels){
+                const rr=ws.addRow(['',label,'','','','',null,'']);
+                rr.getCell(7).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF2CC'}};
+                rr.getCell(7).numFmt='#,##0';
+                deductionRows.push(rr.number);
+            }
+
+            const finalRow=ws.addRow(['',`${mm}월 지급 대상 수수료<vat별도 기준>`,'','','','',null,'']);
+            finalRow.font={bold:true};
+            const deductionFormula=deductionRows.length
+                ? `SUM(G${deductionRows[0]}:G${deductionRows[deductionRows.length-1]})`
+                : '0';
+            const autoDeduct=monthlyDeducts.reduce((s,r)=>s+Math.abs(Number(r.amount)||0),0);
+            finalRow.getCell(7).value={
+                formula:`G${totalRow.number}+${deductionFormula}`,
+                result:totalFee-autoDeduct
+            };
+            finalRow.getCell(7).numFmt='#,##0';
+            finalRow.getCell(7).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE2F0D9'}};
+
+            const noteRow=ws.addRow(['','※ 파란색 공제행은 「도급정산_추가규칙」에서 자동 반영됩니다. 법인카드·하이패스 등 노란색 G열은 회계팀 자료 수령 후 음수(-), 지원금은 양수(+)로 입력하세요.','','','','','','']);
+            ws.mergeCells(`B${noteRow.number}:H${noteRow.number}`);
+            noteRow.getCell(2).font={italic:true,color:{argb:'FF64748B'},size:9};
+            noteRow.getCell(2).alignment={wrapText:true};
+
+            // 캐피탈 규칙이 있는 차량: 현재 월 공제 요약 탭
+            if(monthlyDeducts.some(r=>r.installmentStart && r.installmentTotal)){
+                const cap=wb.addWorksheet('캐피탈');
+                cap.addRow(['정산월','차량번호','항목','현재회차','총회차','월 공제금액','비고']);
+                for(const rule of monthlyDeducts.filter(r=>r.installmentStart && r.installmentTotal)){
+                    const cur=d5YYMMToIndex(month), start=d5YYMMToIndex(rule.installmentStart);
+                    const n=(cur!==null&&start!==null)?cur-start+1:'';
+                    cap.addRow([
+                        d5SettleYYMMLabel(month),
+                        rule.vehicle||vehicles.join(', '),
+                        rule.label,
+                        n,
+                        rule.installmentTotal,
+                        Number(rule.amount)||0,
+                        rule.note||''
+                    ]);
+                }
+                cap.getRow(1).eachCell(c=>{c.font={bold:true};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD9EAF7'}};});
+                cap.views=[{state:'frozen',ySplit:1}];
+                [16,16,20,12,12,16,55].forEach((w,i)=>cap.getColumn(i+1).width=w);
+                cap.getColumn(6).numFmt='#,##0';
+            }
+
+            // 법인카드 탭: 회계팀 자료 붙여넣기용
+            const card=wb.addWorksheet(`${mm}월법인카드`);
+            card.addRow(['이용일시','접수일','승인번호','이용카드','이용자명','가맹점명','이용금액','공급가액','부가세','이용구분','할부개월수','이용지역','카드구분','결제예정일']);
+            card.addRow(['회계팀 자료 수령 후 이 행부터 붙여넣기','','','','','','','','','','','','','']);
+            card.mergeCells('A2:N2');
+            card.getRow(1).eachCell(c=>{c.font={bold:true};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD9EAF7'}};});
+            card.getRow(2).getCell(1).font={italic:true,color:{argb:'FF64748B'}};
+            card.views=[{state:'frozen',ySplit:1}];
+            [18,14,14,20,14,28,14,14,12,12,12,12,14,14].forEach((w,i)=>card.getColumn(i+1).width=w);
+
+            // 하이패스 탭: 회계팀 자료 붙여넣기용
+            const hipass=wb.addWorksheet(`${mm}월하이패스`);
+            hipass.addRow(['이용일시','접수일','승인번호','이용카드','이용자명','가맹점명','이용금액','이용구분','할부개월수','이용지역','카드구분','결제예정일']);
+            hipass.addRow(['회계팀 자료 수령 후 이 행부터 붙여넣기','','','','','','','','','','','']);
+            hipass.mergeCells('A2:L2');
+            hipass.getRow(1).eachCell(c=>{c.font={bold:true};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD9EAF7'}};});
+            hipass.getRow(2).getCell(1).font={italic:true,color:{argb:'FF64748B'}};
+            hipass.views=[{state:'frozen',ySplit:1}];
+            [16,14,14,20,16,30,14,12,12,12,14,14].forEach((w,i)=>hipass.getColumn(i+1).width=w);
+
+            // 파일 정보
+            ws.headerFooter.oddHeader.center=`&B${displayName} · ${d5SettleYYMMLabel(month)} 도급비 정산`;
+            ws.headerFooter.oddFooter.center='조은환경 운영 지표 대시보드';
+            ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0};
+
+            const buf=await wb.xlsx.writeBuffer();
+            const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement('a');
+            a.href=url;
+            a.download=`${d5SettleSafeName(displayName)}_${yy}년${mm}월_도급비 정산.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(()=>URL.revokeObjectURL(url),1000);
+
+            if(status){
+                const specialCount=monthlyAdds.length+monthlyDeducts.length+rules.filter(r=>r.type==='PER_JOB_OVERRIDE').length;
+                status.textContent=`✅ ${displayName} · ${rows.length}건 XLSX 생성 완료 · ${d5SettlementBasis(driver)}열 기준 · 차량 ${vehicles.join(', ')}${specialCount?` · 특수규칙 ${specialCount}개 적용`:''}${feeErrorCount?` · 수수료 확인필요 ${feeErrorCount}건`:''}`;
+            }
+        }catch(e){
+            console.error(e);
+            if(status)status.textContent='❌ XLSX 생성 실패: '+e.message;
+            alert('도급비 정산 엑셀 생성에 실패했습니다.\n'+e.message);
+        }finally{
+            if(btn){btn.disabled=false;btn.innerHTML=old;}
+            d5SettleUpdatePreview(false);
+        }
     }
 
     function d5ExportRawV2(){
