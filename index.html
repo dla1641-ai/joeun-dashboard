@@ -6685,8 +6685,10 @@ E. YoY 변동 — 전년 대비 추세
             [16,14,14,20,16,30,14,12,12,12,14,14].forEach((w,i)=>hipass.getColumn(i+1).width=w);
 
             // 파일 정보
-            ws.headerFooter.oddHeader.center=`&B${displayName} · ${d5SettleYYMMLabel(month)} 도급비 정산`;
-            ws.headerFooter.oddFooter.center='조은환경 운영 지표 대시보드';
+            // ExcelJS headerFooter의 oddHeader/oddFooter는 문자열 속성입니다.
+            // .center 하위 속성으로 접근하면 "Cannot set properties of null" 오류가 발생합니다.
+            ws.headerFooter.oddHeader=`&C&B${displayName} · ${d5SettleYYMMLabel(month)} 도급비 정산`;
+            ws.headerFooter.oddFooter='&C조은환경 운영 지표 대시보드';
             ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0};
 
             const buf=await wb.xlsx.writeBuffer();
