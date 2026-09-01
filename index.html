@@ -7285,10 +7285,28 @@ async function stLoadSharedConfig(){
    }
    _stSharedLayouts={};
    for(const r of stRowsToObjects(lrows)){
-      if(!r.template_id)continue; let layout=null; try{layout=r.layout_json?JSON.parse(r.layout_json):null;}catch(e){}
-      _stSharedLayouts[r.template_id]={...r,layout,verified:String(r.검수상태||'').toUpperCase()==='TRUE'||r.검수상태==='완료'};
+      if(!r.template_id)continue;
+      let layout=null;
+      try{layout=r.layout_json?JSON.parse(r.layout_json):null;}catch(e){}
+      const candidate={
+        ...r,
+        layout,
+        verified:String(r.검수상태||'').toUpperCase()==='TRUE'||r.검수상태==='완료'
+      };
+      const prev=_stSharedLayouts[r.template_id];
+
+      // 동일 처리장 좌표가 여러 행에 남아 있어도:
+      // 1) 검수완료 > 임시
+      // 2) 같은 상태면 updated_at이 최신인 행 우선
+      const candTime=Date.parse(candidate.updated_at||'')||0;
+      const prevTime=Date.parse(prev?.updated_at||'')||0;
+      const shouldUse=!prev
+        || (candidate.verified && !prev.verified)
+        || (candidate.verified===prev.verified && candTime>=prevTime);
+
+      if(shouldUse) _stSharedLayouts[r.template_id]=candidate;
    }
-   const help=ctEl('stSharedHelp'); if(help)help.textContent=`팀 공유 드라이브 설정 동기화 완료 · 처리장 ${Object.keys(_stSharedMaster).length}개 · 원본 폴더 ID 확인됨`;
+   const help=ctEl('stSharedHelp'); if(help)help.textContent=`팀 공유 드라이브 설정 동기화 완료 · 처리장 ${Object.keys(_stSharedMaster).length}개 · 검수 좌표는 공용 Sheet에 저장되어 대시보드 업데이트 후에도 유지됩니다.`;
  }catch(e){ console.warn('공용 수탁 설정 로드 실패',e); const help=ctEl('stSharedHelp'); if(help)help.textContent='공용 설정을 불러오지 못해 로컬 설정으로 동작합니다. '+e.message; }
  stUpdateAdminUi();
 }
@@ -7415,10 +7433,31 @@ async function stAdminMatchDriveFiles(){
 }
 async function stSaveSharedLayout(id,layout,hash,verified){
  if(!stCanManageShared())return false;
- const rows=await stFetchSheetValues(`${ST_LAYOUT_TAB}!A:H`), objs=stRowsToObjects(rows), found=objs.find(r=>r.template_id===id);
- const sm=_stSharedMaster[id]||{}, values=[[id,'v1',sm.drive_file_id||'',hash||'',JSON.stringify(layout),verified?'완료':'임시',new Date().toISOString(),_currentUserEmail||'']];
- if(found) await stSheetsPutRange(`${ST_LAYOUT_TAB}!A${found.__row}:H${found.__row}`,values); else await stSheetsAppend(`${ST_LAYOUT_TAB}!A:H`,values);
- await stLoadSharedConfig(); return true;
+ const rows=await stFetchSheetValues(`${ST_LAYOUT_TAB}!A:H`);
+ const objs=stRowsToObjects(rows).filter(r=>r.template_id===id);
+
+ // 기존 중복 행이 있더라도 검수완료 저장은 검수완료 행을 우선 갱신.
+ // 같은 상태 행이 여러 개면 최신 updated_at 행을 갱신한다.
+ let found=null;
+ if(objs.length){
+   const ranked=[...objs].sort((a,b)=>{
+     const av=String(a.검수상태||'').toUpperCase()==='TRUE'||a.검수상태==='완료';
+     const bv=String(b.검수상태||'').toUpperCase()==='TRUE'||b.검수상태==='완료';
+     if(verified && av!==bv) return av?-1:1;
+     const at=Date.parse(a.updated_at||'')||0;
+     const bt=Date.parse(b.updated_at||'')||0;
+     return bt-at;
+   });
+   found=ranked[0];
+ }
+
+ const sm=_stSharedMaster[id]||{};
+ const values=[[id,'v1',sm.drive_file_id||'',hash||'',JSON.stringify(layout),verified?'완료':'임시',new Date().toISOString(),_currentUserEmail||'']];
+ if(found) await stSheetsPutRange(`${ST_LAYOUT_TAB}!A${found.__row}:H${found.__row}`,values);
+ else await stSheetsAppend(`${ST_LAYOUT_TAB}!A:H`,values);
+
+ await stLoadSharedConfig();
+ return true;
 }
 
 async function stInitSutakSection(){
