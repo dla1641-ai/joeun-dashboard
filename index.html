@@ -261,19 +261,12 @@
                 <!-- 로그인 전 -->
                 <div id="loginArea" class="flex flex-col items-center gap-2">
                     <p class="text-xs text-slate-500 font-medium">Google 계정으로 로그인하세요</p>
-                    <div id="g_id_onload"
-                        data-client_id="112736802945-mbs5ku2f2u7u2f7h203jipmiql1t1ddl.apps.googleusercontent.com"
-                        data-callback="handleGoogleLogin"
-                        data-auto_prompt="false">
-                    </div>
-                    <div class="g_id_signin"
-                        data-type="standard"
-                        data-size="large"
-                        data-theme="outline"
-                        data-text="sign_in_with"
-                        data-shape="rectangular"
-                        data-logo_alignment="left">
-                    </div>
+                    <button id="unifiedGoogleLoginBtn" type="button" onclick="startUnifiedGoogleLogin()"
+                        class="flex items-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+                        <span class="inline-flex items-center justify-center w-5 h-5 font-bold text-blue-600">G</span>
+                        <span>Google 계정으로 로그인</span>
+                    </button>
+                    <p class="text-[11px] text-slate-400">로그인과 Drive/Sheets 권한을 한 번에 요청합니다.</p>
                 </div>
                 <!-- 로그인 후 -->
                 <div id="userArea" class="hidden flex items-center gap-3 bg-teal-50 border border-teal-200 rounded-xl px-4 py-2">
@@ -1432,46 +1425,148 @@
 
     let _accessToken = null;
     let _currentUserEmail = null;
+    let _googleAccessToken = null;
+    let _googleTokenExpiresAt = 0;
+    let _googleTokenClient = null;
+    const GOOGLE_COMBINED_SCOPE = [
+        'openid',
+        'email',
+        'profile',
+        'https://www.googleapis.com/auth/drive.readonly',
+        'https://www.googleapis.com/auth/spreadsheets'
+    ].join(' ');
 
-    // ── Google 로그인 콜백 ──
-    function handleGoogleLogin(response) {
-        const payload = JSON.parse(atob(response.credential.split('.')[1]));
-        const email   = payload.email.toLowerCase();
-        const name    = payload.name;
-        const picture = payload.picture;
+    // ── Google 통합 로그인: 로그인 + Drive + Sheets 권한을 한 번에 처리 ──
+    function getUnifiedTokenClient() {
+        if (_googleTokenClient) return _googleTokenClient;
+        if (!window.google?.accounts?.oauth2) throw new Error('Google 로그인 라이브러리를 불러오지 못했습니다.');
+        _googleTokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CONFIG.CLIENT_ID,
+            scope: GOOGLE_COMBINED_SCOPE,
+            include_granted_scopes: true,
+            callback: () => {}
+        });
+        return _googleTokenClient;
+    }
 
-        if (!CONFIG.ALLOWED_EMAILS.includes(email)) {
+    function requestUnifiedGoogleToken(promptValue='') {
+        return new Promise((resolve, reject) => {
+            try {
+                const client = getUnifiedTokenClient();
+                client.callback = (resp) => {
+                    if (resp?.error) {
+                        reject(new Error(resp.error_description || resp.error));
+                        return;
+                    }
+                    const token = resp?.access_token;
+                    if (!token) {
+                        reject(new Error('Google Access Token을 받지 못했습니다.'));
+                        return;
+                    }
+                    _googleAccessToken = token;
+                    _accessToken = token;
+                    _stDriveToken = token;
+                    _stSheetsToken = token;
+                    const expires = Number(resp.expires_in || 3600);
+                    _googleTokenExpiresAt = Date.now() + Math.max(60, expires - 60) * 1000;
+                    resolve(token);
+                };
+                client.requestAccessToken({ prompt: promptValue });
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    async function fetchGoogleUserProfile(token) {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const profile = await res.json();
+        if (!res.ok) throw new Error(profile?.error_description || profile?.error || `사용자 정보 조회 오류 ${res.status}`);
+        return profile;
+    }
+
+    async function startUnifiedGoogleLogin() {
+        const btn = document.getElementById('unifiedGoogleLoginBtn');
+        const old = btn?.innerHTML;
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⟳</span><span>Google 로그인 중...</span>';
+            }
+
+            // 한 번의 OAuth 흐름에서 사용자 로그인 + Drive/Sheets 권한을 함께 승인
+            const token = await requestUnifiedGoogleToken('');
+            const profile = await fetchGoogleUserProfile(token);
+            const email = String(profile.email || '').toLowerCase();
+
+            if (!CONFIG.ALLOWED_EMAILS.includes(email)) {
+                document.getElementById('loginArea').classList.add('hidden');
+                document.getElementById('accessDenied').classList.remove('hidden');
+                if (google.accounts.oauth2?.revoke && token) {
+                    try { google.accounts.oauth2.revoke(token, () => {}); } catch (_) {}
+                }
+                _googleAccessToken = _accessToken = _stDriveToken = _stSheetsToken = null;
+                _googleTokenExpiresAt = 0;
+                return;
+            }
+
+            _currentUserEmail = email;
             document.getElementById('loginArea').classList.add('hidden');
-            document.getElementById('accessDenied').classList.remove('hidden');
-            return;
+            document.getElementById('accessDenied').classList.add('hidden');
+            document.getElementById('userArea').classList.remove('hidden');
+            document.getElementById('userAvatar').src = profile.picture || '';
+            document.getElementById('userName').textContent = profile.name || email;
+            document.getElementById('userEmail').textContent = email;
+            document.getElementById('dataStatus').classList.remove('hidden');
+            document.getElementById('loginGuide')?.classList.add('hidden');
+
+            renderDashboard();
+
+            // 기존 대시보드 데이터는 API Key 방식 그대로, 비공개 DB/Drive는 동일 OAuth 토큰 재사용
+            loadSheetData();
+            try {
+                stUpdateAdminUi();
+                await stLoadSharedConfig();
+                await stRefreshStatus();
+            } catch (e) {
+                console.warn('공용 설정 초기 동기화 실패', e);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Google 로그인에 실패했습니다.\n' + e.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = old;
+            }
         }
+    }
 
-        // 로그인 UI 전환
-        _currentUserEmail = email;
-        document.getElementById('loginArea').classList.add('hidden');
-        document.getElementById('accessDenied').classList.add('hidden');
-        document.getElementById('userArea').classList.remove('hidden');
-        document.getElementById('userAvatar').src = picture;
-        document.getElementById('userName').textContent = name;
-        document.getElementById('userEmail').textContent = email;
-        document.getElementById('dataStatus').classList.remove('hidden');
-        document.getElementById('loginGuide')?.classList.add('hidden');
-        renderDashboard();
-
-        // API Key 방식으로 시트 데이터 바로 로드 (팝업 없음)
-        loadSheetData();
-        try { stUpdateAdminUi(); stLoadSharedConfig().then(()=>stRefreshStatus()); } catch(e) {}
+    // 구버전 data-callback 호환. 최신 UI에서는 직접 사용하지 않음.
+    function handleGoogleLogin() {
+        startUnifiedGoogleLogin();
     }
 
     // ── 로그아웃 ──
     function handleLogout() {
+        const token = _googleAccessToken || _accessToken || _stDriveToken || _stSheetsToken;
+        if (token && window.google?.accounts?.oauth2?.revoke) {
+            try { google.accounts.oauth2.revoke(token, () => {}); } catch (_) {}
+        }
         _accessToken = null;
-        _stDriveToken = null; _stSheetsToken = null;
+        _googleAccessToken = null;
+        _googleTokenExpiresAt = 0;
+        _stDriveToken = null;
+        _stSheetsToken = null;
         _currentUserEmail = null;
-        window.rawData = [];        document.getElementById('userArea').classList.add('hidden');
+        window.rawData = [];
+        document.getElementById('userArea').classList.add('hidden');
         document.getElementById('dataStatus').classList.add('hidden');
         document.getElementById('loginArea').classList.remove('hidden');
-        google.accounts.id.disableAutoSelect();
+        document.getElementById('accessDenied').classList.add('hidden');
+        document.getElementById('loginGuide')?.classList.remove('hidden');
         renderDashboard();
     }
 
@@ -7202,22 +7297,34 @@ function stUpdateAdminUi(){
  ctEl('stAdminLinkBtn')?.classList.toggle('hidden',!canManage);
  const vb=ctEl('stCalVerifyBtn'); if(vb)vb.textContent=canManage?'검수 완료 + 팀 공용 저장':'검수 완료로 저장';
 }
-function stTokenClient(scope){
- return google.accounts.oauth2.initTokenClient({client_id:CONFIG.CLIENT_ID,scope,include_granted_scopes:true,callback:()=>{}});
+function stUnifiedTokenStillValid(){
+ return !!_googleAccessToken && Date.now() < Number(_googleTokenExpiresAt||0);
 }
-function stRequestToken(scope,kind){
- return new Promise((resolve,reject)=>{
-   try{
-     const c=stTokenClient(scope); c.callback=(resp)=>{ if(resp?.error)reject(new Error(resp.error_description||resp.error)); else { if(kind==='drive')_stDriveToken=resp.access_token; else _stSheetsToken=resp.access_token; resolve(resp.access_token); } };
-     c.requestAccessToken({prompt:''});
-   }catch(e){reject(e);}
- });
+async function stEnsureUnifiedGoogleToken(){
+ if(stUnifiedTokenStillValid()){
+   _accessToken=_googleAccessToken;
+   _stDriveToken=_googleAccessToken;
+   _stSheetsToken=_googleAccessToken;
+   return _googleAccessToken;
+ }
+ // 만료 시에도 Drive/Sheets를 따로 요청하지 않고 동일한 통합 scope로 갱신
+ const tok=await requestUnifiedGoogleToken('');
+ _accessToken=tok; _stDriveToken=tok; _stSheetsToken=tok;
+ return tok;
 }
-async function stEnsureDriveToken(){ if(_stDriveToken)return _stDriveToken; return await stRequestToken('https://www.googleapis.com/auth/drive.readonly','drive'); }
-async function stEnsureSheetsToken(){ if(_stSheetsToken)return _stSheetsToken; return await stRequestToken('https://www.googleapis.com/auth/spreadsheets','sheets'); }
+async function stEnsureDriveToken(){ return await stEnsureUnifiedGoogleToken(); }
+async function stEnsureSheetsToken(){ return await stEnsureUnifiedGoogleToken(); }
 async function stConnectSharedDrive(){
- try{ await stEnsureDriveToken(); await stLoadSharedConfig(); await stRefreshStatus(); alert('공용 Google Drive 연결이 완료되었습니다. 이제 공용 원본이 등록된 처리장은 바로 사용할 수 있습니다.'); }
- catch(e){ console.error(e); alert('Google Drive 연결에 실패했습니다.\n'+e.message+'\n\n회사 계정에 수탁 원본 폴더 열람 권한이 있는지 확인해주세요.'); }
+ try{
+   if(!_currentUserEmail) throw new Error('먼저 Google 계정으로 로그인해주세요.');
+   await stEnsureUnifiedGoogleToken();
+   await stLoadSharedConfig();
+   await stRefreshStatus();
+   alert('공용 Google Drive 연결 상태를 새로고침했습니다.');
+ } catch(e){
+   console.error(e);
+   alert('Google Drive 연결에 실패했습니다.\n'+e.message+'\n\n회사 계정에 수탁 원본 폴더 열람 권한이 있는지 확인해주세요.');
+ }
 }
 async function stFetchDrivePdf(fileId){
  const tok=await stEnsureDriveToken(); const r=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,{headers:{Authorization:`Bearer ${tok}`}});
@@ -7226,12 +7333,56 @@ async function stFetchDrivePdf(fileId){
 }
 async function stGetEffectiveRecord(id,{needData=true}={}){
  const sm=_stSharedMaster[id], sl=_stSharedLayouts[id];
+ const local=await stDbGet(id);
+
  if(sm?.drive_file_id){
-   let data=null,hash=String(sl?.file_hash||sm.file_hash||'');
-   if(needData){ data=await stFetchDrivePdf(sm.drive_file_id); const actual=await stSha256(data); if(!hash)hash=actual; if(sl?.file_hash&&sl.file_hash!==actual){ return {id,source:'shared',data,hash:actual,fileName:sm.파일명||stTemplate(id)?.file,layout:sl?.layout||stSeedLayout(stTemplate(id)),verified:false,hashMismatch:true}; } }
-   return {id,source:'shared',data,hash,fileName:sm.파일명||stTemplate(id)?.file,layout:sl?.layout||stSeedLayout(stTemplate(id)),verified:!!sl?.verified,driveFileId:sm.drive_file_id};
+   // 공용 좌표가 있으면 그것을 최우선 사용
+   if(sl?.layout){
+     let data=null,hash=String(sl?.file_hash||sm.file_hash||'');
+     if(needData){
+       data=await stFetchDrivePdf(sm.drive_file_id);
+       const actual=await stSha256(data);
+       if(!hash) hash=actual;
+       if(sl?.file_hash && sl.file_hash!==actual){
+         return {id,source:'shared',data,hash:actual,fileName:sm.파일명||stTemplate(id)?.file,layout:sl.layout,verified:false,hashMismatch:true,layoutSource:'shared'};
+       }
+     }
+     return {id,source:'shared',data,hash,fileName:sm.파일명||stTemplate(id)?.file,layout:sl.layout,verified:!!sl.verified,driveFileId:sm.drive_file_id,layoutSource:'shared'};
+   }
+
+   // 공용 원본 연결 후에도 예전에 이 브라우저에서 검수한 좌표를 버리지 않음.
+   // 다운로드 시 실제 공용 PDF 해시와 로컬 검수 PDF 해시가 같은지 확인한 뒤 사용한다.
+   if(local?.layout){
+     let data=null, actualHash=String(local.hash||'');
+     if(needData){
+       data=await stFetchDrivePdf(sm.drive_file_id);
+       actualHash=await stSha256(data);
+       if(local.hash && local.hash!==actualHash){
+         return {
+           id,source:'shared',data,hash:actualHash,
+           fileName:sm.파일명||stTemplate(id)?.file,
+           layout:local.layout,verified:false,hashMismatch:true,
+           driveFileId:sm.drive_file_id,layoutSource:'local'
+         };
+       }
+     }
+     return {
+       id,source:'shared',data,hash:actualHash,
+       fileName:sm.파일명||stTemplate(id)?.file,
+       layout:local.layout,verified:!!local.verified,
+       driveFileId:sm.drive_file_id,layoutSource:'local'
+     };
+   }
+
+   return {
+     id,source:'shared',data:needData?await stFetchDrivePdf(sm.drive_file_id):null,
+     hash:'',fileName:sm.파일명||stTemplate(id)?.file,
+     layout:stSeedLayout(stTemplate(id)),verified:false,
+     driveFileId:sm.drive_file_id,layoutSource:'seed'
+   };
  }
- const rec=await stDbGet(id); return rec?{...rec,source:'local'}:null;
+
+ return local?{...local,source:'local',layoutSource:'local'}:null;
 }
 async function stSheetsPutRange(range,values){
  const tok=await stEnsureSheetsToken(); const url=`https://sheets.googleapis.com/v4/spreadsheets/${ST_CONFIG_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
@@ -7380,8 +7531,20 @@ async function stRefreshStatus(){
  const shared=rec.source==='shared';
  if(info){ info.textContent=shared?`공용 Drive 연결: ${rec.fileName}`:`로컬 임시 원본: ${rec.fileName}`; info.className='st-status ok'; }
  if(badge){badge.textContent=shared?'공용 원본 연결됨':'로컬 원본';badge.className='st-badge bg-emerald-50 text-emerald-700 border border-emerald-200';}
- if(lay){ lay.textContent=rec.verified?(shared?'팀 공용 좌표 검수 완료':'로컬 위치 검수 완료'):'위치 검수 필요'; lay.className=rec.verified?'st-badge bg-emerald-50 text-emerald-700 border border-emerald-200':'st-badge bg-amber-50 text-amber-700 border border-amber-200'; }
- if(btn)btn.disabled=!rec.verified;
+ if(lay){
+   if(rec.verified && shared && rec.layoutSource==='local'){
+     lay.textContent='기존 검수 좌표 사용 가능';
+     lay.className='st-badge bg-blue-50 text-blue-700 border border-blue-200';
+   } else {
+     lay.textContent=rec.verified?(shared?'팀 공용 좌표 검수 완료':'로컬 위치 검수 완료'):'위치 검수 필요';
+     lay.className=rec.verified?'st-badge bg-emerald-50 text-emerald-700 border border-emerald-200':'st-badge bg-amber-50 text-amber-700 border border-amber-200';
+   }
+ }
+ if(btn){
+   btn.disabled=!rec.verified;
+   btn.classList.toggle('opacity-50',!rec.verified);
+   btn.classList.toggle('cursor-not-allowed',!rec.verified);
+ }
 }
 
 function stMatchTemplateFromFile(file){
@@ -7520,9 +7683,32 @@ async function stDownloadSutakPdf(){
  let rec; try{rec=await stGetEffectiveRecord(id,{needData:true});}catch(e){alert('공용 수탁 원본을 불러오지 못했습니다.\n'+e.message);return;}
  if(!rec?.data){alert('이 처리장의 공용 수탁 원본 PDF가 연결되지 않았습니다.');return;}
  if(rec.hashMismatch){alert('공용 원본 PDF가 좌표 검수 당시 파일과 달라졌습니다. 팀원 중 한 명이 좌표를 다시 검수해 공용 저장해주세요.');return;}
- if(!rec.verified){alert('입력 위치 검수가 완료되지 않았습니다. 팀원 중 한 명이 공용 좌표 검수를 완료해주세요.');return;}
+ if(!rec.verified){alert('입력 위치 검수가 완료되지 않았습니다. 「입력 위치 확인/보정」에서 한 번 검수 완료해주세요. 검수 좌표는 팀 공용으로 저장됩니다.');return;}
  const btn=ctEl('stDownloadBtn'),status=ctEl('stDownloadStatus'),old=btn?.innerHTML;
- try{if(btn){btn.disabled=true;btn.innerHTML='<span class="inline-block animate-spin">⟳</span><span>수탁 PDF 생성 중...</span>';}if(status)status.textContent=rec.source==='shared'?'공용 Google Drive 원본에 팀 공용 좌표를 적용하고 있습니다.':'로컬 원본에 검수 좌표를 적용하고 있습니다.';const fields=stBuildFields();const out=await stOverlayPdfNative(rec.data,fields,rec.layout);const name=`수탁처리능력확인서_${ctSafeFilename(ctVal('ctProcessorName')||tpl.name)}_${ctSafeFilename(ctVal('ctEmitterName'))}_${ctVal('stIssueDate').replace(/-/g,'')}.pdf`;stDownloadBytes(out,name);if(status)status.textContent='✅ 원본 PDF 보존 방식으로 생성 완료';}
+ try{
+   if(btn){btn.disabled=true;btn.innerHTML='<span class="inline-block animate-spin">⟳</span><span>수탁 PDF 생성 중...</span>';}
+   if(status){
+     status.textContent=rec.source==='shared'
+       ?(rec.layoutSource==='local'?'공용 Drive 원본과 기존 검수 좌표를 확인하고 있습니다.':'공용 Google Drive 원본에 팀 공용 좌표를 적용하고 있습니다.')
+       :'로컬 원본에 검수 좌표를 적용하고 있습니다.';
+   }
+
+   // 공용 원본과 동일한 PDF에서 검수한 기존 좌표라면 최초 1회 팀 공용 좌표로 자동 저장
+   if(rec.source==='shared' && rec.layoutSource==='local' && rec.verified && stCanManageShared()){
+     try{
+       await stSaveSharedLayout(id,rec.layout,rec.hash,true);
+       rec.layoutSource='shared';
+     }catch(syncErr){
+       console.warn('기존 좌표의 팀 공용 승격 실패 - 다운로드는 계속 진행',syncErr);
+     }
+   }
+
+   const fields=stBuildFields();
+   const out=await stOverlayPdfNative(rec.data,fields,rec.layout);
+   const name=`수탁처리능력확인서_${ctSafeFilename(ctVal('ctProcessorName')||tpl.name)}_${ctSafeFilename(ctVal('ctEmitterName'))}_${ctVal('stIssueDate').replace(/-/g,'')}.pdf`;
+   stDownloadBytes(out,name);
+   if(status)status.textContent='✅ 원본 PDF 보존 방식으로 생성 완료';
+ }
  catch(e){console.error(e);if(status)status.textContent='❌ '+e.message;alert('수탁처리능력확인서 생성 중 오류가 발생했습니다.\n'+e.message);}
  finally{if(btn){btn.disabled=false;btn.innerHTML=old;}await stRefreshStatus();}
 }
