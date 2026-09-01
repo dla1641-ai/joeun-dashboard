@@ -13,6 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- 계약서 탭: 사업자등록증 로컬 인식용. 파일은 외부 서버에 업로드하지 않음 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.default.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
@@ -142,6 +143,23 @@
         .ct-ocr-progress > div { height:100%; width:0%; background:#0f766e; transition:width .2s ease; }
         .ct-biz-ok { color:#047857; }
         .ct-biz-warn { color:#b45309; }
+
+
+        /* ── 수탁처리능력확인서 자동 생성 ── */
+        .st-mini-btn { padding:.55rem .8rem; border-radius:.75rem; font-size:.75rem; font-weight:800; transition:.15s ease; }
+        .st-soft-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:1rem; padding:1rem; }
+        .st-status { font-size:.75rem; line-height:1.5; color:#64748b; }
+        .st-status.ok { color:#047857; }
+        .st-status.warn { color:#b45309; }
+        .st-status.err { color:#dc2626; }
+        .st-badge { display:inline-flex; align-items:center; gap:.3rem; padding:.24rem .55rem; border-radius:999px; font-size:.7rem; font-weight:800; }
+        .st-modal-backdrop.hidden { display:none !important; }
+        .st-modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.72); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; }
+        .st-modal { width:min(1180px,96vw); height:min(900px,94vh); background:white; border-radius:18px; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.35); display:flex; flex-direction:column; }
+        .st-cal-stage { position:relative; display:inline-block; background:#e2e8f0; box-shadow:0 1px 10px rgba(15,23,42,.14); }
+        #stCalCanvas, #stCalOverlay { display:block; max-width:none; }
+        #stCalOverlay { position:absolute; inset:0; cursor:crosshair; touch-action:none; }
+        .st-template-row { display:flex; flex-wrap:wrap; align-items:center; gap:.45rem; }
 
     </style>
 </head>
@@ -1158,6 +1176,142 @@
                             </div>
                         </div>
                     </section>
+
+                    <!-- 수탁처리능력확인서 자동 생성 -->
+                    <section class="bg-white rounded-2xl p-5 card-shadow border border-emerald-100">
+                        <div class="flex flex-wrap items-center gap-2 mb-4">
+                            <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-sm">5</span>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="ct-section-title">수탁처리능력확인서 자동 생성</h3>
+                                <p class="ct-help mt-0">수탁 원본 PDF는 GitHub에 올리지 않고 이 브라우저에만 저장합니다. 생성 시 원본 PDF 페이지를 그대로 보존하고 변경값만 위에 반영합니다.</p>
+                            </div>
+                            <span id="stTemplateBadge" class="st-badge bg-slate-100 text-slate-600 border border-slate-200">원본 미등록</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="ct-label ct-required" for="stTemplateSelect">수탁 처리장 양식</label>
+                                <select id="stTemplateSelect" class="ct-input" onchange="stOnTemplateChange()"></select>
+                                <p id="stTemplateHelp" class="ct-help">계약서의 처리장 선택값과 자동 연동됩니다.</p>
+                            </div>
+                            <div>
+                                <label class="ct-label ct-required" for="stIssueDate">작성일</label>
+                                <input id="stIssueDate" class="ct-input" type="date">
+                                <p class="ct-help">수탁확인서에 반영할 작성일입니다.</p>
+                            </div>
+                            <div>
+                                <label class="ct-label" for="stConsignorPhone">배출자 전화번호</label>
+                                <input id="stConsignorPhone" class="ct-input" type="text" placeholder="선택 입력">
+                                <p class="ct-help">계약서 입력값에 없는 항목이라 필요 시 직접 입력합니다.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            <div>
+                                <label class="ct-label" for="stFacilityType">시설 종류</label>
+                                <input id="stFacilityType" class="ct-input" type="text" placeholder="예: 소각시설 / 혼합시설">
+                            </div>
+                            <div>
+                                <label class="ct-label" for="stFacilityCapacity">시설 능력</label>
+                                <input id="stFacilityCapacity" class="ct-input" type="text" placeholder="예: 93.6톤/일">
+                            </div>
+                            <div>
+                                <label class="ct-label" for="stAcceptMethod">수탁방법</label>
+                                <input id="stAcceptMethod" class="ct-input" type="text" value="수시">
+                            </div>
+                        </div>
+
+                        <div id="stStorageBlock" class="mt-4 st-soft-card">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                <div>
+                                    <p class="text-sm font-extrabold text-slate-800">처리능력 입력값</p>
+                                    <p class="ct-help mt-0">현재보관량·1일 평균 반입량·금회수탁량·전체보관량은 시점에 따라 바뀌므로 자동 계산/자동 확정하지 않습니다.</p>
+                                </div>
+                                <button type="button" onclick="stClearDynamicValues()" class="st-mini-btn bg-white hover:bg-slate-50 text-slate-600 border border-slate-200">변동값 비우기</button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                                <div><label class="ct-label" for="stAllowStorage">허용보관량 <span class="text-slate-400">(마스터)</span></label><input id="stAllowStorage" class="ct-input" type="number" step="0.01"></div>
+                                <div><label class="ct-label ct-required" for="stCurrentStorage">현재보관량</label><input id="stCurrentStorage" class="ct-input" type="number" step="0.01"></div>
+                                <div><label class="ct-label ct-required" for="stDailyIn">1일평균반입량</label><input id="stDailyIn" class="ct-input" type="number" step="0.01"></div>
+                                <div><label class="ct-label ct-required" for="stCurrentAccept">금회수탁량</label><input id="stCurrentAccept" class="ct-input" type="number" step="0.01"></div>
+                                <div><label class="ct-label ct-required" for="stTotalStorage">전체보관량</label><input id="stTotalStorage" class="ct-input" type="number" step="0.01"></div>
+                                <div><label class="ct-label" for="stDailyProcess">1일처리량 <span class="text-slate-400">(마스터)</span></label><input id="stDailyProcess" class="ct-input" type="number" step="0.01"></div>
+                            </div>
+                        </div>
+
+                        <div id="stLandfillBlock" class="hidden mt-4 st-soft-card">
+                            <div class="mb-3">
+                                <p class="text-sm font-extrabold text-slate-800">매립 처리능력 입력값</p>
+                                <p class="ct-help mt-0">제이엔텍 등 매립 양식은 일반 보관량 계산식을 사용하지 않습니다. 남은 매립용량과 금회수탁량을 실제 작성값으로 입력합니다.</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div><label class="ct-label" for="stLandfillAllow">매립 허가용량 <span class="text-slate-400">(마스터)</span></label><input id="stLandfillAllow" class="ct-input" type="number" step="0.01"></div>
+                                <div><label class="ct-label ct-required" for="stLandfillDailyIn">1일평균 폐기물 반입량</label><input id="stLandfillDailyIn" class="ct-input" type="number" step="0.01"></div>
+                                <div><label class="ct-label ct-required" for="stLandfillCurrentAccept">금회 폐기물 수탁량</label><input id="stLandfillCurrentAccept" class="ct-input" type="number" step="0.01"></div>
+                                <div><label class="ct-label ct-required" for="stLandfillRemain">남은 매립용량</label><input id="stLandfillRemain" class="ct-input" type="number" step="0.01"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex flex-col lg:flex-row lg:items-stretch gap-3">
+                            <div class="flex-1 st-soft-card">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <p class="text-xs font-bold text-slate-500 mb-1">수탁 원본 PDF 보안 저장소</p>
+                                        <p id="stTemplateFileInfo" class="st-status">선택한 처리장 PDF를 이 브라우저에 최초 1회 등록해주세요.</p>
+                                    </div>
+                                    <span id="stLayoutStatus" class="st-badge bg-amber-50 text-amber-700 border border-amber-200">위치 검수 필요</span>
+                                </div>
+                                <div class="st-template-row mt-3">
+                                    <input id="stRegisterTemplateFile" type="file" accept="application/pdf,.pdf" class="hidden" onchange="stRegisterSelectedTemplate(this.files?.[0])">
+                                    <button type="button" onclick="ctEl('stRegisterTemplateFile').click()" class="st-mini-btn bg-emerald-600 hover:bg-emerald-700 text-white">선택 양식 PDF 등록/교체</button>
+                                    <input id="stBulkTemplateFiles" type="file" accept="application/pdf,.pdf" multiple class="hidden" onchange="stBulkRegisterTemplates(this.files)">
+                                    <button type="button" onclick="ctEl('stBulkTemplateFiles').click()" class="st-mini-btn bg-white hover:bg-slate-50 text-slate-700 border border-slate-200">여러 PDF 일괄 등록</button>
+                                    <button type="button" onclick="stOpenCalibration()" class="st-mini-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200">입력 위치 확인/보정</button>
+                                    <button type="button" onclick="stDeleteSelectedTemplate()" class="st-mini-btn bg-white hover:bg-red-50 text-red-600 border border-red-200">등록 삭제</button>
+                                </div>
+                                <p class="ct-help mt-2">원본 PDF는 IndexedDB에만 저장되며 GitHub/외부 서버로 업로드하지 않습니다. HWP·Excel 양식은 PDF로 변환한 뒤 등록하면 됩니다.</p>
+                            </div>
+                            <div class="w-full lg:w-80 bg-slate-900 text-white rounded-2xl p-4">
+                                <p class="text-sm font-bold">수탁처리능력확인서 PDF</p>
+                                <p class="text-xs text-slate-300 mt-1 leading-5">원본 PDF 페이지는 그대로 유지하고, 보정한 위치에 변경값만 덮어씁니다. 전체 페이지를 JPEG로 재생성하지 않습니다.</p>
+                                <button id="stDownloadBtn" type="button" onclick="stDownloadSutakPdf()" class="mt-3 w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl px-4 py-3 transition-colors flex items-center justify-center gap-2">
+                                    <span>⬇</span><span>수탁확인서 PDF 다운로드</span>
+                                </button>
+                                <p id="stDownloadStatus" class="mt-3 text-xs text-slate-400 text-center"></p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 수탁확인서 좌표 보정 모달 -->
+                    <div id="stCalModal" class="hidden st-modal-backdrop" onclick="if(event.target===this)stCloseCalibration()">
+                        <div class="st-modal">
+                            <div class="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center gap-3">
+                                <div class="flex-1 min-w-[220px]">
+                                    <h3 class="font-extrabold text-slate-900">수탁확인서 입력 위치 확인/보정</h3>
+                                    <p id="stCalMeta" class="text-xs text-slate-500 mt-1">빨간 박스가 실제 값을 덮어쓸 영역입니다. 틀린 항목만 마우스로 새 사각형을 그려 보정하세요.</p>
+                                </div>
+                                <select id="stCalFieldSelect" class="ct-input !w-auto min-w-[240px]" onchange="stCalSelectField(this.value)"></select>
+                                <button type="button" onclick="stCalPrevPage()" class="st-mini-btn border border-slate-200">◀</button>
+                                <span id="stCalPageLabel" class="text-xs font-bold text-slate-600"></span>
+                                <button type="button" onclick="stCalNextPage()" class="st-mini-btn border border-slate-200">▶</button>
+                                <button type="button" onclick="stCloseCalibration()" class="st-mini-btn bg-slate-100 text-slate-700">닫기</button>
+                            </div>
+                            <div class="flex-1 overflow-auto p-4 bg-slate-100 text-center">
+                                <div id="stCalStage" class="st-cal-stage">
+                                    <canvas id="stCalCanvas"></canvas>
+                                    <canvas id="stCalOverlay"></canvas>
+                                </div>
+                            </div>
+                            <div class="px-5 py-3 border-t border-slate-200 flex flex-wrap items-center gap-2">
+                                <span id="stCalCoord" class="text-xs font-mono text-slate-500 flex-1">좌표: -</span>
+                                <button type="button" onclick="stCalResetField()" class="st-mini-btn border border-slate-200 text-slate-600">선택 항목 초기값</button>
+                                <button type="button" onclick="stCalNextField()" class="st-mini-btn border border-blue-200 text-blue-700 bg-blue-50">다음 항목</button>
+                                <button type="button" onclick="stCalSave(false)" class="st-mini-btn border border-slate-200 text-slate-700">좌표 저장</button>
+                                <button type="button" onclick="stCalSave(true)" class="st-mini-btn bg-emerald-600 hover:bg-emerald-700 text-white">검수 완료로 저장</button>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- 우측 요약/다운로드 -->
@@ -6406,6 +6560,470 @@ function ctResetForm() {
     if(ctEl('ctDownloadStatus')) ctEl('ctDownloadStatus').textContent='';
     ctUpdateSummary();
 }
+
+// ════════════════════════════════════════════════════════════════
+//  탭6 · 수탁처리능력확인서 PDF 자동 생성 v11
+//  - 수탁 원본 PDF: IndexedDB 로컬 저장 (GitHub 미포함)
+//  - 처리장별 개별 좌표 저장/검수
+//  - 원본 PDF 페이지 보존 + 변경값만 overlay (pdf-lib)
+//  - 변동 처리능력값 자동 확정 금지
+//  - 매립형(제이엔텍) 별도 필드/레이아웃
+// ════════════════════════════════════════════════════════════════
+const SUTAK_CONFIG = {
+  "templates": {
+    "green_hwasung1": {
+      "name": "그린에코사이클 화성1사업소",
+      "file": "그린에코사이클 화성1사업소_수탁처리능력확인서.pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 9843.25,
+        "daily_process": 500,
+        "accept_method": "수시"
+      }
+    },
+    "samhee": {
+      "name": "삼희개발",
+      "file": "삼희개발_수탁처리능력 확인서.pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "daily_process": 80,
+        "accept_method": "수시"
+      }
+    },
+    "jeongwoo": {
+      "name": "정우리사이클링",
+      "file": "정우리사이클링_NEW수탁처리능력확인서.pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 6640.7,
+        "daily_process": 422,
+        "accept_method": "수시"
+      }
+    },
+    "geodan": {
+      "name": "거단산업",
+      "file": "5. 수탁처리능력확인서_거단산업(처리업).pdf",
+      "mode": "storage",
+      "profile": "geodan",
+      "fixed": {
+        "allow_storage": 8087,
+        "daily_process": 600,
+        "accept_method": "수시"
+      }
+    },
+    "seocheong": {
+      "name": "서청",
+      "file": "서청_수탁처리능력확인서.pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 1558,
+        "daily_process": 105,
+        "accept_method": "수시"
+      }
+    },
+    "hangang_emp": {
+      "name": "한강EMP",
+      "file": "한강EMP_수탁처리능력확인서.pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 5710.9,
+        "daily_process": 560,
+        "accept_method": "수시"
+      }
+    },
+    "daekwang": {
+      "name": "대광이앤씨",
+      "file": "대광이앤씨-수탁처리능력확인서 260319.pdf",
+      "mode": "storage",
+      "profile": "daekwang",
+      "fixed": {
+        "allow_storage": 1000,
+        "daily_process": 100,
+        "accept_method": "수시"
+      }
+    },
+    "giwon": {
+      "name": "기원",
+      "file": "기원_수탁처리능력확인서.pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 700,
+        "daily_process": 70,
+        "process_method": "퇴비",
+        "facility_type": "농업생산활동에 사용",
+        "facility_capacity": "70톤/일",
+        "accept_method": "수시"
+      }
+    },
+    "jnt": {
+      "name": "제이엔텍",
+      "file": "제이엔텍 수탁 8월 도장 스캔본.pdf",
+      "mode": "landfill",
+      "profile": "jnt",
+      "fixed": {
+        "landfill_allow": 4243209,
+        "accept_method": "수시"
+      }
+    },
+    "ido_osan": {
+      "name": "이도에코오산",
+      "file": "이도에코오산_수탁처리능력확인서(25.08.04).pdf",
+      "mode": "storage",
+      "profile": "ido",
+      "fixed": {
+        "allow_storage": 2044.7,
+        "daily_process": 70.1,
+        "process_method": "중간처분(일반소각)",
+        "facility_type": "소각",
+        "facility_capacity": "70.1톤",
+        "accept_method": "수시"
+      }
+    },
+    "energy_sejong": {
+      "name": "에너지세종",
+      "file": "종합재활용 수탁.pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 3750.6,
+        "daily_process": 250,
+        "process_method": "직접제품제조",
+        "accept_method": "수시"
+      }
+    },
+    "sindaehan": {
+      "name": "신대한정유산업",
+      "file": "수탁처리능력확인서_일반_신대한(대표자변경).pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 1148.31,
+        "daily_process": 40.84,
+        "process_method": "위탁 중간처분",
+        "facility_type": "소각",
+        "facility_capacity": "40.84",
+        "accept_method": "수시"
+      }
+    },
+    "sechang_incineration": {
+      "name": "세창이엔텍 소각",
+      "file": "세창이엔텍_소각수탁처리능력확인서.pdf",
+      "mode": "storage",
+      "profile": "sechang",
+      "fixed": {
+        "allow_storage": 2544,
+        "daily_process": 93.6,
+        "process_method": "일반소각",
+        "facility_type": "소각시설",
+        "facility_capacity": "93.6",
+        "accept_method": "수시"
+      }
+    },
+    "samwoo": {
+      "name": "삼우자원개발",
+      "file": "수탁처리능력확인서(삼우자원개발)_2026.pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 1824,
+        "daily_process": 160,
+        "process_method": "중간가공(2010)",
+        "facility_type": "혼합시설",
+        "facility_capacity": "160Ton/일",
+        "accept_method": "수시"
+      }
+    },
+    "bio_post": {
+      "name": "바이오포스트",
+      "file": "수탁처리능력확인서.pdf",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 360,
+        "daily_process": 25,
+        "process_method": "2005 농업생산활동에 사용",
+        "facility_type": "미생물 발효시설",
+        "facility_capacity": "95톤/일",
+        "accept_method": "수시"
+      }
+    },
+    "youngheung": {
+      "name": "영흥산업환경",
+      "file": "영흥산업환경_수탁양식_변환본.pdf",
+      "source": "영흥산업환경_수탁양식(최신)_260706.xlsx",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "process_method": "2101 일반소각",
+        "accept_method": "수시"
+      },
+      "note": "원본 Excel을 PDF로 변환한 뒤 등록하세요."
+    },
+    "sechang_dried_sludge_hwp": {
+      "name": "세창이엔텍 HWP 건조오니",
+      "file": "수탁처리능력확인서-건조오니_변환본.pdf",
+      "source": "수탁처리능력확인서-건조오니.hwp",
+      "mode": "storage",
+      "profile": "standard",
+      "fixed": {
+        "allow_storage": 4177,
+        "daily_process": 300,
+        "process_method": "2009 연료,고형연료제품제조",
+        "accept_method": "수시"
+      },
+      "note": "원본 HWP를 PDF로 변환한 뒤 등록하세요."
+    }
+  },
+  "processorMap": {
+    "samhee": "samhee",
+    "jungwoo": "jeongwoo",
+    "geodan": "geodan",
+    "seocheong": "seocheong",
+    "hangang": "hangang_emp",
+    "daekwang": "daekwang",
+    "giwon": "giwon",
+    "jentec": "jnt",
+    "yidoosan": "ido_osan",
+    "energysejong": "energy_sejong",
+    "shindaehan": "sindaehan",
+    "sechang": "sechang_incineration",
+    "samwoo": "samwoo",
+    "youngheung": "youngheung",
+    "biopost": "bio_post",
+    "greenecho_hs1": "green_hwasung1"
+  }
+};
+
+const ST_DB_NAME='je_sutak_template_db_v2';
+const ST_STORE='templates';
+let _stInitialized=false;
+let _stCalPdf=null, _stCalTemplateId='', _stCalLayout=null, _stCalPage=0, _stCalField='';
+let _stCalScale=1, _stCalDrag=null;
+
+const ST_FIELD_LABELS={
+  p1_consignor_company:'1p · 위탁자 상호', p1_consignor_biz_no:'1p · 위탁자 사업자번호', p1_consignor_rep:'1p · 위탁자 대표자',
+  p1_consignor_birth:'1p · 위탁자 생년월일(공란)', p1_consignor_address:'1p · 위탁자 주소', p1_consignor_phone:'1p · 위탁자 전화번호',
+  p1_waste_name_code:'1p · 폐기물명/코드', p1_waste_state:'1p · 성질·상태', p1_annual_amount:'1p · 위탁량(톤/년)',
+  p1_allow_storage:'1p · 허용보관량', p1_current_storage:'1p · 현재보관량', p1_daily_in:'1p · 1일평균반입량',
+  p1_current_accept:'1p · 금회수탁량', p1_total_storage:'1p · 전체보관량', p1_daily_process:'1p · 1일처리량',
+  p1_landfill_allow:'1p · 매립 허가용량', p1_landfill_daily_in:'1p · 매립 1일평균반입량', p1_landfill_current_accept:'1p · 매립 금회수탁량', p1_landfill_remain:'1p · 남은 매립용량',
+  p2_waste_name_code:'2p · 폐기물명/코드', p2_process_method:'2p · 처리방법', p2_facility_type:'2p · 시설 종류',
+  p2_facility_capacity:'2p · 시설 능력', p2_annual_amount:'2p · 수탁 예정량', p2_accept_method:'2p · 수탁방법',
+  p2_date:'2p · 작성일', p2_consignor_company:'2p · 위탁자 상호', p2_consignor_rep:'2p · 위탁자 대표자', p2_applicant:'2p · 신고인(신청인)'
+};
+
+function stClone(v){ return JSON.parse(JSON.stringify(v)); }
+function stShiftLayout(layout,dy1=0,dy2=0){ const x=stClone(layout); Object.values(x).forEach(c=>{ const d=c.page===0?dy1:(c.page===1?dy2:0); c.box=[c.box[0],c.box[1]+d,c.box[2],c.box[3]+d]; }); return x; }
+
+// 좌표는 최초 보정 작업을 빠르게 하기 위한 '초기 박스'입니다. 실제 PDF 등록 후 반드시 미리보기 검수를 완료해야 다운로드가 열립니다.
+const ST_LAYOUT_STANDARD={
+ p1_consignor_company:{page:0,box:[174,151,327,167],align:'center'}, p1_consignor_biz_no:{page:0,box:[424,151,544,167],align:'center'},
+ p1_consignor_rep:{page:0,box:[184,178,327,194],align:'center'}, p1_consignor_birth:{page:0,box:[405,178,544,194],align:'center'},
+ p1_consignor_address:{page:0,box:[184,205,404,221],align:'center',font_size:7.4}, p1_consignor_phone:{page:0,box:[458,216,542,231],align:'center'},
+ p1_waste_name_code:{page:0,box:[104,276,183,299],align:'center',font_size:7}, p1_waste_state:{page:0,box:[184,276,252,299],align:'center'}, p1_annual_amount:{page:0,box:[253,276,326,299],align:'center'},
+ p1_allow_storage:{page:0,box:[119,718,181,735],align:'center'}, p1_current_storage:{page:0,box:[187,718,254,735],align:'center'}, p1_daily_in:{page:0,box:[258,718,322,735],align:'center'},
+ p1_current_accept:{page:0,box:[325,718,394,735],align:'center'}, p1_total_storage:{page:0,box:[397,718,468,735],align:'center'}, p1_daily_process:{page:0,box:[471,718,540,735],align:'center'},
+ p2_waste_name_code:{page:1,box:[90,143,172,174],align:'center',font_size:7}, p2_process_method:{page:1,box:[175,143,242,174],align:'center',font_size:7},
+ p2_facility_type:{page:1,box:[245,143,294,174],align:'center',font_size:7}, p2_facility_capacity:{page:1,box:[300,143,420,174],align:'center',font_size:7},
+ p2_annual_amount:{page:1,box:[425,143,490,174],align:'center'}, p2_accept_method:{page:1,box:[495,143,555,174],align:'center',font_size:7.2},
+ p2_date:{page:1,box:[242,316,360,333],align:'center',font_size:9}, p2_consignor_company:{page:1,box:[160,335,325,352],align:'left',font_size:8},
+ p2_consignor_rep:{page:1,box:[378,335,470,352],align:'left',font_size:8}, p2_applicant:{page:1,box:[300,744,470,762],align:'center',font_size:8}
+};
+const ST_LAYOUT_JNT=(()=>{ const x=stClone(ST_LAYOUT_STANDARD); delete x.p1_allow_storage; delete x.p1_current_storage; delete x.p1_daily_in; delete x.p1_current_accept; delete x.p1_total_storage; delete x.p1_daily_process;
+ x.p1_landfill_allow={page:0,box:[118,744,190,761],align:'center'}; x.p1_landfill_daily_in={page:0,box:[205,744,274,761],align:'center'}; x.p1_landfill_current_accept={page:0,box:[282,744,345,761],align:'center'}; x.p1_landfill_remain={page:0,box:[356,744,432,761],align:'center'}; return x; })();
+const ST_LAYOUT_PROFILES={
+ standard:ST_LAYOUT_STANDARD,
+ geodan:stShiftLayout(ST_LAYOUT_STANDARD,-14,-14),
+ daekwang:ST_LAYOUT_STANDARD,
+ sechang:stShiftLayout(ST_LAYOUT_STANDARD,-28,-27),
+ ido:stShiftLayout(ST_LAYOUT_STANDARD,-43,-42),
+ jnt:ST_LAYOUT_JNT
+};
+
+function stTemplate(id){ return SUTAK_CONFIG.templates[id]||null; }
+function stSelectedTemplateId(){ return ctVal('stTemplateSelect'); }
+function stSelectedTemplate(){ return stTemplate(stSelectedTemplateId()); }
+function stProcessorToTemplateId(pid){ return SUTAK_CONFIG.processorMap[pid]||''; }
+function stNum(v,fallback=0){ const s=String(v??'').replace(/,/g,'').replace(/톤|ton|Ton|T/g,'').replace(/[^0-9.\-]/g,''); const n=Number(s); return Number.isFinite(n)?n:fallback; }
+function stFmt(v,decimals=2){ const s=String(v??'').trim(); if(!s) return ''; const n=stNum(s,NaN); if(!Number.isFinite(n)) return s; if(Math.abs(n-Math.round(n))<1e-9) return Math.round(n).toLocaleString('ko-KR'); return n.toLocaleString('ko-KR',{maximumFractionDigits:decimals}); }
+function stDateKo(iso){ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${Number(m[1])} 년 ${Number(m[2])} 월 ${Number(m[3])} 일`:''; }
+function stWasteNameCode(){ const n=ctVal('ctWasteName'),c=ctVal('ctWasteCode'); return n&&c?`${n}\n(${c})`:(n||(c?`(${c})`:'')); }
+function stNormName(s){ return String(s||'').toLowerCase().replace(/\.[^.]+$/,'').replace(/[\s_()\-·.,]/g,''); }
+function stSeedLayout(tpl){ return stClone(ST_LAYOUT_PROFILES[tpl?.profile]||ST_LAYOUT_STANDARD); }
+function stMode(){ return stSelectedTemplate()?.mode||'storage'; }
+
+function stOpenDb(){ return new Promise((resolve,reject)=>{ const req=indexedDB.open(ST_DB_NAME,1); req.onupgradeneeded=()=>{ const db=req.result; if(!db.objectStoreNames.contains(ST_STORE)) db.createObjectStore(ST_STORE,{keyPath:'id'}); }; req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }); }
+async function stDbGet(id){ const db=await stOpenDb(); return new Promise((res,rej)=>{ const tx=db.transaction(ST_STORE,'readonly'); const r=tx.objectStore(ST_STORE).get(id); r.onsuccess=()=>res(r.result||null); r.onerror=()=>rej(r.error); tx.oncomplete=()=>db.close(); }); }
+async function stDbPut(rec){ const db=await stOpenDb(); return new Promise((res,rej)=>{ const tx=db.transaction(ST_STORE,'readwrite'); tx.objectStore(ST_STORE).put(rec); tx.oncomplete=()=>{db.close();res(true)}; tx.onerror=()=>{db.close();rej(tx.error)}; }); }
+async function stDbDelete(id){ const db=await stOpenDb(); return new Promise((res,rej)=>{ const tx=db.transaction(ST_STORE,'readwrite'); tx.objectStore(ST_STORE).delete(id); tx.oncomplete=()=>{db.close();res(true)}; tx.onerror=()=>{db.close();rej(tx.error)}; }); }
+async function stSha256(buffer){ if(!crypto?.subtle) return ''; const h=await crypto.subtle.digest('SHA-256',buffer.slice(0)); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+
+async function stInitSutakSection(){
+ if(!_stInitialized){
+   const sel=ctEl('stTemplateSelect'); if(sel){ sel.innerHTML='<option value="">처리장 양식 선택</option>'+Object.entries(SUTAK_CONFIG.templates).map(([id,t])=>`<option value="${id}">${t.name}</option>`).join(''); }
+   const d=ctEl('stIssueDate'); if(d&&!d.value)d.value=ctTodayLocal();
+   _stInitialized=true;
+ }
+ stSyncFromContract(false); await stRefreshStatus();
+}
+function stSyncFromContract(resetDynamic=false){
+ const pid=ctVal('ctProcessorSelect'), tid=stProcessorToTemplateId(pid), sel=ctEl('stTemplateSelect'); if(tid&&sel) sel.value=tid;
+ stApplyFixedDefaults(); if(resetDynamic) stClearDynamicValues(); stToggleMode(); stRefreshStatus();
+}
+function stOnTemplateChange(){ stApplyFixedDefaults(); stClearDynamicValues(); stToggleMode(); stRefreshStatus(); }
+function stApplyFixedDefaults(){
+ const d=stSelectedTemplate()?.fixed||{};
+ const map={stAllowStorage:'allow_storage',stDailyProcess:'daily_process',stFacilityType:'facility_type',stFacilityCapacity:'facility_capacity',stAcceptMethod:'accept_method',stLandfillAllow:'landfill_allow'};
+ Object.entries(map).forEach(([id,k])=>{ const el=ctEl(id); if(el) el.value=d[k]??(id==='stAcceptMethod'?'수시':''); });
+}
+function stClearDynamicValues(){ ['stCurrentStorage','stDailyIn','stCurrentAccept','stTotalStorage','stLandfillDailyIn','stLandfillCurrentAccept','stLandfillRemain'].forEach(id=>ctSet(id,'')); }
+function stToggleMode(){ const land=stMode()==='landfill'; ctEl('stStorageBlock')?.classList.toggle('hidden',land); ctEl('stLandfillBlock')?.classList.toggle('hidden',!land); }
+
+async function stRefreshStatus(){
+ const id=stSelectedTemplateId(), tpl=stSelectedTemplate(), info=ctEl('stTemplateFileInfo'), badge=ctEl('stTemplateBadge'), lay=ctEl('stLayoutStatus'), btn=ctEl('stDownloadBtn');
+ if(!tpl){ if(info)info.textContent='수탁 처리장 양식을 선택하세요.'; if(badge){badge.textContent='양식 미선택';badge.className='st-badge bg-slate-100 text-slate-600 border border-slate-200';} if(lay)lay.textContent='-'; if(btn)btn.disabled=true; return; }
+ const rec=await stDbGet(id);
+ if(!rec){
+   if(info){ info.textContent=(tpl.source?`${tpl.source} → PDF 변환 후 등록 필요`:`선택한 「${tpl.name}」 원본 PDF를 브라우저에 등록해주세요.`); info.className='st-status warn'; }
+   if(badge){badge.textContent='원본 미등록';badge.className='st-badge bg-amber-50 text-amber-700 border border-amber-200';}
+   if(lay){lay.textContent='위치 검수 필요';lay.className='st-badge bg-amber-50 text-amber-700 border border-amber-200';}
+   if(btn)btn.disabled=true; return;
+ }
+ const kb=(Number(rec.size||0)/1024).toFixed(0), fp=rec.hash?rec.hash.slice(0,10):'';
+ if(info){ info.textContent=`브라우저 저장: ${rec.fileName} · ${kb}KB${fp?` · ${fp}`:''}`; info.className='st-status ok'; }
+ if(badge){badge.textContent='원본 등록됨';badge.className='st-badge bg-emerald-50 text-emerald-700 border border-emerald-200';}
+ if(lay){ lay.textContent=rec.verified?'위치 검수 완료':'위치 검수 필요'; lay.className=rec.verified?'st-badge bg-emerald-50 text-emerald-700 border border-emerald-200':'st-badge bg-amber-50 text-amber-700 border border-amber-200'; }
+ if(btn)btn.disabled=!rec.verified;
+}
+
+function stMatchTemplateFromFile(file){
+ const n=stNormName(file.name); let best='';
+ for(const [id,t] of Object.entries(SUTAK_CONFIG.templates)){
+   const candidates=[t.file,t.source,t.name].filter(Boolean).map(stNormName);
+   if(candidates.some(c=>c&& (n.includes(c)||c.includes(n)))) return id;
+   const stem=stNormName(String(t.file||'').replace(/_변환본/,'')).slice(0,14); if(stem&&n.includes(stem)) best=id;
+ }
+ return best;
+}
+async function stSaveTemplateFile(id,file){
+ if(!id) throw new Error('먼저 처리장 양식을 선택해주세요.');
+ if(!file||(!/\.pdf$/i.test(file.name)&&file.type!=='application/pdf')) throw new Error('PDF 파일만 등록할 수 있습니다. HWP/Excel은 PDF로 변환해주세요.');
+ const data=await file.arrayBuffer();
+ if(typeof pdfjsLib==='undefined') throw new Error('PDF 검증 라이브러리를 불러오지 못했습니다.');
+ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+ const doc=await pdfjsLib.getDocument({data:data.slice(0)}).promise; if(doc.numPages<1) throw new Error('유효한 PDF가 아닙니다.');
+ const prev=await stDbGet(id), tpl=stTemplate(id), hash=await stSha256(data);
+ const rec={id,fileName:file.name,size:file.size,savedAt:Date.now(),hash,data,layout:prev?.layout||stSeedLayout(tpl),verified:false,pageCount:doc.numPages};
+ await stDbPut(rec); return rec;
+}
+async function stRegisterSelectedTemplate(file){
+ const input=ctEl('stRegisterTemplateFile'); try{ if(!file)return; const id=stSelectedTemplateId(); if(!id) throw new Error('먼저 수탁 처리장 양식을 선택해주세요.'); const matched=stMatchTemplateFromFile(file); if(matched && matched!==id){ if(!confirm(`선택한 양식은 「${stTemplate(id).name}」인데, 파일명은 「${stTemplate(matched)?.name||'다른 양식'}」으로 인식됩니다.\n그래도 이 파일을 등록할까요?`)) return; } else if(!matched && !confirm('파일명만으로 처리장 양식을 확인하지 못했습니다.\n선택한 처리장의 원본 PDF가 맞는지 확인하셨나요?')) return; await stSaveTemplateFile(id,file); alert('수탁 원본 PDF를 이 브라우저에 저장했습니다.\n보안을 위해 GitHub/외부 서버에는 업로드하지 않습니다.\n\n다운로드 전 「입력 위치 확인/보정」에서 위치를 검수해주세요.'); await stRefreshStatus(); }catch(e){alert('수탁 PDF 등록 실패\n'+e.message);}finally{if(input)input.value='';}
+}
+async function stBulkRegisterTemplates(fileList){
+ const input=ctEl('stBulkTemplateFiles'), files=[...(fileList||[])]; if(!files.length)return;
+ let ok=[],skip=[]; for(const f of files){ try{ const id=stMatchTemplateFromFile(f); if(!id){skip.push(f.name);continue;} await stSaveTemplateFile(id,f); ok.push(stTemplate(id).name); }catch(e){skip.push(`${f.name} (${e.message})`);} }
+ if(input)input.value=''; await stRefreshStatus(); alert(`일괄 등록 완료: ${ok.length}개\n${ok.join(', ')}${skip.length?`\n\n매칭/등록 실패: ${skip.length}개\n${skip.join('\n')}`:''}\n\n각 양식은 최초 1회 위치 검수가 필요합니다.`);
+}
+async function stDeleteSelectedTemplate(){ const id=stSelectedTemplateId(); if(!id)return; if(!confirm(`「${stSelectedTemplate()?.name}」의 브라우저 저장 원본과 좌표를 삭제할까요?`))return; await stDbDelete(id); await stRefreshStatus(); }
+
+function stRequiredFieldsForMode(mode){
+ const common=['p1_consignor_company','p1_consignor_biz_no','p1_consignor_rep','p1_consignor_address','p1_waste_name_code','p1_waste_state','p1_annual_amount','p2_waste_name_code','p2_process_method','p2_annual_amount','p2_date','p2_consignor_company','p2_consignor_rep','p2_applicant'];
+ return mode==='landfill'?common.concat(['p1_landfill_allow','p1_landfill_daily_in','p1_landfill_current_accept','p1_landfill_remain']):common.concat(['p1_allow_storage','p1_current_storage','p1_daily_in','p1_current_accept','p1_total_storage','p1_daily_process']);
+}
+function stFieldsForCalibration(mode){
+ const order=['p1_consignor_company','p1_consignor_biz_no','p1_consignor_rep','p1_consignor_birth','p1_consignor_address','p1_consignor_phone','p1_waste_name_code','p1_waste_state','p1_annual_amount'];
+ if(mode==='landfill') order.push('p1_landfill_allow','p1_landfill_daily_in','p1_landfill_current_accept','p1_landfill_remain');
+ else order.push('p1_allow_storage','p1_current_storage','p1_daily_in','p1_current_accept','p1_total_storage','p1_daily_process');
+ order.push('p2_waste_name_code','p2_process_method','p2_facility_type','p2_facility_capacity','p2_annual_amount','p2_accept_method','p2_date','p2_consignor_company','p2_consignor_rep','p2_applicant'); return order;
+}
+
+async function stOpenCalibration(){
+ const id=stSelectedTemplateId(); if(!id){alert('먼저 수탁 처리장 양식을 선택해주세요.');return;} const rec=await stDbGet(id); if(!rec){alert('먼저 선택한 처리장의 원본 PDF를 등록해주세요.');return;}
+ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+ _stCalPdf=await pdfjsLib.getDocument({data:rec.data.slice(0)}).promise; _stCalTemplateId=id; _stCalLayout=stClone(rec.layout||stSeedLayout(stTemplate(id))); _stCalPage=0;
+ const fields=stFieldsForCalibration(stTemplate(id).mode); _stCalField=fields[0]; const sel=ctEl('stCalFieldSelect'); sel.innerHTML=fields.map(f=>`<option value="${f}">${ST_FIELD_LABELS[f]||f}</option>`).join(''); sel.value=_stCalField;
+ ctEl('stCalModal')?.classList.remove('hidden'); ctEl('stCalMeta').textContent=`${stTemplate(id).name} · 빨간 박스가 변경값 영역입니다. 틀린 박스만 다시 그린 뒤 「검수 완료로 저장」하세요.`;
+ await stCalRender(); stCalBindOverlay();
+}
+function stCloseCalibration(){ ctEl('stCalModal')?.classList.add('hidden'); _stCalPdf=null; _stCalTemplateId=''; }
+async function stCalRender(){
+ if(!_stCalPdf)return; _stCalPage=Math.max(0,Math.min(_stCalPdf.numPages-1,_stCalPage)); const page=await _stCalPdf.getPage(_stCalPage+1);
+ const maxW=Math.min(860,Math.max(520,window.innerWidth-120)); const base=page.getViewport({scale:1}); _stCalScale=maxW/base.width; const vp=page.getViewport({scale:_stCalScale});
+ const c=ctEl('stCalCanvas'),o=ctEl('stCalOverlay'); c.width=o.width=Math.ceil(vp.width); c.height=o.height=Math.ceil(vp.height); c.style.width=o.style.width=c.width+'px'; c.style.height=o.style.height=c.height+'px';
+ await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise; stCalDrawOverlay(); ctEl('stCalPageLabel').textContent=`${_stCalPage+1} / ${_stCalPdf.numPages}`;
+}
+function stCalDrawOverlay(tempBox=null){
+ const o=ctEl('stCalOverlay'); if(!o)return; const ctx=o.getContext('2d'); ctx.clearRect(0,0,o.width,o.height);
+ for(const [f,cfg] of Object.entries(_stCalLayout||{})){ if(Number(cfg.page)!==_stCalPage||!cfg.box)continue; const b=cfg.box.map(v=>v*_stCalScale); ctx.save(); ctx.lineWidth=f===_stCalField?3:1.4; ctx.strokeStyle=f===_stCalField?'#dc2626':'rgba(37,99,235,.7)'; ctx.setLineDash(f===_stCalField?[]:[5,4]); ctx.strokeRect(b[0],b[1],b[2]-b[0],b[3]-b[1]); ctx.fillStyle=f===_stCalField?'rgba(220,38,38,.09)':'rgba(37,99,235,.04)'; ctx.fillRect(b[0],b[1],b[2]-b[0],b[3]-b[1]); ctx.restore(); }
+ if(tempBox){ const b=tempBox; ctx.save();ctx.strokeStyle='#16a34a';ctx.lineWidth=3;ctx.strokeRect(b[0],b[1],b[2]-b[0],b[3]-b[1]);ctx.restore(); }
+ const cfg=_stCalLayout?.[_stCalField]; ctEl('stCalCoord').textContent=cfg?.box?`좌표(pt): [${cfg.box.map(v=>Math.round(v*10)/10).join(', ')}] · ${ST_FIELD_LABELS[_stCalField]||_stCalField}`:'좌표: 미설정';
+}
+function stCalBindOverlay(){ const o=ctEl('stCalOverlay'); if(!o||o.dataset.bound)return; o.dataset.bound='1';
+ const pos=e=>{const r=o.getBoundingClientRect();return [Math.max(0,Math.min(o.width,e.clientX-r.left)),Math.max(0,Math.min(o.height,e.clientY-r.top))];};
+ o.addEventListener('pointerdown',e=>{o.setPointerCapture(e.pointerId);const p=pos(e);_stCalDrag=[p[0],p[1],p[0],p[1]];});
+ o.addEventListener('pointermove',e=>{if(!_stCalDrag)return;const p=pos(e);_stCalDrag[2]=p[0];_stCalDrag[3]=p[1];stCalDrawOverlay([Math.min(_stCalDrag[0],p[0]),Math.min(_stCalDrag[1],p[1]),Math.max(_stCalDrag[0],p[0]),Math.max(_stCalDrag[1],p[1])]);});
+ o.addEventListener('pointerup',e=>{if(!_stCalDrag)return;const p=pos(e),x1=Math.min(_stCalDrag[0],p[0]),y1=Math.min(_stCalDrag[1],p[1]),x2=Math.max(_stCalDrag[0],p[0]),y2=Math.max(_stCalDrag[1],p[1]);_stCalDrag=null;if((x2-x1)<5||(y2-y1)<5){stCalDrawOverlay();return;} const old=_stCalLayout[_stCalField]||{};_stCalLayout[_stCalField]={...old,page:_stCalPage,box:[x1/_stCalScale,y1/_stCalScale,x2/_stCalScale,y2/_stCalScale]};stCalDrawOverlay();});
+}
+function stCalSelectField(f){ _stCalField=f; const cfg=_stCalLayout?.[f]; if(cfg&&Number(cfg.page)!==_stCalPage){_stCalPage=Number(cfg.page)||0;stCalRender();}else stCalDrawOverlay(); }
+function stCalNextField(){ const a=stFieldsForCalibration(stTemplate(_stCalTemplateId)?.mode),i=a.indexOf(_stCalField); _stCalField=a[(i+1)%a.length]; ctEl('stCalFieldSelect').value=_stCalField; stCalSelectField(_stCalField); }
+function stCalPrevPage(){ if(_stCalPdf){_stCalPage=Math.max(0,_stCalPage-1);stCalRender();} }
+function stCalNextPage(){ if(_stCalPdf){_stCalPage=Math.min(_stCalPdf.numPages-1,_stCalPage+1);stCalRender();} }
+function stCalResetField(){ const seed=stSeedLayout(stTemplate(_stCalTemplateId)); if(seed[_stCalField])_stCalLayout[_stCalField]=stClone(seed[_stCalField]); else delete _stCalLayout[_stCalField]; stCalSelectField(_stCalField); }
+async function stCalSave(verify){
+ const rec=await stDbGet(_stCalTemplateId); if(!rec)return; if(verify){ const valid=f=>{const c=_stCalLayout?.[f];if(!c?.box||c.box.length!==4)return false;const b=c.box.map(Number);return b.every(Number.isFinite)&&b[2]>b[0]+2&&b[3]>b[1]+2&&Number(c.page)>=0&&Number(c.page)<Number(rec.pageCount||999);}; const miss=stRequiredFieldsForMode(stTemplate(_stCalTemplateId).mode).filter(f=>!valid(f)); if(miss.length){alert('필수 위치가 아직 없습니다.\n'+miss.map(f=>'- '+(ST_FIELD_LABELS[f]||f)).join('\n'));return;} if(!confirm('화면의 입력 박스 위치를 실제 원본과 대조해 확인하셨나요?\n검수 완료로 저장하면 이 양식의 PDF 다운로드가 활성화됩니다.'))return; }
+ rec.layout=stClone(_stCalLayout); rec.verified=!!verify; rec.layoutSavedAt=Date.now(); await stDbPut(rec); await stRefreshStatus(); if(verify){alert('입력 위치 검수를 완료했습니다. 이제 이 처리장 수탁확인서를 생성할 수 있습니다.');stCloseCalibration();} else alert('좌표를 저장했습니다. 다운로드 활성화 전에는 「검수 완료로 저장」이 필요합니다.');
+}
+
+function stMarkMissing(ids){ ids.forEach(id=>ctEl(id)?.classList.add('ct-missing')); }
+function stValidateSutakInputs(){
+ document.querySelectorAll('#tab6-content .ct-missing').forEach(e=>e.classList.remove('ct-missing'));
+ const common=[['stTemplateSelect','수탁 처리장 양식'],['stIssueDate','작성일'],['ctEmitterName','배출자 상호'],['ctEmitterBizNo','배출자 사업자번호'],['ctEmitterRep','배출자 대표자'],['ctEmitterAddress','배출자 주소'],['ctWasteName','폐기물 종류'],['ctWasteCode','폐기물 코드'],['ctAnnualVolume','예상 배출량']];
+ const req=[...common];
+ if(!ctVal('ctTreatmentMethod') && !stSelectedTemplate()?.fixed?.process_method) req.push(['ctTreatmentMethod','처리방법']);
+ if(stMode()==='landfill') req.push(['stLandfillAllow','매립 허가용량'],['stLandfillDailyIn','1일평균 폐기물 반입량'],['stLandfillCurrentAccept','금회 폐기물 수탁량'],['stLandfillRemain','남은 매립용량']);
+ else req.push(['stAllowStorage','허용보관량'],['stCurrentStorage','현재보관량'],['stDailyIn','1일평균반입량'],['stCurrentAccept','금회수탁량'],['stTotalStorage','전체보관량'],['stDailyProcess','1일처리량']);
+ const miss=req.filter(([id])=>!ctVal(id)); if(miss.length){stMarkMissing(miss.map(x=>x[0]));alert('수탁처리능력확인서 필수값을 확인해주세요.\n\n'+miss.map(x=>'- '+x[1]).join('\n'));return false;} return true;
+}
+
+function stBuildFields(){
+ const t=stSelectedTemplate(),d=t?.fixed||{},annual=ctVal('ctAnnualVolume'),pm=ctVal('ctTreatmentMethod')||d.process_method||'';
+ const base={p1_consignor_company:ctVal('ctEmitterName'),p1_consignor_biz_no:ctFormatBizNo(ctVal('ctEmitterBizNo')),p1_consignor_rep:ctVal('ctEmitterRep'),p1_consignor_birth:'',p1_consignor_address:ctVal('ctEmitterAddress'),p1_consignor_phone:ctVal('stConsignorPhone'),p1_waste_name_code:stWasteNameCode(),p1_waste_state:ctVal('ctWasteForm')||'고상',p1_annual_amount:annual,
+ p2_waste_name_code:stWasteNameCode(),p2_process_method:pm,p2_facility_type:ctVal('stFacilityType')||d.facility_type||'',p2_facility_capacity:ctVal('stFacilityCapacity')||d.facility_capacity||'',p2_annual_amount:annual,p2_accept_method:ctVal('stAcceptMethod')||d.accept_method||'수시',p2_date:stDateKo(ctVal('stIssueDate')),p2_consignor_company:ctVal('ctEmitterName'),p2_consignor_rep:ctVal('ctEmitterRep'),p2_applicant:`${ctVal('ctEmitterName')} ${ctVal('ctEmitterRep')}`.trim()};
+ if(t?.mode==='landfill') Object.assign(base,{p1_landfill_allow:stFmt(ctVal('stLandfillAllow')),p1_landfill_daily_in:stFmt(ctVal('stLandfillDailyIn')),p1_landfill_current_accept:stFmt(ctVal('stLandfillCurrentAccept')),p1_landfill_remain:stFmt(ctVal('stLandfillRemain'))});
+ else Object.assign(base,{p1_allow_storage:stFmt(ctVal('stAllowStorage')),p1_current_storage:stFmt(ctVal('stCurrentStorage')),p1_daily_in:stFmt(ctVal('stDailyIn')),p1_current_accept:stFmt(ctVal('stCurrentAccept')),p1_total_storage:stFmt(ctVal('stTotalStorage')),p1_daily_process:stFmt(ctVal('stDailyProcess'))});
+ return base;
+}
+
+async function stTextPngBytes(value,wPt,hPt,cfg={}){
+ await document.fonts?.ready; const scale=4,w=Math.max(8,Math.ceil(wPt*scale)),h=Math.max(8,Math.ceil(hPt*scale)); const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.clearRect(0,0,w,h);ctx.fillStyle='#000';ctx.textBaseline='middle';
+ let fs=Number(cfg.font_size||8.2)*scale; const lines=String(value??'').split('\n'); const family='"Noto Sans KR", "Malgun Gothic", sans-serif'; ctx.font=`500 ${fs}px ${family}`; const maxLine=lines.reduce((a,b)=>a.length>b.length?a:b,''); while(fs>5.5*scale&&ctx.measureText(maxLine).width>w-8*scale){fs-=.4*scale;ctx.font=`500 ${fs}px ${family}`;}
+ const lh=fs*1.18,total=lh*lines.length;let y=h/2-total/2+lh/2;const align=cfg.align||'center';ctx.textAlign=align;const x=align==='left'?3*scale:(align==='right'?w-3*scale:w/2);for(const line of lines){ctx.fillText(line,x,y);y+=lh;}
+ const blob=await new Promise(r=>c.toBlob(r,'image/png')); return new Uint8Array(await blob.arrayBuffer());
+}
+async function stOverlayPdfNative(bytes,fields,layout){
+ if(!window.PDFLib?.PDFDocument) throw new Error('PDF 편집 라이브러리(pdf-lib)를 불러오지 못했습니다.'); const {PDFDocument,rgb}=PDFLib; const pdf=await PDFDocument.load(bytes.slice(0),{ignoreEncryption:false}); const pages=pdf.getPages();
+ for(const [field,cfg] of Object.entries(layout||{})){ const value=fields[field]; if(value===undefined)continue; const p=pages[Number(cfg.page||0)]; if(!p||!cfg.box)continue; const [x1,y1,x2,y2]=cfg.box.map(Number),w=x2-x1,h=y2-y1,ph=p.getHeight(); if(w<=2||h<=2)continue;
+   const inset=Number(cfg.inset??1.2); p.drawRectangle({x:x1+inset,y:ph-y2+inset,width:Math.max(1,w-inset*2),height:Math.max(1,h-inset*2),color:rgb(1,1,1)}); if(String(value??'').trim()==='')continue;
+   const png=await stTextPngBytes(value,w-inset*2,h-inset*2,cfg); const img=await pdf.embedPng(png); p.drawImage(img,{x:x1+inset,y:ph-y2+inset,width:w-inset*2,height:h-inset*2});
+ }
+ return await pdf.save({useObjectStreams:false,addDefaultPage:false});
+}
+function stDownloadBytes(bytes,name){ const blob=new Blob([bytes],{type:'application/pdf'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000); }
+async function stDownloadSutakPdf(){
+ if(!stValidateSutakInputs())return; const id=stSelectedTemplateId(),tpl=stSelectedTemplate(),rec=await stDbGet(id); if(!rec){alert('이 처리장의 수탁 원본 PDF가 등록되지 않았습니다.');return;} if(!rec.verified){alert('원본 PDF의 입력 위치 검수가 완료되지 않았습니다.\n「입력 위치 확인/보정」에서 실제 칸과 빨간 박스를 확인한 뒤 검수 완료로 저장해주세요.');return;}
+ const btn=ctEl('stDownloadBtn'),status=ctEl('stDownloadStatus'),old=btn?.innerHTML;try{if(btn){btn.disabled=true;btn.innerHTML='<span class="inline-block animate-spin">⟳</span><span>수탁 PDF 생성 중...</span>';}if(status)status.textContent='브라우저에 저장된 원본 PDF에 변경값만 반영하고 있습니다.';const fields=stBuildFields();const out=await stOverlayPdfNative(rec.data,fields,rec.layout);const name=`수탁처리능력확인서_${ctSafeFilename(ctVal('ctProcessorName')||tpl.name)}_${ctSafeFilename(ctVal('ctEmitterName'))}_${ctVal('stIssueDate').replace(/-/g,'')}.pdf`;stDownloadBytes(out,name);if(status)status.textContent='✅ 원본 PDF 보존 방식으로 생성 완료';}catch(e){console.error(e);if(status)status.textContent='❌ '+e.message;alert('수탁처리능력확인서 생성 중 오류가 발생했습니다.\n'+e.message);}finally{if(btn){btn.disabled=false;btn.innerHTML=old;}await stRefreshStatus();}
+}
+
+// 기존 계약서 탭 초기화/처리장 선택과 수탁 기능 연동
+if(typeof initContractTab==='function'){ const _orig=initContractTab; initContractTab=function(){_orig();stInitSutakSection();}; }
+if(typeof ctOnProcessorChange==='function'){ const _origP=ctOnProcessorChange; ctOnProcessorChange=function(){_origP();setTimeout(()=>stSyncFromContract(true),0);}; }
+
 </script>
 
 </body>
