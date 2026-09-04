@@ -267,6 +267,21 @@
         /* 첫 페이지 예외 행: 기본 27px 행높이를 쓰면 다중행 문구/직인이 잘림 */
         .stmt-rep-row,
         .stmt-rep-row td{height:34px !important;}
+
+        /* 공급자 업태/업종 행: 업종명이 2줄이어도 셀 안에서 잘리지 않도록 */
+        .stmt-business-row,
+        .stmt-business-row td{
+            height:42px !important;
+            overflow:visible !important;
+        }
+        .stmt-business-item{
+            font-size:8.5px !important;
+            line-height:1.18 !important;
+            white-space:normal !important;
+            word-break:keep-all !important;
+            padding:3px 5px !important;
+            overflow:visible !important;
+        }
         .stmt-rep-cell{
             position:relative;
             overflow:visible !important;
@@ -9517,7 +9532,7 @@ function stmtPdfFirstPage(c,pageCount){
         <tr><td class="v" rowspan="5">공급자</td><td class="g">등록번호</td><td colspan="3">${stmtEsc(s.regNo)}</td><td class="v" rowspan="5">고객사</td><td class="g">등록번호</td><td>${stmtEsc(c.customerBiz)}</td></tr>
         <tr class="stmt-rep-row"><td class="g">상호명</td><td colspan="1">${stmtEsc(s.name)}</td><td class="g">대표자명</td><td class="stmt-rel stmt-rep-cell">${stmtEsc(s.rep)}${stamp}</td><td class="g">고객사명</td><td>${stmtEsc(c.customerName)}</td></tr>
         <tr><td class="g">주 소</td><td colspan="3">${stmtEsc(s.address)}</td><td class="g">폐기물 종류</td><td rowspan="3">${stmtEsc(c.wasteText).replace(/\n/g,'<br>')}</td></tr>
-        <tr><td class="g">업 태</td><td>${stmtEsc(s.businessType)}</td><td class="g">업종</td><td>${stmtEsc(s.businessItem)}</td></tr>
+        <tr class="stmt-business-row"><td class="g">업 태</td><td>${stmtEsc(s.businessType)}</td><td class="g">업종</td><td class="stmt-business-item">${stmtEsc(s.businessItem)}</td></tr>
         <tr><td class="g">대표전화</td><td colspan="3">${stmtEsc(s.phone)}</td></tr>
       </table>
 
