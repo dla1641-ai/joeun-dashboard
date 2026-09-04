@@ -15,6 +15,7 @@
     <!-- 계약서 탭: 사업자등록증 로컬 인식용. 파일은 외부 서버에 업로드하지 않음 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.default.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
@@ -185,6 +186,135 @@
             font-size: 0.9rem !important;
             z-index: 120 !important;
         }
+
+        /* ─────────────────────────────────────────────
+           통합 거래명세서
+        ───────────────────────────────────────────── */
+        .stmt-dropzone{
+            border:2px dashed #99f6e4;
+            background:#f0fdfa;
+            transition:.18s ease;
+        }
+        .stmt-dropzone.dragover{
+            border-color:#0f766e;
+            background:#ccfbf1;
+            transform:translateY(-1px);
+        }
+        .stmt-file-grid{
+            display:grid;
+            grid-template-columns:minmax(260px,1.7fr) 1.2fr .7fr .9fr .9fr 38px;
+            gap:10px;
+            align-items:center;
+            padding:10px 12px;
+            border-bottom:1px solid #e2e8f0;
+            font-size:12px;
+        }
+        .stmt-file-grid:last-child{border-bottom:0}
+        .stmt-preview-table{border-collapse:collapse;width:100%}
+        .stmt-preview-table th,.stmt-preview-table td{
+            border:1px solid #d1d5db;
+            padding:7px 8px;
+            text-align:center;
+            font-size:12px;
+        }
+        .stmt-preview-table th{background:#e5e7eb;font-weight:800}
+        #stmtPdfMount{
+            position:fixed;
+            left:-20000px;
+            top:0;
+            width:794px;
+            pointer-events:none;
+            z-index:-99;
+        }
+        .stmt-pdf-page{
+            width:794px;
+            height:1123px;
+            background:#fff;
+            color:#000;
+            box-sizing:border-box;
+            padding:34px 16px 18px;
+            position:relative;
+            overflow:hidden;
+            font-family:'Noto Sans KR',sans-serif;
+        }
+        .stmt-doc-title{
+            text-align:center;
+            font-size:30px;
+            font-weight:800;
+            letter-spacing:10px;
+            margin:20px 0 26px;
+        }
+        .stmt-doc-table{
+            width:100%;
+            border-collapse:collapse;
+            table-layout:fixed;
+            font-size:10.5px;
+        }
+        .stmt-doc-table td,.stmt-doc-table th{
+            border:1px solid #111;
+            padding:4px 5px;
+            vertical-align:middle;
+            text-align:center;
+            line-height:1.28;
+            word-break:keep-all;
+        }
+        .stmt-doc-table .g{background:#dedede;font-weight:800}
+        .stmt-doc-table .v{
+            background:#dedede;
+            font-weight:800;
+            width:25px;
+            writing-mode:vertical-rl;
+            text-orientation:upright;
+            letter-spacing:1px;
+        }
+        .stmt-big-money{font-size:20px;font-weight:800}
+        .stmt-small{font-size:8.5px;line-height:1.35}
+        .stmt-link{color:#3b728b;text-decoration:underline}
+        .stmt-rel{position:relative}
+        .stmt-stamp{
+            position:absolute;
+            width:38px;height:38px;object-fit:contain;
+            right:0;top:-8px;
+        }
+        .stmt-bottom-summary{
+            position:absolute;
+            left:16px;right:16px;
+            bottom:195px;
+        }
+        .stmt-pdf-footer{
+            position:absolute;
+            left:16px;right:16px;
+            bottom:14px;
+            font-size:11px;
+            display:flex;
+            justify-content:space-between;
+        }
+        .stmt-detail-title{
+            margin-top:6px;
+            border:1px solid #111;
+            background:#dedede;
+            font-weight:800;
+            font-size:17px;
+            text-align:center;
+            padding:8px;
+        }
+        .stmt-detail-table{
+            width:100%;
+            border-collapse:collapse;
+            table-layout:fixed;
+            font-size:9.5px;
+        }
+        .stmt-detail-table th,.stmt-detail-table td{
+            border:1px solid #666;
+            padding:4px 5px;
+            text-align:center;
+            vertical-align:middle;
+            height:24px;
+            line-height:1.2;
+        }
+        .stmt-detail-table th{background:#dedede;font-weight:800}
+        .stmt-detail-table .total td{background:#dedede;font-weight:800}
+        .stmt-rate-lines{font-size:8.5px;font-weight:700;line-height:1.25}
 </style>
 </head>
 <body class="text-slate-800">
@@ -301,6 +431,7 @@
             <button id="btnTab4" onclick="switchTab(4)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">📋 고객사 브리핑</button>
             <button id="btnTab5" onclick="switchTab(5)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">🚛 운반자 실적 · 도급비</button>
             <button id="btnTab6" onclick="switchTab(6)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">📄 계약서 자동 생성</button>
+            <button id="btnTab7" onclick="switchTab(7)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">🧾 통합 명세서</button>
         </div>
     </div>
 
@@ -1469,6 +1600,104 @@
         </div>
 
 
+
+        <!-- 탭7: 통합 거래명세서 -->
+        <div id="tab7-content" class="hidden space-y-5">
+            <div class="bg-white rounded-2xl p-6 card-shadow border border-slate-100">
+                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 class="text-xl font-bold text-slate-900">🧾 통합 거래명세서 생성</h2>
+                            <span class="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-full px-2 py-1">Excel + PDF</span>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-2 leading-6">
+                            같은 고객사에 계약별로 따로 발행된 업박스 거래명세서 XLSX를 여러 개 넣으면
+                            <b>수량·공급가액·부가세·청구금액과 2페이지 상세 수거내역을 하나로 통합</b>합니다.
+                        </p>
+                        <p class="text-xs text-slate-400 mt-1">
+                            조은환경 공급자 정보는 고정입니다. 고객사명·고객 사업자번호·폐기물 정보는 업로드한 명세서에서 읽습니다.
+                            계약단가가 여러 개면 평균단가를 만들지 않고 각각 표시합니다.
+                        </p>
+                    </div>
+                    <button type="button" onclick="stmtResetAll()" class="shrink-0 px-4 py-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">전체 초기화</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-[1.25fr_.75fr] gap-5">
+                <div class="space-y-5">
+                    <section class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div id="stmtDropzone" class="stmt-dropzone rounded-2xl p-8 text-center cursor-pointer" onclick="document.getElementById('stmtFileInput').click()">
+                            <input id="stmtFileInput" type="file" accept=".xlsx" multiple class="hidden" onchange="stmtHandleFiles(this.files)">
+                            <div class="text-4xl mb-2">📂</div>
+                            <p class="font-bold text-slate-800">거래명세서 XLSX 여러 개 선택</p>
+                            <p class="text-sm text-slate-500 mt-1">클릭하거나 파일을 여기로 끌어다 놓으세요.</p>
+                            <p class="text-xs text-slate-400 mt-2">현재 업박스 거래명세서 양식 기준 · 브라우저 내부 처리</p>
+                        </div>
+
+                        <div class="mt-4 border border-slate-200 rounded-xl overflow-hidden">
+                            <div class="stmt-file-grid bg-slate-50 font-bold text-slate-500">
+                                <div>파일</div><div>집계기간</div><div>수량</div><div>공급가액</div><div>계약단가</div><div></div>
+                            </div>
+                            <div id="stmtFileList">
+                                <div class="py-8 text-center text-sm text-slate-400">선택된 명세서가 없습니다.</div>
+                            </div>
+                        </div>
+                        <div id="stmtValidation" class="mt-3 text-xs text-slate-500"></div>
+                    </section>
+
+                    <section class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <div class="flex items-center justify-between mb-3 gap-2">
+                            <h3 class="font-bold text-slate-900">통합 상세 내역 미리보기</h3>
+                            <span id="stmtDetailCount" class="text-xs font-bold text-slate-400">0건</span>
+                        </div>
+                        <div class="overflow-auto max-h-[560px] border border-slate-200 rounded-xl">
+                            <table class="stmt-preview-table min-w-[780px]">
+                                <thead>
+                                    <tr>
+                                        <th>일자</th>
+                                        <th>품목</th>
+                                        <th>수거량(kg)</th>
+                                        <th>계약단가</th>
+                                        <th>비고</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stmtDetailBody">
+                                    <tr><td colspan="5" class="text-slate-400 py-8">명세서를 추가하면 상세 내역이 표시됩니다.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <aside class="space-y-5">
+                    <section class="bg-white rounded-2xl p-5 card-shadow border border-slate-100">
+                        <h3 class="font-bold text-slate-900 mb-4">통합 결과</h3>
+                        <div id="stmtSummary" class="text-sm">
+                            <div class="py-8 text-center text-slate-400">명세서를 2개 이상 추가해주세요.</div>
+                        </div>
+                    </section>
+
+                    <section class="bg-slate-900 text-white rounded-2xl p-5 shadow-lg">
+                        <p class="font-bold">다운로드</p>
+                        <p class="text-xs text-slate-300 mt-1 leading-5">
+                            Excel은 업로드한 명세서의 원본 서식을 기반으로 만들고,
+                            PDF는 제공해주신 업박스 거래명세서 1페이지 양식을 재현한 뒤 상세내역 페이지를 이어 붙입니다.
+                        </p>
+                        <button id="stmtExcelBtn" type="button" onclick="stmtDownloadExcel()" disabled
+                            class="mt-4 w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-3">
+                            ↓ 통합 거래명세서 Excel
+                        </button>
+                        <button id="stmtPdfBtn" type="button" onclick="stmtDownloadPdf()" disabled
+                            class="mt-2 w-full bg-teal-500 hover:bg-teal-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-3">
+                            ↓ 통합 거래명세서 PDF
+                        </button>
+                        <p id="stmtDownloadStatus" class="mt-3 text-xs text-slate-400 text-center"></p>
+                    </section>
+                </aside>
+            </div>
+            <div id="stmtPdfMount" aria-hidden="true"></div>
+        </div>
+
     </main>
 </div>
 
@@ -2042,7 +2271,7 @@
         currentTab = tabId;
         const active = "px-6 py-3 font-bold text-teal-700 bg-white border border-b-0 border-teal-200 rounded-t-xl transition-all -mb-[1px]";
         const inactive = "px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]";
-        [1,2,3,4,5,6].forEach(i => {
+        [1,2,3,4,5,6,7].forEach(i => {
             const btn = document.getElementById(`btnTab${i}`);
             const pane = document.getElementById(`tab${i}-content`);
             if (btn) btn.className = i === tabId ? active : inactive;
@@ -2052,11 +2281,11 @@
         // 계약서 탭은 매출 필터/기준과 무관하므로 헤더 필터를 숨김
         const basis = document.getElementById('basisControl');
         const globalFilters = document.getElementById('globalFilterPanel');
-        if (basis) basis.style.display = tabId === 6 ? 'none' : '';
-        if (globalFilters) globalFilters.style.display = tabId === 6 ? 'none' : '';
+        if (basis) basis.style.display = (tabId === 6 || tabId === 7) ? 'none' : '';
+        if (globalFilters) globalFilters.style.display = (tabId === 6 || tabId === 7) ? 'none' : '';
 
         // 탭5에서는 업체/폐기물 공통 필터를 사용하지 않음 (기존 동작 유지)
-        if (tabId !== 6) {
+        if (tabId !== 6 && tabId !== 7) {
             const filterBlocks = document.querySelectorAll('#globalFilterPanel > div:first-child > .flex.flex-col');
             filterBlocks.forEach((el, idx) => {
                 // 업체명(0), 폐기물명(2)만 탭5에서 숨김
@@ -2228,7 +2457,7 @@
         if (loginGuide) {
             if (!_currentUserEmail) {
                 loginGuide.classList.remove('hidden');
-                ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content'].forEach(id => {
+                ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content'].forEach(id => {
                     const el = document.getElementById(id); if(el) el.classList.add('hidden');
                 });
                 return;
@@ -2250,6 +2479,19 @@
             return;
         }
 
+        // 통합 명세서는 매출 데이터 유무와 독립적으로 사용
+        if (currentTab === 7) {
+            const noDataMsg = document.getElementById('noDataMessage');
+            if (noDataMsg) noDataMsg.classList.add('hidden');
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.classList.add('hidden');
+            });
+            const pane = document.getElementById('tab7-content');
+            if (pane) pane.classList.remove('hidden');
+            stmtInit();
+            return;
+        }
+
         const custVals  = getFilterVals(tsCust);
         const vehVals   = getFilterVals(tsVeh);
         const wasteVals = getFilterVals(tsWaste);
@@ -2267,7 +2509,7 @@
         const noDataMsg = document.getElementById('noDataMessage');
         if (filtered.length === 0) {
             noDataMsg.classList.remove('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
             return;
         }
         noDataMsg.classList.add('hidden');
@@ -8568,6 +8810,581 @@ if(typeof ctOnProcessorChange==='function'){
  };
 }
 
+</script>
+
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// 통합 거래명세서
+// - 고객사/사업자번호는 업로드 파일에서 읽음
+// - 조은환경 공급자 정보는 고정
+// - 평균단가 생성 금지
+// - 다중 단가: 1페이지 계약단가에 모두 표기 + 상세 비고에 행별 단가 표기
+// ═══════════════════════════════════════════════════════════════
+const STMT_FIXED_SUPPLIER = Object.freeze({
+    regNo:'124-81-74409',
+    name:'조은환경주식회사',
+    rep:'신창운 (인)',
+    address:'경기도 화성시 효행로 512(안녕동)',
+    businessType:'서비스',
+    businessItem:'폐기물수집운반, 폐기물처리허가용역',
+    phone:'1833-7236',
+    account:'신한 100-014-253685 조은환경(주)\\n*고객사명으로 입금부탁드립니다.*',
+    link:'https://customer2.upbox.us'
+});
+const STMT={entries:[],initialized:false,busy:false};
+
+function stmtInit(){
+    if(STMT.initialized)return;
+    STMT.initialized=true;
+    const dz=document.getElementById('stmtDropzone');
+    if(!dz)return;
+    ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();dz.classList.add('dragover');}));
+    ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();dz.classList.remove('dragover');}));
+    dz.addEventListener('drop',e=>{
+        const files=[...(e.dataTransfer?.files||[])].filter(f=>/\.xlsx$/i.test(f.name));
+        if(files.length)stmtHandleFiles(files);
+    });
+    stmtRender();
+}
+function stmtEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function stmtNum(v){
+    if(typeof v==='number'&&Number.isFinite(v))return v;
+    const s=String(v??'').replace(/,/g,'').trim();
+    if(!s)return 0;
+    const n=Number(s.replace(/[^\d.-]/g,''));
+    return Number.isFinite(n)?n:0;
+}
+function stmtFmt(v){return Math.round(Number(v)||0).toLocaleString('ko-KR');}
+function stmtCellValue(cell){
+    const v=cell?.value;
+    if(v===null||v===undefined)return '';
+    if(typeof v==='object'){
+        if(v.result!==undefined&&v.result!==null)return v.result;
+        if(Array.isArray(v.richText))return v.richText.map(x=>x.text||'').join('');
+        if(v.text!==undefined)return v.text;
+    }
+    return v;
+}
+function stmtText(ws,addr){const c=ws.getCell(addr);return String(stmtCellValue(c)??c.text??'').trim();}
+function stmtCellNum(ws,addr){return stmtNum(stmtCellValue(ws.getCell(addr)));}
+function stmtIso(s){
+    const m=String(s||'').match(/(\d{4})[-./]\s*(\d{1,2})[-./]\s*(\d{1,2})/);
+    return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:'';
+}
+function stmtPeriod(s){
+    const x=[...String(s||'').matchAll(/(\d{4})-(\d{2})-(\d{2})/g)].map(m=>`${m[1]}-${m[2]}-${m[3]}`);
+    return {start:x[0]||'',end:x[1]||x[0]||''};
+}
+function stmtRateNum(v){
+    const m=String(v||'').replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);
+    return m?Number(m[0]):null;
+}
+function stmtRateText(v){
+    const n=stmtRateNum(v);
+    if(n!==null&&Number.isFinite(n))return `${Number.isInteger(n)?n:n.toFixed(2).replace(/0+$/,'').replace(/\.$/,'')}원/kg`;
+    return String(v||'').trim()||'미입력';
+}
+function stmtRateKey(v){const n=stmtRateNum(v);return n!==null?`N:${n}`:`S:${String(v||'').replace(/\s+/g,'').toLowerCase()}`;}
+function stmtDays(a,b){
+    const x=new Date(`${a}T00:00:00`),y=new Date(`${b}T00:00:00`);
+    if(Number.isNaN(x.getTime())||Number.isNaN(y.getTime()))return 0;
+    return Math.round((y-x)/86400000)+1;
+}
+function stmtPeriodDisplay(a,b){
+    if(!a||!b)return '';
+    const d1=new Date(`${a}T00:00:00`),d2=new Date(`${b}T00:00:00`);
+    let n=stmtDays(a,b),den=n;
+    if(d1.getFullYear()===d2.getFullYear()&&d1.getMonth()===d2.getMonth())den=new Date(d1.getFullYear(),d1.getMonth()+1,0).getDate();
+    return `${a} ~ ${b} (${n}/${den})`;
+}
+function stmtSafe(v){return String(v||'통합거래명세서').replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,' ').trim();}
+function stmtFindRow(ws,needle,start=1,end=null){
+    const max=end||ws.rowCount, q=String(needle).replace(/\s+/g,'');
+    for(let r=start;r<=max;r++){
+        for(const col of ['B','C','D','E','F','G','H','I','J','K']){
+            if(stmtText(ws,`${col}${r}`).replace(/\s+/g,'').includes(q))return r;
+        }
+    }
+    return -1;
+}
+async function stmtStampFromFile(file){
+    try{
+        const zip=await JSZip.loadAsync(await file.arrayBuffer());
+        const names=Object.keys(zip.files).filter(n=>/^xl\/media\/image\d+\.(png|jpe?g)$/i.test(n));
+        if(!names.length)return '';
+        const name=names[0],ext=/\.png$/i.test(name)?'png':'jpeg';
+        return `data:image/${ext};base64,${await zip.file(name).async('base64')}`;
+    }catch(e){console.warn('직인 추출 실패',e);return '';}
+}
+async function stmtParseFile(file){
+    if(typeof ExcelJS==='undefined')throw new Error('ExcelJS를 불러오지 못했습니다.');
+    const wb=new ExcelJS.Workbook();
+    await wb.xlsx.load(await file.arrayBuffer());
+    const ws=wb.getWorksheet('업박스 거래명세서')||wb.worksheets[0];
+    if(!ws)throw new Error('업박스 거래명세서 시트를 찾지 못했습니다.');
+
+    const title=stmtText(ws,'B4');
+    const periodText=stmtText(ws,'C13')||stmtText(ws,'E35');
+    const p=stmtPeriod(periodText);
+    const customerBiz=stmtText(ws,'J6');
+    const customerName=stmtText(ws,'J8');
+    const waste=stmtText(ws,'J10');
+    const rawRate=stmtText(ws,'G17')||stmtText(ws,'E21');
+    const rateText=stmtRateText(rawRate);
+
+    const detailTitle=stmtFindRow(ws,'수거 내역',30);
+    const detailHead=detailTitle>0?detailTitle+1:-1;
+    const details=[];
+    let detailTotal=-1;
+    if(detailHead>0){
+        for(let r=detailHead+1;r<=ws.rowCount;r++){
+            const b=stmtText(ws,`B${r}`);
+            if(/^TOTAL$/i.test(b.replace(/\s+/g,''))){detailTotal=r;break;}
+            const date=stmtIso(b),qty=stmtCellNum(ws,`H${r}`);
+            if(date||qty){
+                details.push({
+                    date,
+                    item:stmtText(ws,`D${r}`)||'폐기물 수거',
+                    qty,
+                    note:stmtText(ws,`K${r}`),
+                    rateText,
+                    rateKey:stmtRateKey(rateText),
+                    source:file.name
+                });
+            }
+        }
+    }
+
+    const adjTitle=stmtFindRow(ws,'기타/할인·할증 내역',detailTotal>0?detailTotal+1:30);
+    const adjustments=[];
+    let adjTotal=-1;
+    if(adjTitle>0){
+        for(let r=adjTitle+2;r<=ws.rowCount;r++){
+            const b=stmtText(ws,`B${r}`);
+            if(/^TOTAL$/i.test(b.replace(/\s+/g,''))){adjTotal=r;break;}
+            const date=stmtIso(b),item=stmtText(ws,`D${r}`),desc=stmtText(ws,`E${r}`),amount=stmtCellNum(ws,`H${r}`),note=stmtText(ws,`K${r}`);
+            if(date||item||desc||amount||note)adjustments.push({date,item,desc,amount,note,source:file.name});
+        }
+    }
+
+    return {
+        id:`stmt_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        file,fileName:file.name,title,
+        typoPurchase:/매\s*입/.test(title),
+        customerBiz,customerName,waste,
+        periodText,period:p,
+        rateText,rateKey:stmtRateKey(rateText),
+        supply:stmtCellNum(ws,'F24')||stmtCellNum(ws,'F20'),
+        vat:stmtCellNum(ws,'G24')||stmtCellNum(ws,'G20'),
+        amount:stmtCellNum(ws,'F13')||stmtCellNum(ws,'K35'),
+        totalQty:stmtNum(stmtText(ws,'D24')),
+        dueDate:stmtText(ws,'I17'),
+        planName:stmtText(ws,'C17')||'일반요금제',
+        details,adjustments,
+        stampDataUrl:await stmtStampFromFile(file),
+        rows:{detailTitle,detailHead,detailTotal,adjTitle,adjHead:adjTitle>0?adjTitle+1:-1,adjTotal}
+    };
+}
+async function stmtHandleFiles(fileList){
+    const files=[...fileList].filter(f=>/\.xlsx$/i.test(f.name));
+    if(!files.length){alert('XLSX 파일을 선택해주세요.');return;}
+    const st=document.getElementById('stmtDownloadStatus');
+    if(st)st.textContent='명세서 분석 중...';
+    for(const f of files){
+        try{STMT.entries.push(await stmtParseFile(f));}
+        catch(e){console.error(e);alert(`${f.name}\n분석 실패: ${e.message}`);}
+    }
+    const input=document.getElementById('stmtFileInput');if(input)input.value='';
+    if(st)st.textContent='';
+    stmtRender();
+}
+function stmtRemove(id){STMT.entries=STMT.entries.filter(x=>x.id!==id);stmtRender();}
+function stmtResetAll(){
+    STMT.entries=[];
+    const input=document.getElementById('stmtFileInput');if(input)input.value='';
+    const st=document.getElementById('stmtDownloadStatus');if(st)st.textContent='';
+    stmtRender();
+}
+function stmtCombined(){
+    if(!STMT.entries.length)return null;
+    const es=STMT.entries;
+    const bizs=[...new Set(es.map(e=>e.customerBiz).filter(Boolean))];
+    const names=[...new Set(es.map(e=>e.customerName).filter(Boolean))];
+    const customerMismatch=bizs.length>1||(!bizs.length&&names.length>1);
+
+    const rates=[],rateKeys=new Set();
+    es.forEach(e=>{if(!rateKeys.has(e.rateKey)){rateKeys.add(e.rateKey);rates.push(e.rateText);}});
+    const multiRate=rates.length>1;
+
+    const wastes=[...new Set(es.map(e=>e.waste).filter(Boolean))];
+    const details=es.flatMap(e=>e.details).sort((a,b)=>String(a.date||'9999').localeCompare(String(b.date||'9999'))||String(a.rateKey).localeCompare(String(b.rateKey)));
+    const adjustments=es.flatMap(e=>e.adjustments).sort((a,b)=>String(a.date||'9999').localeCompare(String(b.date||'9999')));
+    const detailDates=details.map(d=>d.date).filter(Boolean).sort();
+    const starts=es.map(e=>e.period.start).filter(Boolean).sort();
+    const ends=es.map(e=>e.period.end).filter(Boolean).sort();
+    const start=detailDates[0]||starts[0]||'',end=detailDates[detailDates.length-1]||ends[ends.length-1]||'';
+
+    const detailQty=details.reduce((s,d)=>s+(d.qty||0),0);
+    const sourceQty=es.reduce((s,e)=>s+(e.totalQty||0),0);
+    const supply=es.reduce((s,e)=>s+(e.supply||0),0);
+    const vat=es.reduce((s,e)=>s+(e.vat||0),0);
+    const amount=es.reduce((s,e)=>s+(e.amount||0),0);
+    const dueDates=es.map(e=>e.dueDate).filter(Boolean).sort();
+
+    return {
+        valid:!customerMismatch,
+        customerMismatch,
+        customerBiz:es[0].customerBiz,
+        customerName:es[0].customerName,
+        wasteText:wastes.length<=1?(wastes[0]||''):`계약별 상이\n${wastes.join(' / ')}`,
+        wastes,rates,multiRate,
+        rateDisplay:multiRate?`계약별 상이 (${rates.join(' · ')})`:(rates[0]||''),
+        periodStart:start,periodEnd:end,periodDisplay:stmtPeriodDisplay(start,end),
+        details,adjustments,
+        detailQty,sourceQty,totalQty:detailQty||sourceQty,
+        supply,vat,amount,
+        dueDate:dueDates[dueDates.length-1]||'',
+        planName:es[0].planName||'일반요금제',
+        stampDataUrl:es.map(e=>e.stampDataUrl).find(Boolean)||'',
+        typoCount:es.filter(e=>e.typoPurchase).length
+    };
+}
+function stmtRender(){
+    const list=document.getElementById('stmtFileList');
+    if(!list)return;
+    const validation=document.getElementById('stmtValidation');
+    const summary=document.getElementById('stmtSummary');
+    const tbody=document.getElementById('stmtDetailBody');
+    const count=document.getElementById('stmtDetailCount');
+    const xbtn=document.getElementById('stmtExcelBtn'),pbtn=document.getElementById('stmtPdfBtn');
+
+    if(!STMT.entries.length){
+        list.innerHTML='<div class="py-8 text-center text-sm text-slate-400">선택된 명세서가 없습니다.</div>';
+        validation.textContent='';
+        summary.innerHTML='<div class="py-8 text-center text-slate-400">명세서를 2개 이상 추가해주세요.</div>';
+        tbody.innerHTML='<tr><td colspan="5" class="text-slate-400 py-8">명세서를 추가하면 상세 내역이 표시됩니다.</td></tr>';
+        count.textContent='0건';xbtn.disabled=true;pbtn.disabled=true;return;
+    }
+    list.innerHTML=STMT.entries.map(e=>`
+        <div class="stmt-file-grid">
+            <div class="min-w-0">
+                <div class="font-bold text-slate-700 truncate" title="${stmtEsc(e.fileName)}">${stmtEsc(e.fileName)}</div>
+                <div class="text-[10px] ${e.typoPurchase?'text-amber-600':'text-emerald-600'}">${e.typoPurchase?'매입 문구 감지 → 통합본에서는 거래명세서로 출력':'거래명세서'}</div>
+            </div>
+            <div>${stmtEsc(e.periodText||'-')}</div>
+            <div class="font-bold">${stmtFmt(e.totalQty)}kg</div>
+            <div>${stmtFmt(e.supply)}원</div>
+            <div class="font-bold">${stmtEsc(e.rateText)}</div>
+            <button type="button" onclick="stmtRemove('${e.id}')" class="w-8 h-8 rounded-lg border border-red-200 text-red-500 hover:bg-red-50">×</button>
+        </div>`).join('');
+
+    const c=stmtCombined(),msgs=[];
+    if(c.customerMismatch)msgs.push('❌ 서로 다른 고객사가 섞여 있습니다. 고객사 사업자번호가 동일한 파일만 통합할 수 있습니다.');
+    if(c.typoCount)msgs.push(`ℹ️ ${c.typoCount}개 파일의 제목에 ‘매입’ 문구가 있으나 통합본은 정상 ‘거래명세서’로 출력합니다.`);
+    if(c.detailQty&&c.sourceQty&&Math.abs(c.detailQty-c.sourceQty)>0.01)msgs.push(`⚠️ 원본 TOTAL(${stmtFmt(c.sourceQty)}kg)과 상세 합계(${stmtFmt(c.detailQty)}kg)가 다릅니다.`);
+    if(c.multiRate)msgs.push(`ℹ️ 단가가 ${c.rates.length}개입니다. 평균단가를 만들지 않고 ${c.rates.join(' / ')}로 각각 표시합니다.`);
+    validation.innerHTML=msgs.length?msgs.map(m=>`<div class="mt-1 ${m.startsWith('❌')?'text-red-600':m.startsWith('⚠️')?'text-amber-600':'text-slate-500'}">${stmtEsc(m)}</div>`).join(''):'<span class="text-emerald-600">✅ 통합 가능한 파일입니다.</span>';
+
+    summary.innerHTML=`
+        <div class="grid grid-cols-[100px_1fr] gap-y-3">
+            <div class="text-slate-400 font-bold">고객사</div><div class="font-bold">${stmtEsc(c.customerName||'-')}</div>
+            <div class="text-slate-400 font-bold">사업자번호</div><div>${stmtEsc(c.customerBiz||'-')}</div>
+            <div class="text-slate-400 font-bold">집계기간</div><div>${stmtEsc(c.periodDisplay||'-')}</div>
+            <div class="text-slate-400 font-bold">총 수량</div><div class="font-bold text-teal-700">${stmtFmt(c.totalQty)} kg</div>
+            <div class="text-slate-400 font-bold">공급가액</div><div>${stmtFmt(c.supply)} 원</div>
+            <div class="text-slate-400 font-bold">부가세</div><div>${stmtFmt(c.vat)} 원</div>
+            <div class="text-slate-400 font-bold">청구금액</div><div class="text-xl font-bold">${stmtFmt(c.amount)} 원</div>
+            <div class="text-slate-400 font-bold">계약단가</div><div class="font-bold ${c.multiRate?'text-amber-700':''}">${stmtEsc(c.rateDisplay||'-')}</div>
+        </div>`;
+    count.textContent=`${c.details.length.toLocaleString('ko-KR')}건`;
+    tbody.innerHTML=c.details.length?c.details.map(d=>`
+        <tr>
+            <td>${stmtEsc(d.date)}</td><td>${stmtEsc(d.item)}</td><td class="font-bold">${stmtFmt(d.qty)}</td>
+            <td class="${c.multiRate?'font-bold text-amber-700':''}">${stmtEsc(d.rateText)}</td>
+            <td>${stmtEsc(d.note||'')}</td>
+        </tr>`).join(''):'<tr><td colspan="5" class="text-slate-400 py-8">상세내역을 찾지 못했습니다.</td></tr>';
+    xbtn.disabled=!c.valid;pbtn.disabled=!c.valid;
+}
+
+// ── Excel 출력 ───────────────────────────────────────────────
+function stmtCopyCellStyle(from,to){
+    try{
+        to.style=JSON.parse(JSON.stringify(from.style||{}));
+        if(from.numFmt)to.numFmt=from.numFmt;
+        if(from.alignment)to.alignment=JSON.parse(JSON.stringify(from.alignment));
+        if(from.font)to.font=JSON.parse(JSON.stringify(from.font));
+        if(from.fill)to.fill=JSON.parse(JSON.stringify(from.fill));
+        if(from.border)to.border=JSON.parse(JSON.stringify(from.border));
+        if(from.protection)to.protection=JSON.parse(JSON.stringify(from.protection));
+    }catch(e){console.warn('셀 스타일 복사 실패',e);}
+}
+function stmtMergeSafe(ws,range){try{ws.mergeCells(range);}catch(e){}}
+function stmtUnmergeIfNeeded(ws,range){try{ws.unMergeCells(range);}catch(e){}}
+function stmtSetMergedValue(ws,addr,value){ws.getCell(addr).value=value;}
+function stmtBuildDetailNote(d,multiRate){
+    const parts=[];
+    if(multiRate)parts.push(d.rateText);
+    if(d.note)parts.push(d.note);
+    return parts.join(' / ');
+}
+async function stmtBuildExcelWorkbook(){
+    const c=stmtCombined();
+    if(!c?.valid)throw new Error('서로 다른 고객사가 섞여 있습니다.');
+    const base=STMT.entries.find(e=>!e.typoPurchase)||STMT.entries[0];
+    const wb=new ExcelJS.Workbook();
+    await wb.xlsx.load(await base.file.arrayBuffer());
+    const ws=wb.getWorksheet('업박스 거래명세서')||wb.worksheets[0];
+
+    // 조은환경 공급자 정보는 무조건 고정
+    ws.getCell('B4').value='거 래 명 세 서';
+    ws.getCell('B6').value='공\\n급\\n자';
+    ws.getCell('H6').value='고객사';
+    ws.getCell('C6').value='등록번호'; ws.getCell('D6').value=STMT_FIXED_SUPPLIER.regNo;
+    ws.getCell('C7').value='상호명'; ws.getCell('D7').value=STMT_FIXED_SUPPLIER.name;
+    ws.getCell('E7').value='대표자명'; ws.getCell('F7').value=STMT_FIXED_SUPPLIER.rep;
+    ws.getCell('C8').value='주   소'; ws.getCell('D8').value=STMT_FIXED_SUPPLIER.address;
+    ws.getCell('C9').value='업   태'; ws.getCell('D9').value=STMT_FIXED_SUPPLIER.businessType;
+    ws.getCell('E9').value='업종'; ws.getCell('F9').value=STMT_FIXED_SUPPLIER.businessItem;
+    ws.getCell('C10').value='대표전화'; ws.getCell('D10').value=STMT_FIXED_SUPPLIER.phone;
+
+    // 고객사는 업로드 파일에서 동적
+    ws.getCell('I6').value='등록번호'; ws.getCell('J6').value=c.customerBiz;
+    ws.getCell('I8').value='고객사명'; ws.getCell('J8').value=c.customerName;
+    ws.getCell('I10').value='폐기물 종류'; ws.getCell('J10').value=c.wasteText;
+
+    // 요약/단가
+    ws.getCell('F12').value='청구금액';
+    ws.getCell('I12').value='입금계좌';
+    ws.getCell('C13').value=c.periodDisplay;
+    ws.getCell('F13').value=c.amount;
+    ws.getCell('I13').value=STMT_FIXED_SUPPLIER.account;
+    ws.getCell('I16').value='납부기한';
+    ws.getCell('I17').value=c.dueDate;
+    ws.getCell('C17').value=c.planName;
+    ws.getCell('G17').value=c.rateDisplay;
+
+    // 청구상세는 합계만 갱신, 평균단가 생성 금지
+    ws.getCell('B19').value='청구상세';
+    ws.getCell('F20').value=c.supply;
+    ws.getCell('G20').value=c.vat;
+    ws.getCell('E20').value=c.multiRate?'계약별 상이':'-';
+    ws.getCell('E21').value=c.multiRate?'계약별 상이':(stmtRateNum(c.rates[0])??'-');
+    ws.getCell('D24').value=c.totalQty;
+    ws.getCell('F24').value=c.supply;
+    ws.getCell('G24').value=c.vat;
+    ws.getCell('I19').value='업박스 링크';
+    ws.getCell('I20').value=STMT_FIXED_SUPPLIER.link;
+
+    // 하단 요약행
+    ws.getCell('E35').value=c.periodDisplay;
+    ws.getCell('H35').value='청구금액';
+    ws.getCell('K35').value=c.amount;
+
+    // 기존 상세/할인 구간 제거 후 새 상세구간 작성
+    const baseRows=base.rows;
+    const detailTitle=baseRows.detailTitle>0?baseRows.detailTitle:37;
+    // detailTitle부터 아래 기존 내용을 통째로 제거하고 새로 구성
+    if(ws.rowCount>=detailTitle) ws.spliceRows(detailTitle, ws.rowCount-detailTitle+1);
+
+    // 첫 파일의 상세 헤더 스타일 샘플을 다시 읽기 위해 별도 템플릿 workbook
+    const templateWb=new ExcelJS.Workbook();
+    await templateWb.xlsx.load(await base.file.arrayBuffer());
+    const tws=templateWb.getWorksheet('업박스 거래명세서')||templateWb.worksheets[0];
+
+    function appendStyledRow(values,srcRow){
+        const row=ws.addRow(values);
+        row.height=tws.getRow(srcRow).height||20;
+        for(let col=1;col<=11;col++)stmtCopyCellStyle(tws.getCell(srcRow,col),row.getCell(col));
+        return row.number;
+    }
+
+    const titleRow=appendStyledRow([null,'수거 내역'],base.rows.detailTitle>0?base.rows.detailTitle:37);
+    stmtMergeSafe(ws,`B${titleRow}:K${titleRow}`);
+
+    const hrow=appendStyledRow([null,'일 자',null,'품 목',null,null,null,'수거량(kg)',null,null,'비고'],base.rows.detailHead>0?base.rows.detailHead:38);
+    stmtMergeSafe(ws,`B${hrow}:C${hrow}`);stmtMergeSafe(ws,`D${hrow}:G${hrow}`);stmtMergeSafe(ws,`H${hrow}:J${hrow}`);
+
+    const sampleDetail=(base.rows.detailHead>0?base.rows.detailHead+1:39);
+    for(const d of c.details){
+        const r=appendStyledRow([null,d.date,null,d.item,null,null,null,d.qty,null,null,stmtBuildDetailNote(d,c.multiRate)],sampleDetail);
+        stmtMergeSafe(ws,`B${r}:C${r}`);stmtMergeSafe(ws,`D${r}:G${r}`);stmtMergeSafe(ws,`H${r}:J${r}`);
+    }
+    const totalStyle=base.rows.detailTotal>0?base.rows.detailTotal:45;
+    const tr=appendStyledRow([null,'TOTAL',null,null,null,null,null,c.totalQty,null,null,null],totalStyle);
+    stmtMergeSafe(ws,`B${tr}:G${tr}`);stmtMergeSafe(ws,`H${tr}:J${tr}`);
+
+    ws.addRow([]);
+
+    // 기타/할인·할증 내역
+    const adjTitleSrc=base.rows.adjTitle>0?base.rows.adjTitle:47;
+    const ar=appendStyledRow([null,'기타/할인·할증 내역'],adjTitleSrc);
+    stmtMergeSafe(ws,`B${ar}:K${ar}`);
+    const adjHeadSrc=base.rows.adjHead>0?base.rows.adjHead:48;
+    const ahr=appendStyledRow([null,'일자',null,'품목','상세 내용',null,null,'공급가액',null,null,'비고'],adjHeadSrc);
+    stmtMergeSafe(ws,`B${ahr}:C${ahr}`);stmtMergeSafe(ws,`E${ahr}:G${ahr}`);stmtMergeSafe(ws,`H${ahr}:J${ahr}`);
+
+    const adjSample=(base.rows.adjHead>0?base.rows.adjHead+1:49);
+    for(const a of c.adjustments){
+        const rr=appendStyledRow([null,a.date,null,a.item,a.desc,null,null,a.amount,null,null,a.note],adjSample);
+        stmtMergeSafe(ws,`B${rr}:C${rr}`);stmtMergeSafe(ws,`E${rr}:G${rr}`);stmtMergeSafe(ws,`H${rr}:J${rr}`);
+    }
+    const adjTotalStyle=base.rows.adjTotal>0?base.rows.adjTotal:50;
+    const atr=appendStyledRow([null,'TOTAL',null,null,null,null,null,c.adjustments.reduce((s,a)=>s+(a.amount||0),0),null,null,null],adjTotalStyle);
+    stmtMergeSafe(ws,`B${atr}:G${atr}`);stmtMergeSafe(ws,`H${atr}:J${atr}`);
+
+    // 인쇄 설정: 1페이지 + 상세 페이지
+    ws.pageSetup = {...(ws.pageSetup||{}), orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, paperSize:9};
+    ws.headerFooter={};
+    return wb;
+}
+async function stmtDownloadExcel(){
+    const btn=document.getElementById('stmtExcelBtn'),st=document.getElementById('stmtDownloadStatus');
+    const old=btn.innerHTML;
+    try{
+        btn.disabled=true;btn.innerHTML='⟳ Excel 생성 중...';st.textContent='원본 서식을 기반으로 통합 중...';
+        const c=stmtCombined(),wb=await stmtBuildExcelWorkbook(),buf=await wb.xlsx.writeBuffer();
+        const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+        const url=URL.createObjectURL(blob),a=document.createElement('a');
+        a.href=url;a.download=`${stmtSafe(c.customerName)}_${c.periodStart.slice(0,7)}_통합 거래명세서.xlsx`;
+        document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+        st.textContent='✅ 통합 Excel 생성 완료';
+    }catch(e){console.error(e);st.textContent='❌ Excel 생성 실패';alert('통합 거래명세서 Excel 생성에 실패했습니다.\\n'+e.message);}
+    finally{btn.innerHTML=old;btn.disabled=!stmtCombined()?.valid;}
+}
+
+// ── PDF 출력 ────────────────────────────────────────────────
+function stmtPdfRateHtml(c){
+    if(!c.multiRate)return stmtEsc(c.rateDisplay);
+    return `<div class="stmt-rate-lines">계약별 상이<br>${c.rates.map(stmtEsc).join('<br>')}</div>`;
+}
+function stmtPdfFirstPage(c,pageCount){
+    const s=STMT_FIXED_SUPPLIER,stamp=c.stampDataUrl?`<img class="stmt-stamp" src="${c.stampDataUrl}">`:'';
+    return `
+    <div class="stmt-pdf-page">
+      <div class="stmt-doc-title">거 래 명 세 서</div>
+      <table class="stmt-doc-table">
+        <colgroup>
+          <col style="width:24px"><col style="width:72px"><col style="width:118px"><col style="width:72px"><col style="width:118px">
+          <col style="width:24px"><col style="width:78px"><col style="width:170px">
+        </colgroup>
+        <tr><td class="v" rowspan="5">공급자</td><td class="g">등록번호</td><td colspan="3">${stmtEsc(s.regNo)}</td><td class="v" rowspan="5">고객사</td><td class="g">등록번호</td><td>${stmtEsc(c.customerBiz)}</td></tr>
+        <tr><td class="g">상호명</td><td colspan="1">${stmtEsc(s.name)}</td><td class="g">대표자명</td><td class="stmt-rel">${stmtEsc(s.rep)}${stamp}</td><td class="g">고객사명</td><td>${stmtEsc(c.customerName)}</td></tr>
+        <tr><td class="g">주 소</td><td colspan="3">${stmtEsc(s.address)}</td><td class="g">폐기물 종류</td><td rowspan="3">${stmtEsc(c.wasteText).replace(/\n/g,'<br>')}</td></tr>
+        <tr><td class="g">업 태</td><td>${stmtEsc(s.businessType)}</td><td class="g">업종</td><td>${stmtEsc(s.businessItem)}</td></tr>
+        <tr><td class="g">대표전화</td><td colspan="3">${stmtEsc(s.phone)}</td></tr>
+      </table>
+
+      <div style="height:8px"></div>
+      <table class="stmt-doc-table">
+        <colgroup><col style="width:24px"><col style="width:210px"><col style="width:140px"><col style="width:205px"></colgroup>
+        <tr><td class="v" rowspan="2">청구요약</td><td class="g">집계기간</td><td class="g">청구금액</td><td class="g">입금계좌</td></tr>
+        <tr>
+          <td>${stmtEsc(c.periodDisplay)}<div class="stmt-small" style="margin-top:7px">*집계기간이 30일 미만시 일할 청구 될 수 있습니다.<br>*실제 수거량이 기본 수거량보다 작을 시 기본금액이 부과됩니다.</div></td>
+          <td class="stmt-big-money">${stmtFmt(c.amount)} 원</td>
+          <td>${stmtEsc(s.account).replace(/\n/g,'<br>')}</td>
+        </tr>
+      </table>
+
+      <div style="height:8px"></div>
+      <div style="display:grid;grid-template-columns:1.18fr .82fr;gap:18px">
+        <div>
+          <table class="stmt-doc-table">
+            <colgroup><col style="width:24px"><col><col style="width:74px"><col style="width:86px"><col style="width:102px"></colgroup>
+            <tr><td class="v" rowspan="2">요금정보</td><td class="g">요금제명</td><td class="g">기본수거량</td><td class="g">기본금액</td><td class="g">계약 단가</td></tr>
+            <tr><td>${stmtEsc(c.planName)}</td><td>-</td><td>-</td><td>${stmtPdfRateHtml(c)}</td></tr>
+          </table>
+        </div>
+        <table class="stmt-doc-table"><tr><td class="g">납부기한</td></tr><tr><td>${stmtEsc(c.dueDate||'-')}</td></tr></table>
+      </div>
+
+      <div style="height:8px"></div>
+      <div style="display:grid;grid-template-columns:1.18fr .82fr;gap:18px">
+        <div>
+          <table class="stmt-doc-table">
+            <colgroup><col style="width:24px"><col style="width:76px"><col style="width:84px"><col style="width:68px"><col style="width:94px"><col style="width:80px"></colgroup>
+            <tr><td class="v" rowspan="6">청구상세</td><td class="g">품목</td><td class="g">수량</td><td class="g">단가</td><td class="g">공급가액</td><td class="g">부가세</td></tr>
+            <tr><td>기본요금</td><td>-</td><td>${c.multiRate?'계약별 상이':'-'}</td><td rowspan="2">${stmtFmt(c.supply)}</td><td rowspan="2">${stmtFmt(c.vat)}</td></tr>
+            <tr><td>추가 수거 요금</td><td>-</td><td>${c.multiRate?'계약별 상이':stmtEsc(String(stmtRateNum(c.rates[0])??'-'))}</td></tr>
+            <tr><td>기타</td><td>-</td><td>-</td><td>0</td><td>0</td></tr>
+            <tr><td>할인·할증</td><td>-</td><td>-</td><td>0</td><td>0</td></tr>
+            <tr><td><b>TOTAL</b></td><td><b>${stmtFmt(c.totalQty)}</b></td><td></td><td><b>${stmtFmt(c.supply)}</b></td><td><b>${stmtFmt(c.vat)}</b></td></tr>
+          </table>
+        </div>
+        <div>
+          <table class="stmt-doc-table"><tr><td class="g">업박스 링크</td></tr><tr><td><span class="stmt-link">${stmtEsc(s.link)}</span></td></tr></table>
+        </div>
+      </div>
+
+      <div class="stmt-bottom-summary">
+        <table class="stmt-doc-table"><tr><td class="g">집계기간</td><td>${stmtEsc(c.periodDisplay)}</td><td class="g">청구금액</td><td><b>${stmtFmt(c.amount)} 원</b></td></tr></table>
+      </div>
+      <div class="stmt-pdf-footer"><span>업박스 거래명세서</span><span>1페이지 중 ${pageCount}페이지</span></div>
+    </div>`;
+}
+function stmtPdfDetailPage(c,rows,pageNo,pageCount){
+    const detailRows=rows.map(d=>`
+        <tr><td>${stmtEsc(d.date)}</td><td>${stmtEsc(d.item)}</td><td>${stmtFmt(d.qty)}</td><td>${stmtEsc(d.rateText)}</td><td>${stmtEsc(d.note||'')}</td></tr>`).join('');
+    return `
+    <div class="stmt-pdf-page">
+      <div style="margin-top:30px"></div>
+      <table class="stmt-doc-table"><tr><td class="g">집계기간</td><td>${stmtEsc(c.periodDisplay)}</td><td class="g">청구금액</td><td><b>${stmtFmt(c.amount)} 원</b></td></tr></table>
+      <div style="height:22px"></div>
+      <div class="stmt-detail-title">수거 내역</div>
+      <table class="stmt-detail-table">
+        <colgroup><col style="width:18%"><col style="width:32%"><col style="width:18%"><col style="width:18%"><col style="width:14%"></colgroup>
+        <thead><tr><th>일 자</th><th>품 목</th><th>수거량(kg)</th><th>계약 단가</th><th>비고</th></tr></thead>
+        <tbody>${detailRows}</tbody>
+      </table>
+      ${pageNo===pageCount?`<table class="stmt-detail-table" style="margin-top:-1px"><tr class="total"><td style="width:50%">TOTAL</td><td style="width:18%">${stmtFmt(c.totalQty)}</td><td style="width:32%"></td></tr></table>`:''}
+      ${pageNo===pageCount&&c.adjustments.length?`
+        <div style="height:18px"></div>
+        <div class="stmt-detail-title">기타/할인·할증 내역</div>
+        <table class="stmt-detail-table">
+          <thead><tr><th>일자</th><th>품목</th><th>상세 내용</th><th>공급가액</th><th>비고</th></tr></thead>
+          <tbody>${c.adjustments.map(a=>`<tr><td>${stmtEsc(a.date)}</td><td>${stmtEsc(a.item)}</td><td>${stmtEsc(a.desc)}</td><td>${stmtFmt(a.amount)}</td><td>${stmtEsc(a.note)}</td></tr>`).join('')}</tbody>
+          <tr class="total"><td colspan="3">TOTAL</td><td>${stmtFmt(c.adjustments.reduce((s,a)=>s+(a.amount||0),0))}</td><td></td></tr>
+        </table>`:''}
+      <div class="stmt-pdf-footer"><span>업박스 거래명세서</span><span>${pageNo}페이지 중 ${pageCount}페이지</span></div>
+    </div>`;
+}
+async function stmtBuildPdfBytes(){
+    if(typeof html2canvas==='undefined')throw new Error('PDF 렌더링 라이브러리를 불러오지 못했습니다.');
+    if(!window.PDFLib?.PDFDocument)throw new Error('pdf-lib을 불러오지 못했습니다.');
+    const c=stmtCombined();if(!c?.valid)throw new Error('서로 다른 고객사가 섞여 있습니다.');
+    const perPage=27;
+    const chunks=[];
+    for(let i=0;i<c.details.length;i+=perPage)chunks.push(c.details.slice(i,i+perPage));
+    if(!chunks.length)chunks.push([]);
+    const pageCount=1+chunks.length;
+    const mount=document.getElementById('stmtPdfMount');
+    mount.innerHTML=stmtPdfFirstPage(c,pageCount)+chunks.map((x,i)=>stmtPdfDetailPage(c,x,i+2,pageCount)).join('');
+    await new Promise(r=>setTimeout(r,80));
+
+    const pdf=await PDFLib.PDFDocument.create();
+    const a4=[595.28,841.89];
+    for(const el of mount.querySelectorAll('.stmt-pdf-page')){
+        const canvas=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false});
+        const jpg=canvas.toDataURL('image/jpeg',0.96);
+        const img=await pdf.embedJpg(jpg);
+        const page=pdf.addPage(a4);
+        page.drawImage(img,{x:0,y:0,width:a4[0],height:a4[1]});
+    }
+    mount.innerHTML='';
+    return await pdf.save({useObjectStreams:false});
+}
+async function stmtDownloadPdf(){
+    const btn=document.getElementById('stmtPdfBtn'),st=document.getElementById('stmtDownloadStatus'),old=btn.innerHTML;
+    try{
+        btn.disabled=true;btn.innerHTML='⟳ PDF 생성 중...';st.textContent='업박스 양식으로 PDF 생성 중...';
+        const c=stmtCombined(),bytes=await stmtBuildPdfBytes();
+        const blob=new Blob([bytes],{type:'application/pdf'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+        a.href=url;a.download=`${stmtSafe(c.customerName)}_${c.periodStart.slice(0,7)}_통합 거래명세서.pdf`;
+        document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+        st.textContent='✅ 통합 PDF 생성 완료';
+    }catch(e){console.error(e);st.textContent='❌ PDF 생성 실패';alert('통합 거래명세서 PDF 생성에 실패했습니다.\\n'+e.message);}
+    finally{btn.innerHTML=old;btn.disabled=!stmtCombined()?.valid;}
+}
 </script>
 
 </body>
