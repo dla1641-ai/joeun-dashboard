@@ -252,10 +252,10 @@
         }
         .stmt-doc-table td,.stmt-doc-table th{
             border:1px solid #111;
-            padding:4px 5px;
+            padding:2px 5px 5px;
             vertical-align:middle;
             text-align:center;
-            line-height:1.28;
+            line-height:1.12;
             word-break:keep-all;
         }
         .stmt-doc-table .g{background:#dedede;font-weight:800}
@@ -306,11 +306,11 @@
         }
         .stmt-detail-table th,.stmt-detail-table td{
             border:1px solid #666;
-            padding:4px 5px;
+            padding:2px 5px 5px;
             text-align:center;
             vertical-align:middle;
             height:24px;
-            line-height:1.2;
+            line-height:1.08;
         }
         .stmt-detail-table th{background:#dedede;font-weight:800}
         .stmt-detail-table .total td{background:#dedede;font-weight:800}
@@ -1657,12 +1657,11 @@
                                         <th>일자</th>
                                         <th>품목</th>
                                         <th>수거량(kg)</th>
-                                        <th>계약단가</th>
                                         <th>비고</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stmtDetailBody">
-                                    <tr><td colspan="5" class="text-slate-400 py-8">명세서를 추가하면 상세 내역이 표시됩니다.</td></tr>
+                                    <tr><td colspan="4" class="text-slate-400 py-8">명세서를 추가하면 상세 내역이 표시됩니다.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1680,8 +1679,8 @@
                     <section class="bg-slate-900 text-white rounded-2xl p-5 shadow-lg">
                         <p class="font-bold">다운로드</p>
                         <p class="text-xs text-slate-300 mt-1 leading-5">
-                            Excel은 업로드한 명세서의 원본 서식을 기반으로 만들고,
-                            PDF는 제공해주신 업박스 거래명세서 1페이지 양식을 재현한 뒤 상세내역 페이지를 이어 붙입니다.
+                            Excel과 PDF 모두 동일한 통합값을 적용합니다. Excel은 원본 업박스 서식을 유지한 채 첫 장 숫자와 상세내역을 다시 작성하고,
+                            PDF도 같은 값으로 첫 장 + 통합 상세페이지를 생성합니다.
                         </p>
                         <button id="stmtExcelBtn" type="button" onclick="stmtDownloadExcel()" disabled
                             class="mt-4 w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-3">
@@ -8829,7 +8828,7 @@ const STMT_FIXED_SUPPLIER = Object.freeze({
     businessType:'서비스',
     businessItem:'폐기물수집운반, 폐기물처리허가용역',
     phone:'1833-7236',
-    account:'신한 100-014-253685 조은환경(주)\\n*고객사명으로 입금부탁드립니다.*',
+    account:'신한 100-014-253685 조은환경(주)\n*고객사명으로 입금부탁드립니다.*',
     link:'https://customer2.upbox.us'
 });
 const STMT={entries:[],initialized:false,busy:false};
@@ -8893,10 +8892,17 @@ function stmtDays(a,b){
 }
 function stmtPeriodDisplay(a,b){
     if(!a||!b)return '';
-    const d1=new Date(`${a}T00:00:00`),d2=new Date(`${b}T00:00:00`);
-    let n=stmtDays(a,b),den=n;
-    if(d1.getFullYear()===d2.getFullYear()&&d1.getMonth()===d2.getMonth())den=new Date(d1.getFullYear(),d1.getMonth()+1,0).getDate();
-    return `${a} ~ ${b} (${n}/${den})`;
+    return `${a} ~ ${b}`;
+}
+function stmtMonthPeriod(ym){
+    const m=String(ym||'').match(/^(\d{4})-(\d{2})$/);
+    if(!m)return null;
+    const y=Number(m[1]),mo=Number(m[2]);
+    if(mo<1||mo>12)return null;
+    const last=new Date(y,mo,0).getDate();
+    const start=`${y}-${String(mo).padStart(2,'0')}-01`;
+    const end=`${y}-${String(mo).padStart(2,'0')}-${String(last).padStart(2,'0')}`;
+    return {ym:`${y}-${String(mo).padStart(2,'0')}`,start,end,days:last,display:`${start} ~ ${end} (${last}/${last})`};
 }
 function stmtSafe(v){return String(v||'통합거래명세서').replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,' ').trim();}
 function stmtFindRow(ws,needle,start=1,end=null){
@@ -9020,10 +9026,29 @@ function stmtCombined(){
     const wastes=[...new Set(es.map(e=>e.waste).filter(Boolean))];
     const details=es.flatMap(e=>e.details).sort((a,b)=>String(a.date||'9999').localeCompare(String(b.date||'9999'))||String(a.rateKey).localeCompare(String(b.rateKey)));
     const adjustments=es.flatMap(e=>e.adjustments).sort((a,b)=>String(a.date||'9999').localeCompare(String(b.date||'9999')));
+
+    // 거래명세서는 월 단위 통합.
+    // 원본 집계기간의 종료일을 우선 기준으로 월을 판정하고,
+    // 없으면 시작일/상세 수거일을 사용한다.
+    const monthCandidates=es.map(e=>{
+        const d=e.period.end||e.period.start||e.details?.find(x=>x.date)?.date||'';
+        return /^\d{4}-\d{2}/.test(d)?d.slice(0,7):'';
+    }).filter(Boolean);
+    const months=[...new Set(monthCandidates)];
+    const monthMismatch=months.length>1;
+    const billingMonth=months[0]||'';
+    const mp=stmtMonthPeriod(billingMonth);
+
+    // 월 정보를 못 찾는 예외에서만 기존 범위 방식 fallback
     const detailDates=details.map(d=>d.date).filter(Boolean).sort();
     const starts=es.map(e=>e.period.start).filter(Boolean).sort();
     const ends=es.map(e=>e.period.end).filter(Boolean).sort();
-    const start=detailDates[0]||starts[0]||'',end=detailDates[detailDates.length-1]||ends[ends.length-1]||'';
+    const fallbackStart=starts[0]||detailDates[0]||'';
+    const fallbackEnd=ends[ends.length-1]||detailDates[detailDates.length-1]||fallbackStart;
+
+    const periodStart=mp?.start||fallbackStart;
+    const periodEnd=mp?.end||fallbackEnd;
+    const periodDisplay=mp?.display||(fallbackStart&&fallbackEnd?`${fallbackStart} ~ ${fallbackEnd}`:'');
 
     const detailQty=details.reduce((s,d)=>s+(d.qty||0),0);
     const sourceQty=es.reduce((s,e)=>s+(e.totalQty||0),0);
@@ -9033,14 +9058,14 @@ function stmtCombined(){
     const dueDates=es.map(e=>e.dueDate).filter(Boolean).sort();
 
     return {
-        valid:!customerMismatch,
-        customerMismatch,
+        valid:!customerMismatch&&!monthMismatch,
+        customerMismatch,monthMismatch,billingMonth,
         customerBiz:es[0].customerBiz,
         customerName:es[0].customerName,
         wasteText:wastes.length<=1?(wastes[0]||''):`계약별 상이\n${wastes.join(' / ')}`,
         wastes,rates,multiRate,
         rateDisplay:multiRate?`계약별 상이 (${rates.join(' · ')})`:(rates[0]||''),
-        periodStart:start,periodEnd:end,periodDisplay:stmtPeriodDisplay(start,end),
+        periodStart,periodEnd,periodDisplay,
         details,adjustments,
         detailQty,sourceQty,totalQty:detailQty||sourceQty,
         supply,vat,amount,
@@ -9063,7 +9088,7 @@ function stmtRender(){
         list.innerHTML='<div class="py-8 text-center text-sm text-slate-400">선택된 명세서가 없습니다.</div>';
         validation.textContent='';
         summary.innerHTML='<div class="py-8 text-center text-slate-400">명세서를 2개 이상 추가해주세요.</div>';
-        tbody.innerHTML='<tr><td colspan="5" class="text-slate-400 py-8">명세서를 추가하면 상세 내역이 표시됩니다.</td></tr>';
+        tbody.innerHTML='<tr><td colspan="4" class="text-slate-400 py-8">명세서를 추가하면 상세 내역이 표시됩니다.</td></tr>';
         count.textContent='0건';xbtn.disabled=true;pbtn.disabled=true;return;
     }
     list.innerHTML=STMT.entries.map(e=>`
@@ -9081,6 +9106,7 @@ function stmtRender(){
 
     const c=stmtCombined(),msgs=[];
     if(c.customerMismatch)msgs.push('❌ 서로 다른 고객사가 섞여 있습니다. 고객사 사업자번호가 동일한 파일만 통합할 수 있습니다.');
+    if(c.monthMismatch)msgs.push('❌ 서로 다른 정산월의 명세서가 섞여 있습니다. 같은 월 명세서끼리 통합해주세요.');
     if(c.typoCount)msgs.push(`ℹ️ ${c.typoCount}개 파일의 제목에 ‘매입’ 문구가 있으나 통합본은 정상 ‘거래명세서’로 출력합니다.`);
     if(c.detailQty&&c.sourceQty&&Math.abs(c.detailQty-c.sourceQty)>0.01)msgs.push(`⚠️ 원본 TOTAL(${stmtFmt(c.sourceQty)}kg)과 상세 합계(${stmtFmt(c.detailQty)}kg)가 다릅니다.`);
     if(c.multiRate)msgs.push(`ℹ️ 단가가 ${c.rates.length}개입니다. 평균단가를 만들지 않고 ${c.rates.join(' / ')}로 각각 표시합니다.`);
@@ -9100,10 +9126,11 @@ function stmtRender(){
     count.textContent=`${c.details.length.toLocaleString('ko-KR')}건`;
     tbody.innerHTML=c.details.length?c.details.map(d=>`
         <tr>
-            <td>${stmtEsc(d.date)}</td><td>${stmtEsc(d.item)}</td><td class="font-bold">${stmtFmt(d.qty)}</td>
-            <td class="${c.multiRate?'font-bold text-amber-700':''}">${stmtEsc(d.rateText)}</td>
-            <td>${stmtEsc(d.note||'')}</td>
-        </tr>`).join(''):'<tr><td colspan="5" class="text-slate-400 py-8">상세내역을 찾지 못했습니다.</td></tr>';
+            <td>${stmtEsc(d.date)}</td>
+            <td>${stmtEsc(d.item)}</td>
+            <td class="font-bold">${stmtFmt(d.qty)}</td>
+            <td class="${c.multiRate?'font-bold text-amber-700':''}">${stmtEsc(stmtBuildDetailNote(d,c.multiRate))}</td>
+        </tr>`).join(''):'<tr><td colspan="4" class="text-slate-400 py-8">상세내역을 찾지 못했습니다.</td></tr>';
     xbtn.disabled=!c.valid;pbtn.disabled=!c.valid;
 }
 
@@ -9124,8 +9151,9 @@ function stmtUnmergeIfNeeded(ws,range){try{ws.unMergeCells(range);}catch(e){}}
 function stmtSetMergedValue(ws,addr,value){ws.getCell(addr).value=value;}
 function stmtBuildDetailNote(d,multiRate){
     const parts=[];
-    if(multiRate)parts.push(d.rateText);
-    if(d.note)parts.push(d.note);
+    if(multiRate)parts.push(`계약단가 ${d.rateText}`);
+    const raw=String(d.note||'').trim();
+    if(raw && !/^[-+]?\d+(?:\.\d+)?$/.test(raw))parts.push(raw);
     return parts.join(' / ');
 }
 async function stmtBuildExcelWorkbook(){
@@ -9138,7 +9166,7 @@ async function stmtBuildExcelWorkbook(){
 
     // 조은환경 공급자 정보는 무조건 고정
     ws.getCell('B4').value='거 래 명 세 서';
-    ws.getCell('B6').value='공\\n급\\n자';
+    ws.getCell('B6').value='공\n급\n자';
     ws.getCell('H6').value='고객사';
     ws.getCell('C6').value='등록번호'; ws.getCell('D6').value=STMT_FIXED_SUPPLIER.regNo;
     ws.getCell('C7').value='상호명'; ws.getCell('D7').value=STMT_FIXED_SUPPLIER.name;
@@ -9168,7 +9196,7 @@ async function stmtBuildExcelWorkbook(){
     ws.getCell('B19').value='청구상세';
     ws.getCell('F20').value=c.supply;
     ws.getCell('G20').value=c.vat;
-    ws.getCell('E20').value=c.multiRate?'계약별 상이':'-';
+    ws.getCell('E20').value='-';
     ws.getCell('E21').value=c.multiRate?'계약별 상이':(stmtRateNum(c.rates[0])??'-');
     ws.getCell('D24').value=c.totalQty;
     ws.getCell('F24').value=c.supply;
@@ -9233,8 +9261,24 @@ async function stmtBuildExcelWorkbook(){
     const atr=appendStyledRow([null,'TOTAL',null,null,null,null,null,c.adjustments.reduce((s,a)=>s+(a.amount||0),0),null,null,null],adjTotalStyle);
     stmtMergeSafe(ws,`B${atr}:G${atr}`);stmtMergeSafe(ws,`H${atr}:J${atr}`);
 
-    // 인쇄 설정: 1페이지 + 상세 페이지
-    ws.pageSetup = {...(ws.pageSetup||{}), orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, paperSize:9};
+    // 인쇄 설정: 첫 장 + 상세 장 모두 Excel/PDF 인쇄영역에 포함
+    // 상세는 반드시 새 페이지에서 시작하므로 첫 장의 하단 집계기간/청구금액이
+    // 상세 페이지 상단에 반복되지 않는다.
+    try{
+        if(titleRow>1 && typeof ws.getRow(titleRow-1).addPageBreak==='function'){
+            ws.getRow(titleRow-1).addPageBreak();
+        }
+    }catch(e){console.warn('Excel 상세 페이지 나누기 설정 실패',e);}
+
+    ws.pageSetup = {
+        ...(ws.pageSetup||{}),
+        orientation:'portrait',
+        fitToPage:true,
+        fitToWidth:1,
+        fitToHeight:0,
+        paperSize:9,
+        printArea:`A1:K${ws.rowCount}`
+    };
     ws.headerFooter={};
     return wb;
 }
@@ -9304,7 +9348,7 @@ function stmtPdfFirstPage(c,pageCount){
           <table class="stmt-doc-table">
             <colgroup><col style="width:24px"><col style="width:76px"><col style="width:84px"><col style="width:68px"><col style="width:94px"><col style="width:80px"></colgroup>
             <tr><td class="v" rowspan="6">청구상세</td><td class="g">품목</td><td class="g">수량</td><td class="g">단가</td><td class="g">공급가액</td><td class="g">부가세</td></tr>
-            <tr><td>기본요금</td><td>-</td><td>${c.multiRate?'계약별 상이':'-'}</td><td rowspan="2">${stmtFmt(c.supply)}</td><td rowspan="2">${stmtFmt(c.vat)}</td></tr>
+            <tr><td>기본요금</td><td>-</td><td>-</td><td rowspan="2">${stmtFmt(c.supply)}</td><td rowspan="2">${stmtFmt(c.vat)}</td></tr>
             <tr><td>추가 수거 요금</td><td>-</td><td>${c.multiRate?'계약별 상이':stmtEsc(String(stmtRateNum(c.rates[0])??'-'))}</td></tr>
             <tr><td>기타</td><td>-</td><td>-</td><td>0</td><td>0</td></tr>
             <tr><td>할인·할증</td><td>-</td><td>-</td><td>0</td><td>0</td></tr>
@@ -9324,19 +9368,30 @@ function stmtPdfFirstPage(c,pageCount){
 }
 function stmtPdfDetailPage(c,rows,pageNo,pageCount){
     const detailRows=rows.map(d=>`
-        <tr><td>${stmtEsc(d.date)}</td><td>${stmtEsc(d.item)}</td><td>${stmtFmt(d.qty)}</td><td>${stmtEsc(d.rateText)}</td><td>${stmtEsc(d.note||'')}</td></tr>`).join('');
+        <tr>
+          <td>${stmtEsc(d.date)}</td>
+          <td>${stmtEsc(d.item)}</td>
+          <td>${stmtFmt(d.qty)}</td>
+          <td>${stmtEsc(stmtBuildDetailNote(d,c.multiRate))}</td>
+        </tr>`).join('');
     return `
     <div class="stmt-pdf-page">
-      <div style="margin-top:30px"></div>
-      <table class="stmt-doc-table"><tr><td class="g">집계기간</td><td>${stmtEsc(c.periodDisplay)}</td><td class="g">청구금액</td><td><b>${stmtFmt(c.amount)} 원</b></td></tr></table>
-      <div style="height:22px"></div>
+      <div style="height:36px"></div>
       <div class="stmt-detail-title">수거 내역</div>
       <table class="stmt-detail-table">
-        <colgroup><col style="width:18%"><col style="width:32%"><col style="width:18%"><col style="width:18%"><col style="width:14%"></colgroup>
-        <thead><tr><th>일 자</th><th>품 목</th><th>수거량(kg)</th><th>계약 단가</th><th>비고</th></tr></thead>
+        <colgroup>
+          <col style="width:19%">
+          <col style="width:41%">
+          <col style="width:20%">
+          <col style="width:20%">
+        </colgroup>
+        <thead><tr><th>일 자</th><th>품 목</th><th>수거량(kg)</th><th>비고</th></tr></thead>
         <tbody>${detailRows}</tbody>
       </table>
-      ${pageNo===pageCount?`<table class="stmt-detail-table" style="margin-top:-1px"><tr class="total"><td style="width:50%">TOTAL</td><td style="width:18%">${stmtFmt(c.totalQty)}</td><td style="width:32%"></td></tr></table>`:''}
+      ${pageNo===pageCount?`
+        <table class="stmt-detail-table" style="margin-top:-1px">
+          <tr class="total"><td colspan="2">TOTAL</td><td>${stmtFmt(c.totalQty)}</td><td></td></tr>
+        </table>`:''}
       ${pageNo===pageCount&&c.adjustments.length?`
         <div style="height:18px"></div>
         <div class="stmt-detail-title">기타/할인·할증 내역</div>
