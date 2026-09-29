@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>조은환경 운영 지표 대시보드</title>
+    <!-- v36: 계산식/운반횟수/기준전환 정합성 점검 수정 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -327,6 +328,16 @@
             text-orientation:upright;
             letter-spacing:1px;
         }
+        /* 첫 페이지 '요금정보' 세로 라벨 전용: 4글자가 잘리지 않도록 폭/자간 보정 */
+        .stmt-doc-table .stmt-rate-v{
+            width:32px !important;
+            min-width:32px !important;
+            font-size:8.6px !important;
+            line-height:1 !important;
+            letter-spacing:0 !important;
+            padding:2px 4px !important;
+            overflow:visible !important;
+        }
         .stmt-big-money{font-size:20px;font-weight:800}
         .stmt-small{font-size:8.5px;line-height:1.35}
         .stmt-link{color:#3b728b;text-decoration:underline}
@@ -547,8 +558,8 @@
                         <p id="cmYoyDetail" class="text-xs text-slate-400 mt-1"></p>
                     </div>
                 </div>
-                <p class="text-xs text-slate-400 mt-3">※ 이번 달은 아직 진행 중이므로, 전월·전년도 <b>같은 일수 구간(1일~오늘)</b>으로 잘라 공정하게 비교합니다.</p>
-                <div class="mt-4 pt-4 border-t border-slate-100">
+                <p id="cmCompareNote" class="text-xs text-slate-400 mt-3">※ 이번 달은 아직 진행 중이므로, 전월·전년도 <b>같은 일수 구간(1일~오늘)</b>으로 잘라 공정하게 비교합니다.</p>
+                <div id="cmCumulativeWrap" class="mt-4 pt-4 border-t border-slate-100">
                     <p class="text-sm font-bold text-slate-600 mb-2">📈 이번 달 누적 매출 추이 <span class="text-xs font-normal text-slate-400">(전월·전년 동기간 점선 대비)</span></p>
                     <div class="relative w-full h-[240px]"><canvas id="cmCumulativeChart"></canvas></div>
                 </div>
@@ -785,7 +796,7 @@
                                 <label class="flex items-center gap-1.5 cursor-pointer bg-white border border-slate-200 rounded-lg px-3 py-1.5 hover:border-teal-400 transition-colors">
                                     <input type="checkbox" class="b4-kpi-cb" data-target="b4card-dayavg" checked onchange="applyB4Display()">
                                     <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
-                                    <span class="text-xs font-bold text-slate-700">일평균 운반 톤수</span>
+                                    <span class="text-xs font-bold text-slate-700">조업일 평균 배출량</span>
                                 </label>
                             </div>
                         </div>
@@ -805,7 +816,7 @@
                                 </label>
                                 <label class="flex items-center gap-1.5 cursor-pointer bg-white border border-slate-200 rounded-lg px-3 py-1.5 hover:border-blue-400 transition-colors">
                                     <input type="checkbox" class="b4-chart-cb" data-target="b4section-daily" checked onchange="applyB4Display()">
-                                    <span class="text-xs font-bold text-slate-700">📅 일평균 발생량 비교</span>
+                                    <span class="text-xs font-bold text-slate-700">📅 회당 평균 발생량 비교</span>
                                 </label>
                                 <label class="flex items-center gap-1.5 cursor-pointer bg-white border border-slate-200 rounded-lg px-3 py-1.5 hover:border-blue-400 transition-colors">
                                     <input type="checkbox" class="b4-chart-cb" data-target="b4section-table" checked onchange="applyB4Display()">
@@ -837,7 +848,7 @@
                     <h3 id="b4MonthAvgWeight" class="text-xl font-bold text-slate-900">0<span class="text-xs font-normal text-slate-500 ml-1">Ton/월</span></h3>
                 </div>
                 <div id="b4card-dayavg" class="bg-white rounded-xl p-5 card-shadow border-l-4 border-rose-500">
-                    <p class="text-xs font-bold text-slate-500 mb-1">일평균 운반 톤수</p>
+                    <p class="text-xs font-bold text-slate-500 mb-1">조업일 평균 배출량</p>
                     <h3 id="b4DayAvgWeight" class="text-xl font-bold text-slate-900">0<span class="text-xs font-normal text-slate-500 ml-1">Ton/일</span></h3>
                 </div>
             </div>
@@ -877,11 +888,11 @@
                 </div>
             </div>
 
-            <!-- 차트 row 3: 일평균 발생량 비교 -->
+            <!-- 차트 row 3: 회당 평균 발생량 비교 -->
             <div id="b4section-daily" class="bg-white rounded-xl p-6 card-shadow border border-slate-100">
                 <div class="flex flex-wrap items-center gap-3 mb-4">
                     <div>
-                        <h2 class="text-lg font-bold text-slate-800">📅 월별 일평균 발생량 비교</h2>
+                        <h2 class="text-lg font-bold text-slate-800">📅 월별 회당 평균 발생량 비교</h2>
                         <p class="text-xs text-slate-400 mt-0.5">총 배출량 ÷ 조업일수(운반횟수) — 발생량 증가 원인 분석</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 ml-auto">
@@ -1960,23 +1971,34 @@
             const rows = json.values || [];
             if (rows.length < 2) { if (statusEl) statusEl.textContent = '⚠️ 데이터가 없습니다'; return; }
 
-            const headers    = rows[0].map(h => (h||'').trim());
-            const idxMonth      = headers.findIndex(h => h.includes('년/월') || h.includes('년월'));
-            // 매출인식 일자 (D열) - "매출인식"이 포함된 컬럼 우선
-            const idxAcctDate   = headers.findIndex(h => h.includes('매출인식'));
-            // 수행일자 (E열) - "수행" 또는 단순 "일자" (매출인식 제외)
-            const idxPerformDate = headers.findIndex((h, i) =>
+            const headers = rows[0].map(h => (h||'').trim());
+            // 헤더 공백/개행 차이에도 안정적으로 매핑 (예: '수행 일자', '년 월')
+            const normHeaders = headers.map(h => String(h||'').replace(/\s+/g,'').trim());
+            const idxMonth      = normHeaders.findIndex(h => h.includes('년/월') || h.includes('년월'));
+            // 매출인식 일자 (D열) - '매출인식'이 포함된 컬럼 우선
+            const idxAcctDate   = normHeaders.findIndex(h => h.includes('매출인식'));
+            // 수행일자 (E열) - '수행일' 또는 단순 '일자' (매출인식 제외)
+            const idxPerformDate = normHeaders.findIndex((h, i) =>
                 i !== idxAcctDate && (h.includes('수행일') || h === '일자' || (h.includes('일자') && !h.includes('매출')))
             );
-            const idxCust    = headers.findIndex(h => h.includes('업체명'));
-            const idxWaste   = headers.findIndex(h => h.includes('폐기물명'));
-            const idxWeight  = headers.findIndex(h => h.includes('중량'));
-            const idxTotal   = headers.findIndex(h => h.includes('총매출액'));
-            const idxNet     = headers.findIndex(h => h.includes('순매출액'));
+            const idxCust    = normHeaders.findIndex(h => h.includes('업체명'));
+            const idxWaste   = normHeaders.findIndex(h => h.includes('폐기물명'));
+            const idxWeight  = normHeaders.findIndex(h => h.includes('중량'));
+            const idxTotal   = normHeaders.findIndex(h => h.includes('총매출액'));
+            const idxNet     = normHeaders.findIndex(h => h.includes('순매출액'));
             // 차량번호: 여러 패턴으로 검색, 모두 실패하면 C열(2) 고정
-            let idxVehicle = headers.findIndex(h => h.includes('차량번호'));
-            if (idxVehicle === -1) idxVehicle = headers.findIndex(h => h.includes('차량'));
+            let idxVehicle = normHeaders.findIndex(h => h.includes('차량번호'));
+            if (idxVehicle === -1) idxVehicle = normHeaders.findIndex(h => h.includes('차량'));
             if (idxVehicle === -1) idxVehicle = 2; // C열 기본값
+
+            // 핵심 컬럼이 없으면 조용히 잘못 계산하지 않고 즉시 원인을 표시
+            const missing = [];
+            if (idxCust < 0) missing.push('업체명');
+            if (idxWeight < 0) missing.push('중량');
+            if (idxTotal < 0) missing.push('총매출액');
+            if (idxNet < 0) missing.push('순매출액');
+            if (idxMonth < 0 && idxPerformDate < 0 && idxAcctDate < 0) missing.push('년/월 또는 일자');
+            if (missing.length) throw new Error(`필수 컬럼을 찾지 못했습니다: ${missing.join(', ')}`);
 
             console.log('헤더:', headers);
             console.log('인덱스:', { idxMonth, idxAcctDate, idxPerformDate, idxCust, idxWaste, idxWeight, idxTotal, idxNet, idxVehicle });
@@ -1986,17 +2008,20 @@
             // 날짜 → YYMM 형식 변환 (예: "2024. 6. 26" → "2406", "2024-06-26" → "2406")
             const dateToYYMM = (str) => {
                 if (!str) return '';
-                const s = String(str).trim();
+                const raw = String(str).trim();
+                const compact = raw.replace(/\s+/g,'');
                 // 이미 YYMM 형식이면 그대로
-                if (/^\d{4}$/.test(s)) return s;
-                // "2024. 6. 26" 또는 "2024-06-26" 형식
-                const m = s.match(/(\d{4})[.\-\/\s]+(\d{1,2})/);
+                if (/^\d{4}$/.test(compact)) return compact;
+                // YYYYMM 형식도 허용
+                if (/^\d{6}$/.test(compact)) return compact.substring(2);
+                // "2024. 6. 26", "2024-06-26", "2024/6" 형식
+                const m = raw.match(/(\d{4})[.\-\/\s]+(\d{1,2})/);
                 if (m) {
                     const yy = m[1].substring(2);
                     const mm = m[2].padStart(2, '0');
                     return yy + mm;
                 }
-                return s;
+                return '';
             };
 
             // 날짜를 표준 형식으로 변환 (예: "2024. 6. 26" → "2024-06-26")
@@ -2011,29 +2036,41 @@
             // 원본 데이터 저장 (수행일 month + 매출인식 accountMonth + 두 일자 모두 보관)
             // 수행월: F열(년/월)이 비어있으면 E열(수행일자)에서 역산
             const computePerformMonth = (r) => {
-                const raw = String(r[idxMonth] || '').trim();
-                if (raw) return raw;
+                const raw = idxMonth >= 0 ? String(r[idxMonth] || '').trim() : '';
+                if (raw) return dateToYYMM(raw);
                 return idxPerformDate >= 0 ? dateToYYMM(r[idxPerformDate]) : '';
             };
             window.rawDataBase = rows.slice(1)
-                .filter(r => r[idxCust] && (r[idxMonth] || (idxPerformDate>=0 && r[idxPerformDate]) || (idxAcctDate>=0 && r[idxAcctDate])))
-                .map(r => ({
-                    month:        computePerformMonth(r),                                              // 수행일 기준 년/월 (F열 우선, 없으면 E열에서 역산)
-                    accountMonth: dateToYYMM(r[idxAcctDate]),                                          // D열: 매출인식 기준 년/월
-                    date:         idxPerformDate >= 0 ? normDate(r[idxPerformDate]) : '',              // E열: 수행 일자
-                    accountDate:  idxAcctDate >= 0    ? normDate(r[idxAcctDate])    : '',              // D열: 매출인식 일자
-                    customer: String(r[idxCust]   || '').trim(),
-                    waste:    String(r[idxWaste]  || '미상').trim(),
-                    weight:   parseNum(r[idxWeight]),
-                    totalRev: parseNum(r[idxTotal]),
-                    netRev:   parseNum(r[idxNet]),
-                    vehicle:  String(r[idxVehicle] || '미상').trim(),
-                }));
+                .filter(r => r[idxCust] && ((idxMonth>=0 && r[idxMonth]) || (idxPerformDate>=0 && r[idxPerformDate]) || (idxAcctDate>=0 && r[idxAcctDate])))
+                .map((r, rowIndex) => {
+                    const performMonth = computePerformMonth(r);
+                    const performDate  = idxPerformDate >= 0 ? normDate(r[idxPerformDate]) : '';
+                    const accountMonth = idxAcctDate >= 0 ? dateToYYMM(r[idxAcctDate]) : '';
+                    const accountDate  = idxAcctDate >= 0 ? normDate(r[idxAcctDate]) : '';
+                    return {
+                        // 원본 행 식별자: 일자 없는 예외행도 서로 다른 운반 건으로 취급하기 위한 fallback
+                        _rowId: rowIndex + 2,
+                        // 원본 기준값은 별도 보관. month/date는 현재 선택된 기준에 따라 applyBasis()에서 다시 설정한다.
+                        performMonth,
+                        performDate,
+                        accountMonth,
+                        accountDate,
+                        month: performMonth,
+                        date: performDate,
+                        tripDate: performDate,
+                        customer: String(r[idxCust]   || '').trim(),
+                        waste:    String(r[idxWaste]  || '미상').trim(),
+                        weight:   parseNum(r[idxWeight]),
+                        totalRev: parseNum(r[idxTotal]),
+                        netRev:   parseNum(r[idxNet]),
+                        vehicle:  String(r[idxVehicle] || '미상').trim(),
+                    };
+                });
 
+            updateBasisButtonStyle();
             applyBasis();
 
-            const count = window.rawDataBase.length;
-            if (statusEl) statusEl.textContent = `✅ ${count.toLocaleString()}건 로드 완료`;
+            // applyBasis()에서 현재 기준(수행일/매출인식)의 실제 로드 건수와 제외 건수를 표시한다.
             loadDogupData();
         } catch(e) {
             if (statusEl) statusEl.textContent = `❌ 오류: ${e.message}`;
@@ -2108,73 +2145,121 @@
     }
 
     // ── 기준 전환 ──
+    // 수행일/매출인식 기준은 탭1~4 공통 데이터셋에 적용한다.
+    // 필터 TomSelect를 재생성하는 동안 change 이벤트가 끼어들면 일부 탭에서
+    // 파괴된 인스턴스를 참조해 오류가 날 수 있으므로 전환 중에는 렌더 이벤트를 잠근다.
+    let _basisSwitching = false;
+
+    function updateBasisButtonStyle() {
+        const btnP = document.getElementById('btnBasisPerform');
+        const btnA = document.getElementById('btnBasisAccount');
+        if (!btnP || !btnA) return;
+        if (_dataBasis === 'perform') {
+            btnP.className = 'px-3 py-1.5 text-xs font-bold rounded-md transition-all bg-white text-teal-700 shadow-sm whitespace-nowrap';
+            btnA.className = 'px-3 py-1.5 text-xs font-bold rounded-md transition-all text-slate-500 whitespace-nowrap';
+        } else {
+            btnA.className = 'px-3 py-1.5 text-xs font-bold rounded-md transition-all bg-white text-blue-700 shadow-sm whitespace-nowrap';
+            btnP.className = 'px-3 py-1.5 text-xs font-bold rounded-md transition-all text-slate-500 whitespace-nowrap';
+        }
+    }
+
     function applyBasis() {
-        // 디버그: accountMonth 샘플 확인
-        const sample = window.rawDataBase.slice(0,3);
-        console.log('applyBasis 호출 - _dataBasis:', _dataBasis);
-        console.log('rawDataBase 샘플:', sample.map(d=>({month:d.month, accountMonth:d.accountMonth})));
+        if (_basisSwitching) return;
+        if (!Array.isArray(window.rawDataBase) || window.rawDataBase.length === 0) return;
 
-        // 현재 필터 선택값 저장
-        const savedFilters = {
-            customer: tsCust  ? getFilterVals(tsCust)  : [],
-            vehicle:  tsVeh   ? getFilterVals(tsVeh)   : [],
-            waste:    tsWaste ? getFilterVals(tsWaste) : [],
-            month:    tsMon   ? getFilterVals(tsMon)   : [],
-            year:     tsYear  ? getFilterVals(tsYear)  : [],
-        };
+        _basisSwitching = true;
+        const btnP = document.getElementById('btnBasisPerform');
+        const btnA = document.getElementById('btnBasisAccount');
+        if (btnP) btnP.disabled = true;
+        if (btnA) btnA.disabled = true;
 
-        // 기준에 따라 month + date 값 재설정 (dedup용 일자도 basis에 맞춰 동기화)
-        // ※ 매출인식 기준 선택 시, 매출인식 날짜가 없는 행은 제외됨 (수행월로 대체하지 않음 — 두 기준 혼합 방지)
-        const totalBefore = window.rawDataBase.length;
-        window.rawData = window.rawDataBase.map(d => ({
-            ...d,
-            month:    _dataBasis === 'account' ? d.accountMonth : d.month,
-            tripDate: _dataBasis === 'account' ? d.accountDate  : d.date,
-        })).filter(d => d.month);
-        const excluded = totalBefore - window.rawData.length;
-        if (excluded > 0) {
-            console.log(`[${_dataBasis === 'account' ? '매출인식' : '수행일'} 기준] ${excluded}건은 해당 날짜 정보가 없어 제외됨`);
-        }
-        const basisStatusEl = document.getElementById('dataStatusText');
-        if (basisStatusEl) {
+        try {
+            // 현재 필터 선택값 저장. 기준을 바꿔도 업체/차량/폐기물은 유지하고,
+            // 년월/년도는 새 기준 데이터에 실제 존재하는 값만 복원한다.
+            const savedFilters = {
+                customer: tsCust  ? getFilterVals(tsCust)  : [],
+                vehicle:  tsVeh   ? getFilterVals(tsVeh)   : [],
+                waste:    tsWaste ? getFilterVals(tsWaste) : [],
+                month:    tsMon   ? getFilterVals(tsMon)   : [],
+                year:     tsYear  ? getFilterVals(tsYear)  : [],
+            };
+
+            const totalBefore = window.rawDataBase.length;
+            window.rawData = window.rawDataBase.map(d => {
+                const activeMonth = _dataBasis === 'account'
+                    ? (d.accountMonth || '')
+                    : (d.performMonth || d.month || '');
+                const activeDate = _dataBasis === 'account'
+                    ? (d.accountDate || '')
+                    : (d.performDate || d.date || '');
+                return {
+                    ...d,
+                    month: activeMonth,
+                    // date는 선택 기준(수행일/매출인식)의 날짜. 기간 비교/일자 기준에 사용.
+                    date: activeDate,
+                    // tripDate는 실제 운반 식별을 위해 수행일을 유지한다.
+                    // 매출인식일이 동일한 여러 건을 1건으로 잘못 합치는 문제 방지.
+                    tripDate: d.performDate || activeDate,
+                };
+            }).filter(d => d.month);
+
+            const excluded = totalBefore - window.rawData.length;
             const label = _dataBasis === 'account' ? '매출인식' : '수행일';
-            const excludedNote = excluded > 0 ? ` <span style="color:#d97706">(⚠️ ${label} 날짜 없는 ${excluded.toLocaleString()}건 제외)</span>` : '';
-            basisStatusEl.innerHTML = `✅ ${window.rawData.length.toLocaleString()}건 로드 완료 (${label} 기준)${excludedNote}`;
+            console.log(`[기준전환] ${label} 기준 ${window.rawData.length}건 / 제외 ${excluded}건`);
+
+            // 기준에 따라 필터 옵션을 완전히 재구성하되, 전환 중 change 렌더는 잠금.
+            initFilters();
+
+            const restoreFilter = (ts, vals) => {
+                if (!ts || !vals || !vals.length) return;
+                const validVals = vals.filter(v => Object.prototype.hasOwnProperty.call(ts.options || {}, v));
+                validVals.forEach(v => {
+                    try { ts.addItem(v, true); } catch (_) {}
+                });
+                try { ts.refreshItems(); } catch (_) {}
+            };
+
+            restoreFilter(tsCust,  savedFilters.customer);
+            restoreFilter(tsVeh,   savedFilters.vehicle);
+            restoreFilter(tsWaste, savedFilters.waste);
+            restoreFilter(tsMon,   savedFilters.month);
+            restoreFilter(tsYear,  savedFilters.year);
+
+            // 탭4 등에서 사용하는 파생 캐시는 이전 기준값을 남기지 않도록 초기화.
+            _b4Data = [];
+            _b4DataFull = [];
+            _lastSummaryData = {};
+
+            const basisStatusEl = document.getElementById('dataStatusText');
+            if (basisStatusEl) {
+                const excludedNote = excluded > 0
+                    ? ` <span style="color:#d97706">(⚠️ ${label} 날짜 없는 ${excluded.toLocaleString()}건 제외)</span>`
+                    : '';
+                basisStatusEl.innerHTML = `✅ ${window.rawData.length.toLocaleString()}건 로드 완료 (${label} 기준)${excludedNote}`;
+            }
+        } catch (e) {
+            console.error('기준 전환 오류:', e);
+            const basisStatusEl = document.getElementById('dataStatusText');
+            if (basisStatusEl) basisStatusEl.textContent = `❌ 기준 전환 오류: ${e.message}`;
+        } finally {
+            _basisSwitching = false;
+            if (btnP) btnP.disabled = false;
+            if (btnA) btnA.disabled = false;
         }
 
-        // 필터 재구성
-        initFilters();
-
-        // 저장된 필터값 복원 (기준 전환 후에도 유효한 값만)
-        const restoreFilter = (ts, vals) => {
-            if (!ts || !vals.length) return;
-            const validVals = vals.filter(v => ts.options[v]);
-            validVals.forEach(v => ts.addItem(v, true));
-            if (validVals.length) ts.refreshItems();
-        };
-
-        restoreFilter(tsCust,  savedFilters.customer);
-        restoreFilter(tsVeh,   savedFilters.vehicle);
-        restoreFilter(tsWaste, savedFilters.waste);
-        restoreFilter(tsMon,   savedFilters.month);
-        restoreFilter(tsYear,  savedFilters.year);
-
+        // 모든 필터/데이터셋이 완성된 뒤 현재 탭을 한 번만 렌더링한다.
         renderPills();
         renderDashboard();
     }
 
     function setBasis(basis) {
-        _dataBasis = basis;
-        // 토글 버튼 스타일
-        const btnP = document.getElementById('btnBasisPerform');
-        const btnA = document.getElementById('btnBasisAccount');
-        if (basis === 'perform') {
-            btnP.className = 'px-3 py-1.5 text-xs font-bold rounded-md transition-all bg-white text-teal-700 shadow-sm';
-            btnA.className = 'px-3 py-1.5 text-xs font-bold rounded-md transition-all text-slate-500';
-        } else {
-            btnA.className = 'px-3 py-1.5 text-xs font-bold rounded-md transition-all bg-white text-blue-700 shadow-sm';
-            btnP.className = 'px-3 py-1.5 text-xs font-bold rounded-md transition-all text-slate-500';
+        if (!['perform','account'].includes(basis) || _basisSwitching) return;
+        if (_dataBasis === basis && window.rawData.length > 0) {
+            updateBasisButtonStyle();
+            return;
         }
+        _dataBasis = basis;
+        updateBasisButtonStyle();
         if (window.rawDataBase.length > 0) applyBasis();
     }
 
@@ -2230,6 +2315,38 @@
         if (typeof str === 'number') return str;
         return Number(str.replace(/[^0-9.-]+/g,"")) || 0;
     };
+
+
+    // ── 운반 건수/일수 공통 기준 ──
+    // 같은 날짜 + 차량 + 고객사를 1회 운반으로 본다.
+    // 날짜가 없는 예외행은 원본 행번호(_rowId)로 분리해 월 전체가 1건으로 뭉치는 것을 방지한다.
+    function getTripKey(d) {
+        const dt = d?.performDate || d?.tripDate || '';
+        const veh = d?.vehicle || '';
+        const cust = d?.customer || '';
+        // 실제 일자(YYYY-MM-DD)가 있을 때만 날짜+차량+고객사로 묶는다.
+        // 월(YYMM)만 있는 값은 같은 달 전체가 1건으로 합쳐질 수 있으므로 행 ID로 분리한다.
+        if (/^\d{4}-\d{2}-\d{2}$/.test(String(dt))) return `${dt}|${veh}|${cust}`;
+        return `ROW|${d?._rowId ?? ''}|${d?.month || ''}|${veh}|${cust}`;
+    }
+    function countUniqueTrips(data) {
+        return new Set((data || []).map(getTripKey)).size;
+    }
+    function getActiveDayKey(d) {
+        // '조업일'은 실제 수행일 기준으로 계산한다. 매출인식은 월(YYMM)만 존재하므로
+        // 회계 기준으로 탭을 보더라도 조업일수 자체는 실제 수행일을 사용한다.
+        const dt = d?.performDate || d?.tripDate || d?.date || '';
+        return /^\d{4}-\d{2}-\d{2}$/.test(String(dt)) ? String(dt) : '';
+    }
+    function countActiveDays(data) {
+        const days = new Set((data || []).map(getActiveDayKey).filter(Boolean));
+        return days.size;
+    }
+    function getEffectiveCalendarDays(yymm) {
+        const full = getDaysInMonth(yymm);
+        const now = getTodayYYMM();
+        return yymm === now.yymm ? Math.min(full, now.day) : full;
+    }
 
     // 안전한 차트 파괴 — 캔버스 자체를 교체해서 완전 초기화
     function destroyChart(inst, canvasId) {
@@ -2346,7 +2463,8 @@
         // 계약서 탭은 매출 필터/기준과 무관하므로 헤더 필터를 숨김
         const basis = document.getElementById('basisControl');
         const globalFilters = document.getElementById('globalFilterPanel');
-        if (basis) basis.style.display = (tabId === 6 || tabId === 7) ? 'none' : '';
+        // 수행일/매출인식 기준은 운영 매출 데이터 기반 탭(1~4)에만 적용.
+        if (basis) basis.style.display = (tabId >= 5) ? 'none' : '';
         if (globalFilters) globalFilters.style.display = (tabId === 6 || tabId === 7) ? 'none' : '';
 
         // 탭5에서는 업체/폐기물 공통 필터를 사용하지 않음 (기존 동작 유지)
@@ -2485,18 +2603,22 @@
         const years     = uniq(window.rawData.map(d => d.month?.substring(0,2))).filter(y => !isNaN(y));
 
         const onFilterChange = () => {
+            if (_basisSwitching) return;
             renderPills();
             clearTimeout(renderDebounce);
             renderDebounce = setTimeout(() => { animateDashboard(); animateNumbers(); renderDashboard(); }, 80);
         };
 
-        if (tsCust)  tsCust.destroy();
-        if (tsVeh)   tsVeh.destroy();
-        if (tsWaste) tsWaste.destroy();
-        if (tsMon)   tsMon.destroy();
-        if (tsYear)  tsYear.destroy();
+        // 기준 전환 중 destroy()가 change 이벤트를 발생시키더라도 렌더링하지 않도록 위에서 잠금.
+        const destroyTs = (ts) => { try { if (ts) ts.destroy(); } catch (_) {} };
+        destroyTs(tsCust); destroyTs(tsVeh); destroyTs(tsWaste); destroyTs(tsMon); destroyTs(tsYear);
+        tsCust = tsVeh = tsWaste = tsMon = tsYear = null;
 
-        tsCust  = buildTomSelect('filterCustomer', customers.map(v => ({ value:v, label:v })), true, () => { updateWasteOptions(); onFilterChange(); });
+        tsCust  = buildTomSelect('filterCustomer', customers.map(v => ({ value:v, label:v })), true, () => {
+            if (_basisSwitching) return;
+            updateWasteOptions();
+            onFilterChange();
+        });
         tsVeh   = buildTomSelect('filterVehicle',  vehicles.map(v  => ({ value:v, label:v })), true, onFilterChange);
         tsWaste = buildTomSelect('filterWaste',    wastes.map(v    => ({ value:v, label:v })), true, onFilterChange);
         tsMon   = buildTomSelect('filterMonth',    months.map(v    => ({ value:v, label: v.length===4&&!isNaN(v) ? `${v.substring(0,2)}년 ${v.substring(2,4)}월` : v })), true, onFilterChange);
@@ -2504,7 +2626,7 @@
     }
 
     function updateWasteOptions() {
-        if (!tsWaste) return;
+        if (_basisSwitching || !tsWaste) return;
         const custVals = getFilterVals(tsCust);
         const source = custVals.length === 0 ? window.rawData : window.rawData.filter(d => custVals.includes(d.customer));
         const wastes = [...new Set(source.map(d => d.waste))].filter(Boolean).sort();
@@ -2563,6 +2685,20 @@
         const monVals   = getFilterVals(tsMon);
         const yearVals  = getFilterVals(tsYear);
 
+        // 운반자 실적·도급비는 별도 DB(window.dogupData)를 사용하므로
+        // 매출 원본(rawData)이나 숨겨진 업체/폐기물 필터의 0건 여부와 무관하게 렌더링한다.
+        if (currentTab === 5) {
+            const noDataMsg = document.getElementById('noDataMessage');
+            if (noDataMsg) noDataMsg.classList.add('hidden');
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab6-content','tab7-content'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.classList.add('hidden');
+            });
+            const pane = document.getElementById('tab5-content');
+            if (pane) pane.classList.remove('hidden');
+            renderDogupTab();
+            return;
+        }
+
         const filtered = window.rawData.filter(d =>
             matchesFilter(custVals,  d.customer) &&
             matchesFilter(vehVals,   d.vehicle)  &&
@@ -2585,7 +2721,7 @@
         filtered.forEach(d => { sumTotalRev += d.totalRev; sumNetRev += d.netRev; sumWeight += d.weight; uniqueMonths.add(d.month); });
 
         let totalDays = 0;
-        uniqueMonths.forEach(m => { totalDays += getDaysInMonth(m); });
+        uniqueMonths.forEach(m => { totalDays += getEffectiveCalendarDays(m); });
         if (totalDays === 0) totalDays = 30;
         const totalMonths = uniqueMonths.size || 1;
         const totalWeeks  = totalDays / 7;
@@ -2600,15 +2736,13 @@
             renderCurrentMonthPanel(custVals, vehVals, wasteVals);
         }
         if (currentTab === 2) {
-            document.getElementById('tripCount').innerText = filtered.length.toLocaleString('ko-KR');
+            const trendTripCount = countUniqueTrips(filtered) || 1;
+            document.getElementById('tripCount').innerText = countUniqueTrips(filtered).toLocaleString('ko-KR');
             document.getElementById('sumTotalRevCard').innerHTML = `${formatCurrency(sumTotalRev)}<span class="text-base font-normal text-slate-500 ml-1">원</span>`;
-            // 월평균 수거횟수 = (date+vehicle 유니크 수거) / 월수
-            const trend_trips = new Set();
-            filtered.forEach(d => trend_trips.add((d.tripDate || d.date || d.month) + '|' + (d.vehicle || '')));
-            document.getElementById('avgMonthlyTripsCard').innerHTML = `${(trend_trips.size/totalMonths).toFixed(1)}<span class="text-base font-normal text-slate-500 ml-1">회/월</span>`;
-            document.getElementById('avgTotalRevCard').innerHTML = `${formatCurrency(sumTotalRev/filtered.length)}<span class="text-base font-normal text-slate-500 ml-1">원</span>`;
-            document.getElementById('avgNetRevCard').innerHTML   = `${formatCurrency(sumNetRev/filtered.length)}<span class="text-base font-normal text-slate-500 ml-1">원</span>`;
-            document.getElementById('avgWeightCard').innerHTML   = `${formatNumber(sumWeight/filtered.length)}<span class="text-base font-normal text-slate-500 ml-1">Ton</span>`;
+            document.getElementById('avgMonthlyTripsCard').innerHTML = `${(countUniqueTrips(filtered)/totalMonths).toFixed(1)}<span class="text-base font-normal text-slate-500 ml-1">회/월</span>`;
+            document.getElementById('avgTotalRevCard').innerHTML = `${formatCurrency(sumTotalRev/trendTripCount)}<span class="text-base font-normal text-slate-500 ml-1">원</span>`;
+            document.getElementById('avgNetRevCard').innerHTML   = `${formatCurrency(sumNetRev/trendTripCount)}<span class="text-base font-normal text-slate-500 ml-1">원</span>`;
+            document.getElementById('avgWeightCard').innerHTML   = `${formatNumber(sumWeight/trendTripCount)}<span class="text-base font-normal text-slate-500 ml-1">Ton</span>`;
             renderTrendCharts(filtered);
             renderContributionChart(filtered);
             renderComparisonTable(custVals, vehVals, wasteVals, monVals, yearVals);
@@ -2681,7 +2815,7 @@
             data.forEach(d => { monthMap[d.month] = (monthMap[d.month] || 0) + d.totalRev; });
             const monthList = months.map(m => `${m}: ${Math.round(monthMap[m]/10000)}만원`).join(', ');
             prompt = `아래는 조은환경 폐기물 운반 사업의 매출 데이터입니다. 2-3문장으로 핵심만 요약해주세요. 한국어로, 실무 담당자가 바로 이해할 수 있게 써주세요. 수치 강조, 특이사항 포함.
-총매출: ${Math.round(total/10000)}만원, 순매출: ${Math.round(net/10000)}만원, 마진율: ${((net/total)*100).toFixed(1)}%
+총매출: ${Math.round(total/10000)}만원, 순매출: ${Math.round(net/10000)}만원, 마진율: ${total ? ((net/total)*100).toFixed(1) : '0.0'}%
 월별 매출: ${monthList}`;
         } else if (tab === 2) {
             const custMap = {};
@@ -2691,8 +2825,10 @@
             const custCount = Object.keys(custMap).length;
 
             // 월/년 필터 감지 → 전월·전년 동월 비교
-            const _monV2  = getFilterVals(tsMon);
-            const _custV2 = getFilterVals(tsCust);
+            const _monV2   = getFilterVals(tsMon);
+            const _custV2  = getFilterVals(tsCust);
+            const _wasteV2 = getFilterVals(tsWaste);
+            const _vehV2   = getFilterVals(tsVeh);
             let periodCompare = '';
             _tab2WebSearch = false;
 
@@ -2706,7 +2842,12 @@
                 const prevY = String(yy-1).padStart(2,'0') + String(mm).padStart(2,'0');
 
                 const aggWeight = (month) => {
-                    const rows = window.rawData.filter(d => d.month === month && matchesFilter(_custV2, d.customer));
+                    const rows = window.rawData.filter(d =>
+                        d.month === month &&
+                        matchesFilter(_custV2, d.customer) &&
+                        matchesFilter(_wasteV2, d.waste) &&
+                        matchesFilter(_vehV2, d.vehicle)
+                    );
                     const byWaste = {}; let tot = 0, cost = 0;
                     rows.forEach(d => { byWaste[d.waste] = (byWaste[d.waste]||0) + d.weight; tot += d.weight; cost += d.totalRev; });
                     return { tot, cost, byWaste };
@@ -2741,7 +2882,7 @@
 
 총 ${custCount}개 업체, 합계 ${Math.round(total/10000)}만원
 상위 3개 업체: ${top3}
-배차 건수: ${data.length}건, 회당 평균: ${Math.round(total/data.length/10000)}만원${periodCompare}
+배차 건수: ${countUniqueTrips(data)}건, 회당 평균: ${Math.round(total/Math.max(countUniqueTrips(data),1)/10000)}만원${periodCompare}
 
 요약 지침:
 - 3~5문장으로 핵심만 한국어로, 실무 담당자가 바로 이해하게.
@@ -2750,16 +2891,23 @@
 - 마크다운 없이 plain text로.`;
         } else if (tab === 3) {
             const vehMap = {};
-            data.forEach(d => { if (!vehMap[d.vehicle]) vehMap[d.vehicle] = { rev:0, net:0, cnt:0 }; vehMap[d.vehicle].rev += d.totalRev; vehMap[d.vehicle].net += d.netRev; vehMap[d.vehicle].cnt += 1; });
+            data.forEach(d => {
+                if (!vehMap[d.vehicle]) vehMap[d.vehicle] = { rev:0, net:0, trips:new Set() };
+                vehMap[d.vehicle].rev += d.totalRev;
+                vehMap[d.vehicle].net += d.netRev;
+                vehMap[d.vehicle].trips.add(getTripKey(d));
+            });
             const sorted = Object.entries(vehMap).sort((a,b) => b[1].rev - a[1].rev);
             const top = sorted[0];
             const vCount = sorted.length;
             const totalRev = sorted.reduce((s,[,v]) => s + v.rev, 0);
-            const topEfficiency = sorted.sort((a,b) => (b[1].net/b[1].cnt) - (a[1].net/a[1].cnt))[0];
+            const topEfficiency = [...sorted].sort((a,b) =>
+                (b[1].net/Math.max(b[1].trips.size,1)) - (a[1].net/Math.max(a[1].trips.size,1))
+            )[0];
             prompt = `아래는 조은환경 차량별 운반 실적 데이터입니다. 2-3문장으로 핵심만 요약해주세요. 한국어로, 실무 담당자가 바로 이해할 수 있게.
 총 ${vCount}대 운행, 합계 ${Math.round(totalRev/10000)}만원
-최다 매출 차량: ${top[0]} (${Math.round(top[1].rev/10000)}만원, ${top[1].cnt}회)
-회당 순매출 최고 효율 차량: ${topEfficiency[0]} (${Math.round(topEfficiency[1].net/topEfficiency[1].cnt/10000)}만원/회)`;
+최다 매출 차량: ${top[0]} (${Math.round(top[1].rev/10000)}만원, ${top[1].trips.size}회)
+회당 순매출 최고 효율 차량: ${topEfficiency[0]} (${Math.round(topEfficiency[1].net/Math.max(topEfficiency[1].trips.size,1)/10000)}만원/회)`;
         }
 
         try {
@@ -2830,26 +2978,40 @@
 
         const baseMatch = d => matchesFilter(custVals, d.customer) && matchesFilter(vehVals, d.vehicle) && matchesFilter(wasteVals, d.waste);
         const agg = (month, uptoDay) => {
-            let rev = 0, net = 0, cnt = 0;
+            let rev = 0, net = 0;
+            const tripKeys = new Set();
             window.rawData.forEach(d => {
                 if (d.month !== month || !baseMatch(d)) return;
-                if (uptoDay && dayOfRow(d) > uptoDay) return;
-                rev += d.totalRev; net += d.netRev; cnt++;
+                const rowDay = dayOfRow(d);
+                if (uptoDay && rowDay !== null && rowDay > uptoDay) return;
+                rev += d.totalRev; net += d.netRev; tripKeys.add(getTripKey(d));
             });
-            return { rev, net, cnt };
+            return { rev, net, cnt: tripKeys.size };
         };
 
-        const cur = agg(yymm, day);
-        const pm  = agg(prevM, day);
-        const py  = agg(yoyM, day);
+        // 수행일은 실제 일자가 있으므로 같은 일수 구간 비교가 가능.
+        // 매출인식은 원본 DB가 YYMM 월 단위이므로 일자 컷을 억지로 적용하지 않는다.
+        const hasDailyBasis = _dataBasis === 'perform';
+        const cutDay = hasDailyBasis ? day : null;
+        const cur = agg(yymm, cutDay);
+        const pm  = agg(prevM, cutDay);
+        const py  = agg(yoyM, cutDay);
 
         panel.classList.remove('hidden');
         const yy2 = yymm.substring(0,2), mm2 = yymm.substring(2,4);
-        document.getElementById('cmMonthLabel').textContent = `(${yy2}년 ${mm2}월 · 1일~${day}일 기준)`;
+        document.getElementById('cmMonthLabel').textContent = hasDailyBasis
+            ? `(${yy2}년 ${mm2}월 · 1일~${day}일 기준)`
+            : `(${yy2}년 ${mm2}월 · 매출인식 월 기준)`;
 
         const daysInMonth = getDaysInMonth(yymm) || 30;
         const progressPct = Math.round(day / daysInMonth * 100);
-        document.getElementById('cmProgressBadge').textContent = `이번 달 ${progressPct}% 경과 (${day}/${daysInMonth}일)`;
+        document.getElementById('cmProgressBadge').textContent = hasDailyBasis
+            ? `이번 달 ${progressPct}% 경과 (${day}/${daysInMonth}일)`
+            : `매출인식 기준 · 월 단위 집계`;
+        const compareNote = document.getElementById('cmCompareNote');
+        if (compareNote) compareNote.innerHTML = hasDailyBasis
+            ? '※ 이번 달은 아직 진행 중이므로, 전월·전년도 <b>같은 일수 구간(1일~오늘)</b>으로 잘라 공정하게 비교합니다.'
+            : '※ 매출인식 값은 원본 DB가 <b>월(YYMM) 단위</b>이므로, 전월·전년 비교도 월 단위 누적값으로 표시합니다.';
 
         if (cur.cnt === 0) {
             document.getElementById('cmTotalRev').innerHTML = `<span class="text-xl">아직 집계 전</span>`;
@@ -2875,16 +3037,25 @@
             el.className = `text-3xl font-bold ${isUp ? 'text-emerald-600' : 'text-rose-500'}`;
             det.innerHTML = `${baseLabel} ${formatCurrency(baseV)}원 대비 <b class="${isUp?'text-emerald-600':'text-rose-500'}">${isUp?'▲':'▼'} ${formatCurrency(Math.abs(diff))}원</b>`;
         };
-        renderPct('cmMomPct', 'cmMomDetail', cur.rev, pm.rev, `전월(${prevM.substring(2,4)}월) 동기간`);
-        renderPct('cmYoyPct', 'cmYoyDetail', cur.rev, py.rev, `전년(${yoyM.substring(0,2)}년 ${yoyM.substring(2,4)}월) 동기간`);
+        renderPct('cmMomPct', 'cmMomDetail', cur.rev, pm.rev,
+            hasDailyBasis ? `전월(${prevM.substring(2,4)}월) 동기간` : `전월(${prevM.substring(2,4)}월)`);
+        renderPct('cmYoyPct', 'cmYoyDetail', cur.rev, py.rev,
+            hasDailyBasis ? `전년(${yoyM.substring(0,2)}년 ${yoyM.substring(2,4)}월) 동기간` : `전년(${yoyM.substring(0,2)}년 ${yoyM.substring(2,4)}월)`);
 
         // ── 누적 매출 추이 (전월·전년 점선 대비) ──
+        // 매출인식은 일자 정보가 없으므로 일별 누적차트를 숨긴다.
+        const cumWrap = document.getElementById('cmCumulativeWrap');
+        if (cumWrap) cumWrap.classList.toggle('hidden', !hasDailyBasis);
+        if (!hasDailyBasis) {
+            cmCumInst = destroyChart(cmCumInst, 'cmCumulativeChart');
+            return;
+        }
         const dailyCumulative = (month, upto) => {
             const byDay = {};
             window.rawData.forEach(d => {
                 if (d.month !== month || !baseMatch(d)) return;
                 const dy = dayOfRow(d);
-                if (dy < 1 || dy > 31) return;
+                if (dy === null || dy < 1 || dy > 31) return;
                 byDay[dy] = (byDay[dy] || 0) + d.totalRev;
             });
             const cum = []; let run = 0;
@@ -3051,11 +3222,11 @@
         data.forEach(d => {
             const w = d.waste || '미상';
             if (!wasteMap[w]) wasteMap[w] = {};
-            if (!wasteMap[w][d.month]) wasteMap[w][d.month] = { totalRev:0, netRev:0, weight:0, count:0 };
+            if (!wasteMap[w][d.month]) wasteMap[w][d.month] = { totalRev:0, netRev:0, weight:0, tripKeys:new Set() };
             wasteMap[w][d.month].totalRev += d.totalRev;
             wasteMap[w][d.month].netRev   += d.netRev;
             wasteMap[w][d.month].weight   += d.weight;
-            wasteMap[w][d.month].count    += 1;
+            wasteMap[w][d.month].tripKeys.add(getTripKey(d));
             allMonths.add(d.month);
         });
         const months = [...allMonths].sort();
@@ -3065,9 +3236,10 @@
         const dsTotal=[], dsNet=[], dsWeight=[];
         wastes.forEach((w) => {
             const c = getColorForLabel(w);
+            const tripN = m => wasteMap[w][m]?.tripKeys?.size || 0;
             dsTotal.push({ label:w, data: months.map(m => wasteMap[w][m]?.totalRev||0), backgroundColor:`${c}CC`, borderColor:c, borderWidth:2, borderRadius:4 });
-            dsNet.push(  { label:w, data: months.map(m => wasteMap[w][m] ? wasteMap[w][m].netRev/wasteMap[w][m].count : 0), backgroundColor:`${c}33`, borderColor:c, borderWidth:2, fill:false, tension:0.3, pointBackgroundColor:c, pointRadius:4 });
-            dsWeight.push({ label:w, data: months.map(m => wasteMap[w][m] ? wasteMap[w][m].weight/wasteMap[w][m].count : 0), backgroundColor:`${c}33`, borderColor:c, borderWidth:2, fill:false, tension:0.3, pointBackgroundColor:c, pointRadius:4 });
+            dsNet.push(  { label:w, data: months.map(m => tripN(m) ? wasteMap[w][m].netRev/tripN(m) : 0), backgroundColor:`${c}33`, borderColor:c, borderWidth:2, fill:false, tension:0.3, pointBackgroundColor:c, pointRadius:4 });
+            dsWeight.push({ label:w, data: months.map(m => tripN(m) ? wasteMap[w][m].weight/tripN(m) : 0), backgroundColor:`${c}33`, borderColor:c, borderWidth:2, fill:false, tension:0.3, pointBackgroundColor:c, pointRadius:4 });
         });
         const mk = (id, inst, type, ds, unit, stacked) => {
             destroyChart(inst, id);
@@ -3101,10 +3273,11 @@
             const w = d.waste || '미상';
             allMonths.add(d.month);
             if (!wasteMap[w]) wasteMap[w] = {};
-            if (!wasteMap[w][d.month]) wasteMap[w][d.month] = { weight:0, cost:0, count:0 };
+            if (!wasteMap[w][d.month]) wasteMap[w][d.month] = { weight:0, cost:0, count:0, tripKeys:new Set() };
             wasteMap[w][d.month].weight += d.weight;
             wasteMap[w][d.month].cost   += d.totalRev;
             wasteMap[w][d.month].count  += 1;
+            wasteMap[w][d.month].tripKeys.add(getTripKey(d));
             if (!monthTotals[d.month]) monthTotals[d.month] = { weight:0, cost:0, count:0 };
             monthTotals[d.month].weight += d.weight;
             monthTotals[d.month].cost   += d.totalRev;
@@ -3118,28 +3291,17 @@
         const totalCost   = data.reduce((s,d)=>s+d.totalRev,0);
         const totalMonths = months.length || 1;
 
-        // 일평균 계산 (운반건수가 있는 날 = 조업일수 근사)
-        let totalWorkDays = 0;
-        months.forEach(m => {
-            const daySet = new Set(data.filter(d=>d.month===m).map(d=>d.month+'-'+d.weight.toString().slice(0,3)));
-            totalWorkDays += Math.max(daySet.size, monthTotals[m]?.count || 1);
-        });
-        const avgWorkDaysPerMonth = totalWorkDays / totalMonths;
-
-        // 운반횟수: (date + vehicle) 유니크 — 같은 날 같은 차량은 한 번의 수거
-        const uniqueTrips = new Set();
-        data.forEach(d => {
-            const key = (d.tripDate || d.date || d.month) + '|' + (d.vehicle || '');
-            uniqueTrips.add(key);
-        });
-        const totalTripsUnique = uniqueTrips.size;
+        // 실제 조업일수: 수행일/매출인식 일자의 고유 날짜 수.
+        // 날짜가 없는 예외 데이터만 있는 경우에는 고유 운반횟수를 fallback으로 사용한다.
+        const activeDays = countActiveDays(data);
+        const totalTripsUnique = countUniqueTrips(data);
+        const totalWorkDays = activeDays || totalTripsUnique || 1;
 
         // 월별 운반횟수 (일평균 선그래프용)
         const monthTripsMap = {};
         data.forEach(d => {
-            const key = (d.tripDate || d.date || d.month) + '|' + (d.vehicle || '');
             if (!monthTripsMap[d.month]) monthTripsMap[d.month] = new Set();
-            monthTripsMap[d.month].add(key);
+            monthTripsMap[d.month].add(getTripKey(d));
         });
         // 월별 일평균(회당) 배출량 / 비용
         const dailyAvgWeightData = months.map(m => {
@@ -3170,7 +3332,7 @@
         }));
         // 일평균(회당) 배출량 라인
         dsWeight.push({
-            type:'line', label:'일평균 배출량(회당)', data:dailyAvgWeightData,
+            type:'line', label:'회당 평균 배출량', data:dailyAvgWeightData,
             borderColor:'#0d9488', backgroundColor:'#0d9488',
             borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#fff', pointBorderColor:'#0d9488', pointBorderWidth:2,
             tension:0.3, order:1, yAxisID:'y1',
@@ -3190,7 +3352,7 @@
                 },
                 scales:{
                     y:{stacked:false,beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11}},title:{display:true,text:'월 총 배출량(T)',font:{family:"'Noto Sans KR'",size:10}}},
-                    y1:{position:'right',beginAtZero:true,max:Math.max(...dailyAvgWeightData,0.1)*2.3,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:10},color:'#0d9488',callback:v=>v.toFixed(1)+'T'},title:{display:true,text:'일평균(회당)',font:{family:"'Noto Sans KR'",size:10},color:'#0d9488'}},
+                    y1:{position:'right',beginAtZero:true,max:Math.max(...dailyAvgWeightData,0.1)*2.3,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:10},color:'#0d9488',callback:v=>v.toFixed(1)+'T'},title:{display:true,text:'회당 평균',font:{family:"'Noto Sans KR'",size:10},color:'#0d9488'}},
                     x:{grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:11},maxRotation:45,minRotation:0}}
                 }
             }
@@ -3204,7 +3366,7 @@
         }));
         // 일평균(회당) 비용 라인
         dsCost.push({
-            type:'line', label:'일평균 비용(회당)', data:dailyAvgCostData,
+            type:'line', label:'회당 평균 비용', data:dailyAvgCostData,
             borderColor:'#f58231', backgroundColor:'#f58231',
             borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#fff', pointBorderColor:'#f58231', pointBorderWidth:2,
             tension:0.3, order:1, yAxisID:'y1',
@@ -3224,7 +3386,7 @@
                 },
                 scales:{
                     y:{stacked:true,beginAtZero:true,grid:{color:'#e2e8f0',borderDash:[4,4]},ticks:{font:{family:"'Noto Sans KR'",size:11},callback:v=>v>=100000000?(v/100000000).toFixed(1)+'억':v>=10000000?(v/10000000).toFixed(0)+'천만':v>=10000?(v/10000).toFixed(0)+'만':v},title:{display:true,text:'월 총 비용',font:{family:"'Noto Sans KR'",size:10}}},
-                    y1:{position:'right',beginAtZero:true,max:Math.max(...dailyAvgCostData,1)*2.3,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:10},color:'#e0670f',callback:v=>v>=10000?Math.round(v/10000)+'만':v},title:{display:true,text:'일평균(회당)',font:{family:"'Noto Sans KR'",size:10},color:'#e0670f'}},
+                    y1:{position:'right',beginAtZero:true,max:Math.max(...dailyAvgCostData,1)*2.3,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:10},color:'#e0670f',callback:v=>v>=10000?Math.round(v/10000)+'만':v},title:{display:true,text:'회당 평균',font:{family:"'Noto Sans KR'",size:10},color:'#e0670f'}},
                     x:{stacked:true,grid:{display:false},ticks:{font:{family:"'Noto Sans KR'",size:11},maxRotation:45,minRotation:0}}
                 }
             }
@@ -3235,7 +3397,8 @@
         const allMMs = [...new Set(_b4DataFull.map(d=>d.month?.substring(2,4)).filter(Boolean))].sort();
         const wasteSelect = document.getElementById('yoyWasteSelect');
         wasteSelect.innerHTML = '<option value="all">전체</option>';
-        wastes.forEach(w => wasteSelect.add(new Option(w, w)));
+        const yoyWastes = [...new Set(_b4DataFull.map(d=>d.waste).filter(Boolean))].sort();
+        yoyWastes.forEach(w => wasteSelect.add(new Option(w, w)));
 
         const buildCheckboxes = (containerId, mms, onChange) => {
             const container = document.getElementById(containerId);
@@ -3297,7 +3460,9 @@
             const rows = Object.values(wasteMap[w]);
             const totW = rows.reduce((s,r)=>s+r.weight,0);
             const totC = rows.reduce((s,r)=>s+r.cost,0);
-            const totN = rows.reduce((s,r)=>s+r.count,0);
+            const tripKeys = new Set();
+            rows.forEach(r => (r.tripKeys || []).forEach(k => tripKeys.add(k)));
+            const totN = tripKeys.size;
             const color = getColorForLabel(w);
             html += `<tr class="border-b border-slate-100 hover:bg-teal-50 transition-colors">
                 <td class="p-3 font-semibold text-slate-800 flex items-center gap-2">
@@ -3315,8 +3480,8 @@
             <td class="p-3 text-right text-teal-900">${formatNumber(totalWeight)}</td>
             <td class="p-3 text-right text-teal-900">${formatCurrency(totalCost)}원</td>
             <td class="p-3 text-right text-teal-900">${formatCurrency(totalWeight>0?totalCost/totalWeight:0)}원</td>
-            <td class="p-3 text-right text-teal-900">${data.length.toLocaleString('ko-KR')}건</td>
-            <td class="p-3 text-right text-teal-900">${formatNumber(data.length>0?totalWeight/data.length:0)}Ton</td>
+            <td class="p-3 text-right text-teal-900">${totalTripsUnique.toLocaleString('ko-KR')}건</td>
+            <td class="p-3 text-right text-teal-900">${formatNumber(totalTripsUnique>0?totalWeight/totalTripsUnique:0)}Ton</td>
         </tr>`;
         document.getElementById('b4SummaryTableBody').innerHTML = html;
     }
@@ -3344,19 +3509,22 @@
             const mm = d.month.substring(2,4);
             if (!selectedMMs.includes(mm)) return;
             if (selWaste !== 'all' && d.waste !== selWaste) return;
-            // 진행 중인 달이면 모든 연도를 오늘 경과일까지만 (공정 비교)
-            if (mm === _curMM) {
-                if (dayOfRow(d) > _todayY.day) return;
+            // 수행일 기준에서만 진행 중인 달을 같은 경과일로 잘라 공정 비교.
+            // 매출인식은 원본이 YYMM 월 단위라 일자 컷을 적용하지 않는다.
+            if (_dataBasis === 'perform' && mm === _curMM) {
+                const rowDay = dayOfRow(d);
+                if (rowDay !== null && rowDay > _todayY.day) return;
                 _yoyPartial = true;
             }
             const yy = '20' + d.month.substring(0,2);
             if (selectedYYs.length && !selectedYYs.includes(yy)) return;
             allYears.add(yy);
             if (!mmYearMap[mm]) mmYearMap[mm] = {};
-            if (!mmYearMap[mm][yy]) mmYearMap[mm][yy] = { weight:0, trips:0 };
+            if (!mmYearMap[mm][yy]) mmYearMap[mm][yy] = { weight:0, tripKeys:new Set(), trips:0 };
             mmYearMap[mm][yy].weight += d.weight;
-            mmYearMap[mm][yy].trips  += 1;
+            mmYearMap[mm][yy].tripKeys.add(getTripKey(d));
         });
+        Object.values(mmYearMap).forEach(yearMap => Object.values(yearMap).forEach(v => { v.trips = v.tripKeys.size; }));
 
         const years = [...allYears].sort();
         const yearColors = ['#4363d8','#f58231','#0d9488','#e63946','#911eb4'];
@@ -3417,7 +3585,7 @@
         }
     }
 
-    // ── 일평균 발생량 비교 차트 (조업일수 = 운반횟수 기준) ──
+    // ── 회당 평균 발생량 비교 차트 (고유 운반횟수 기준) ──
     function renderDailyAvgChart() {
         const selectedMMs = [...document.querySelectorAll('#dailyMonthCheckboxes .yoy-month-cb:checked')].map(cb=>cb.value);
         const selectedYYs = [...document.querySelectorAll('#dailyYearCheckboxes .yoy-year-cb:checked')].map(cb=>cb.value);
@@ -3429,37 +3597,33 @@
         }
 
         // ── 데이터 집계: mmYearMap[mm][year] = { weight, trips }
-        // 운반 단위 집계: 같은 (date+vehicle+customer)는 1회 수거로 묶고, 그 운반의 "전체 중량"(다른 폐기물 포함) 사용
+        // 현재 고객사/폐기물/차량 필터가 적용된 _b4DataFull만 사용한다.
+        // 같은 (date+vehicle+customer)는 1회 수거로 묶되, 중량도 현재 필터에 포함된 데이터만 합산한다.
+        // ※ 이전에는 window.rawData 전체에서 같은 운반 키의 다른 폐기물까지 재합산해
+        //    월 총량/회당 평균이 상단 배출량 추이와 달라지는 문제가 있었음.
         const mmYearMap = {};
-        // 1단계: _b4DataFull에서 운반 키(고유) 수집
-        const filteredTripKeys = new Set();
+        const tripTotalWeight = {};   // tripKey -> 현재 필터 기준 중량
+        const tripMonthYear   = {};   // tripKey -> { mm, yy }
+
         _b4DataFull.forEach(d => {
             if (!d.month || d.month.length !== 4) return;
             const mm = d.month.substring(2,4);
             const yy = '20' + d.month.substring(0,2);
             if (!selectedMMs.includes(mm)) return;
             if (selectedYYs.length && !selectedYYs.includes(yy)) return;
-            const tripKey = (d.tripDate || d.date || d.month) + '|' + (d.vehicle || '') + '|' + (d.customer || '');
-            filteredTripKeys.add(tripKey);
-        });
+            // 수행일 기준에서만 현재 진행월을 동일 경과일까지 잘라 비교
+            const todayCmp = getTodayYYMM();
+            const rowDay = dayOfRow(d);
+            if (_dataBasis === 'perform' && mm === todayCmp.yymm.substring(2,4) && rowDay !== null && rowDay > todayCmp.day) return;
 
-        // 2단계: 전체 rawData에서 해당 운반 키의 모든 폐기물 합산 (전체 운반 중량 산출)
-        const tripTotalWeight = {};   // tripKey -> 전체 중량
-        const tripMonthYear   = {};   // tripKey -> { mm, yy }
-        (window.rawData || []).forEach(d => {
-            if (!d.month || d.month.length !== 4) return;
-            const tripKey = (d.tripDate || d.date || d.month) + '|' + (d.vehicle || '') + '|' + (d.customer || '');
-            if (!filteredTripKeys.has(tripKey)) return;
+            const tripKey = getTripKey(d);
             tripTotalWeight[tripKey] = (tripTotalWeight[tripKey] || 0) + (d.weight || 0);
             if (!tripMonthYear[tripKey]) {
-                tripMonthYear[tripKey] = {
-                    mm: d.month.substring(2,4),
-                    yy: '20' + d.month.substring(0,2)
-                };
+                tripMonthYear[tripKey] = { mm, yy };
             }
         });
 
-        // 3단계: 월/연도별 집계
+        // 월/연도별 총량 + 고유 운반횟수 집계
         Object.entries(tripTotalWeight).forEach(([key, weight]) => {
             const { mm, yy } = tripMonthYear[key];
             if (!mmYearMap[mm]) mmYearMap[mm] = {};
@@ -3503,7 +3667,7 @@
             }
         });
 
-        // ── 오른쪽: 일평균 발생량 그룹 막대
+        // ── 오른쪽: 회당 평균 발생량 그룹 막대
         const avgDatasets = years.map((y,i) => ({
             label: `${y}년`,
             data: selectedMMs.map(mm => {
@@ -3524,8 +3688,8 @@
                 layout:{padding:{top:32}},
                 plugins:{
                     legend:{display:true,position:'bottom',labels:{font:{family:"'Noto Sans KR'",size:11,weight:'bold'},boxWidth:12,padding:10}},
-                    title:{display:true,text:'일평균 발생량 (t/d)',font:{family:"'Noto Sans KR'",size:13,weight:'bold'},color:'#334155',padding:{bottom:10}},
-                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>{const d=mmYearMap[selectedMMs[ctx.dataIndex]]?.[years[ctx.datasetIndex]];return ` ${ctx.dataset.label}: ${(ctx.parsed?.y||0).toFixed(2)} t/d (${d?.trips||0}회 운반)`;}}},
+                    title:{display:true,text:'회당 평균 발생량 (T/회)',font:{family:"'Noto Sans KR'",size:13,weight:'bold'},color:'#334155',padding:{bottom:10}},
+                    tooltip:{backgroundColor:'#1e293b',padding:10,callbacks:{label:ctx=>{const d=mmYearMap[selectedMMs[ctx.dataIndex]]?.[years[ctx.datasetIndex]];return ` ${ctx.dataset.label}: ${(ctx.parsed?.y||0).toFixed(2)} T/회 (${d?.trips||0}회 운반)`;}}},
                     datalabels:{display:true,anchor:'end',align:'top',font:{family:"'Noto Sans KR'",size:9,weight:'bold'},color:ctx=>ctx.dataset.borderColor,formatter:v=>v>0?v.toFixed(2)+'T':null,offset:2,clip:false}
                 },
                 scales:{
@@ -3548,7 +3712,7 @@
                     const d = yearData[y];
                     const td = d.trips > 0 ? (d.weight/d.trips).toFixed(2) : '0';
                     return `<div style="flex:1;text-align:center;padding:12px;border-radius:10px;background:#f8fafc;border:1.5px solid #e2e8f0;">
-                        <p style="font-size:20px;font-weight:800;color:${color};">${td} t/d</p>
+                        <p style="font-size:20px;font-weight:800;color:${color};">${td} T/회</p>
                         <p style="font-size:11px;color:#475569;margin-top:4px;">${y}년 ${mm}월</p>
                         <p style="font-size:11px;color:#64748b;">총 ${d.weight.toFixed(2)}T / ${d.trips}회</p>
                     </div>`;
@@ -3564,12 +3728,12 @@
                     const aPct = dPrev > 0 ? ((aDiff/dPrev)*100).toFixed(1) : '-';
                     const isUp = aDiff >= 0;
                     diffHtml = `<p style="font-size:16px;font-weight:800;color:${isUp?'#065f46':'#991b1b'};text-align:center;margin:10px 0 0;">
-                        ${isUp?'▲':'▼'} ${Math.abs(aDiff).toFixed(2)} t/d (${aPct}% ${isUp?'증가':'감소'})
+                        ${isUp?'▲':'▼'} ${Math.abs(aDiff).toFixed(2)} T/회 (${aPct}% ${isUp?'증가':'감소'})
                     </p>`;
                 }
 
                 return `<div style="border:1.5px solid ${color}33;border-radius:14px;padding:16px;background:#fff;">
-                    <p style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">📅 ${mm}월 일평균 발생량 비교</p>
+                    <p style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">📅 ${mm}월 회당 평균 발생량 비교</p>
                     <div style="display:flex;gap:8px;">${yearCards}</div>
                     ${diffHtml}
                 </div>`;
@@ -4421,24 +4585,27 @@
         const vs = {}; const allMonths = new Set();
         data.forEach(d => {
             const v = d.vehicle||'미상';
-            if (!vs[v]) vs[v] = { totalRev:0, netRev:0, count:0, monthly:{} };
-            vs[v].totalRev += d.totalRev; vs[v].netRev += d.netRev; vs[v].count += 1;
-            if (!vs[v].monthly[d.month]) vs[v].monthly[d.month] = { totalRev:0, count:0 };
+            if (!vs[v]) vs[v] = { totalRev:0, netRev:0, tripKeys:new Set(), monthly:{} };
+            vs[v].totalRev += d.totalRev;
+            vs[v].netRev   += d.netRev;
+            vs[v].tripKeys.add(getTripKey(d));
+            if (!vs[v].monthly[d.month]) vs[v].monthly[d.month] = { totalRev:0, tripKeys:new Set() };
             vs[v].monthly[d.month].totalRev += d.totalRev;
-            vs[v].monthly[d.month].count    += 1;
+            vs[v].monthly[d.month].tripKeys.add(getTripKey(d));
             allMonths.add(d.month);
         });
         const vehicles = Object.keys(vs).sort((a,b) => vs[b].totalRev - vs[a].totalRev);
         let html = '';
         vehicles.forEach(v => {
             const s = vs[v];
+            const n = s.tripKeys.size || 1;
             html += `<tr class="border-b border-slate-200 hover:bg-teal-50 transition-colors">
                 <td class="p-3 font-semibold text-slate-800">${v}</td>
-                <td class="p-3 text-right font-bold text-slate-700">${s.count.toLocaleString('ko-KR')} 건</td>
+                <td class="p-3 text-right font-bold text-slate-700">${s.tripKeys.size.toLocaleString('ko-KR')} 건</td>
                 <td class="p-3 text-right font-bold text-teal-600">${formatCurrency(s.totalRev)} 원</td>
                 <td class="p-3 text-right font-bold text-emerald-600">${formatCurrency(s.netRev)} 원</td>
-                <td class="p-3 text-right text-slate-600">${formatCurrency(s.totalRev/s.count)} 원</td>
-                <td class="p-3 text-right text-slate-600">${formatCurrency(s.netRev/s.count)} 원</td>
+                <td class="p-3 text-right text-slate-600">${formatCurrency(s.totalRev/n)} 원</td>
+                <td class="p-3 text-right text-slate-600">${formatCurrency(s.netRev/n)} 원</td>
             </tr>`;
         });
         document.getElementById('vehicleTableBody').innerHTML = html || `<tr><td colspan="6" class="p-6 text-center text-teal-600 font-bold">데이터가 없습니다.</td></tr>`;
@@ -4450,7 +4617,7 @@
         vehicles.forEach((v) => {
             const c = getColorForLabel(v);
             dsRev.push({ label:v, data: months.map(m => vs[v].monthly[m]?.totalRev||0), backgroundColor:`${c}CC`, borderColor:c, borderWidth:2, borderRadius:4 });
-            dsCnt.push({ label:v, data: months.map(m => vs[v].monthly[m]?.count||0), backgroundColor:`${c}33`, borderColor:c, borderWidth:2, fill:false, tension:0.3, pointBackgroundColor:c, pointRadius:4 });
+            dsCnt.push({ label:v, data: months.map(m => vs[v].monthly[m]?.tripKeys?.size||0), backgroundColor:`${c}33`, borderColor:c, borderWidth:2, fill:false, tension:0.3, pointBackgroundColor:c, pointRadius:4 });
         });
         vehicleRevChartInst   = destroyChart(vehicleRevChartInst, 'vehicleRevChart');
         vehicleCountChartInst = destroyChart(vehicleCountChartInst, 'vehicleCountChart');
@@ -4522,9 +4689,13 @@
     }
     // 데이터 행의 일(day) 추출 (tripDate 형식: 2026-07-05)
     function dayOfRow(d) {
-        if (!d.tripDate) return 99;
-        const p = String(d.tripDate).split('-');
-        return p.length === 3 ? parseInt(p[2], 10) : 99;
+        // 부분월 비교는 선택된 기준의 날짜(date)를 사용한다.
+        // 일자가 없는 월 단위 데이터는 null로 두어 총합에는 포함하되, 일자 컷에서 강제 제외하지 않는다.
+        const src = d?.date || d?.tripDate || '';
+        const m = String(src).match(/^\d{4}-\d{2}-(\d{2})$/);
+        if (!m) return null;
+        const day = parseInt(m[1], 10);
+        return Number.isFinite(day) ? day : null;
     }
 
     function renderComparisonTable(custVals, vehVals, wasteVals, monVals, yearVals) {
@@ -4552,19 +4723,22 @@
 
         // 진행 중인 달이면 날짜 기준 부분 비교 (오늘 경과일까지만)
         const _today = getTodayYYMM();
-        const isPartial = (targetMonth === _today.yymm);
+        const isPartial = (_dataBasis === 'perform' && targetMonth === _today.yymm);
         const cutDay = isPartial ? _today.day : 99;
 
         _compTargetMonth = targetMonth;
         _compRows = customers.map(c => {
             const cd = rel.filter(d=>d.customer===c);
-            let curRev=0,prevRev=0,yoyRev=0,curNet=0,curWeight=0,curCount=0;
+            let curRev=0,prevRev=0,yoyRev=0,curNet=0,curWeight=0;
+            const curTripKeys = new Set();
             cd.forEach(d => {
-                if (isPartial && dayOfRow(d) > cutDay) return; // 부분월: 경과일까지만
-                if(d.month===targetMonth){ curRev+=d.totalRev; curNet+=d.netRev; curWeight+=d.weight; curCount++; }
+                const rowDay = dayOfRow(d);
+                if (isPartial && rowDay !== null && rowDay > cutDay) return; // 부분월: 경과일까지만
+                if(d.month===targetMonth){ curRev+=d.totalRev; curNet+=d.netRev; curWeight+=d.weight; curTripKeys.add(getTripKey(d)); }
                 else if(d.month===prevMonth) prevRev+=d.totalRev;
                 else if(d.month===yoyMonth)  yoyRev+=d.totalRev;
             });
+            const curCount = curTripKeys.size;
             const momPct = calcGrowthPct(curRev, prevRev);
             const yoyPct = calcGrowthPct(curRev, yoyRev);
             return {
@@ -4751,7 +4925,7 @@
             const totalWeight = _b4Data.reduce((s,d)=>s+d.weight,0);
             const totalCost   = _b4Data.reduce((s,d)=>s+d.totalRev,0);
             const uniqTrips   = new Set();
-            _b4Data.forEach(d => uniqTrips.add((d.tripDate||d.date||d.month) + '|' + (d.vehicle||'')));
+            _b4Data.forEach(d => uniqTrips.add(getTripKey(d)));
             const tripCount = uniqTrips.size;
             const monthsCnt = new Set(_b4Data.map(d=>d.month)).size || 1;
 
@@ -4908,7 +5082,7 @@
                 `· 운영 기간: ${period} (${monthsCnt}개월)`,
                 `· 총 운반 횟수: ${tripCount}회  ·  월평균 ${(tripCount/monthsCnt).toFixed(1)}회/월`,
                 `· 톤당 단가: ${totalWeight>0 ? Math.round(totalCost/totalWeight).toLocaleString() : 0}원/T`,
-                `· 일평균 발생량: ${totalWeight>0 && tripCount>0 ? (totalWeight/tripCount).toFixed(2) : 0} t/회`,
+                `· 회당 평균 발생량: ${totalWeight>0 && tripCount>0 ? (totalWeight/tripCount).toFixed(2) : 0} T/회`,
             ];
             summaryLines.forEach((line,i) => {
                 s2.addText(line, {
@@ -5315,45 +5489,43 @@ ${yChartInsight}`
             }
 
             // ════════════════════════════════════════════
-            // 슬라이드: 월별 일평균 발생량 + 월별 비교 카드 전체
+            // 슬라이드: 월별 회당 평균 발생량 + 월별 비교 카드 전체
             // ════════════════════════════════════════════
             if (dTotal || dAvg) {
                 const s = pptx.addSlide();
                 s.background = { color: C.white };
-                addHeaderBar(s, '월별 일평균 발생량 비교');
+                addHeaderBar(s, '월별 회당 평균 발생량 비교');
 
                 // 차트 영역 (위쪽, 높이 축소해서 카드 공간 확보)
                 if (dTotal) s.addImage({ data: dTotal, x: 0.5, y: 1.0, w: 6.2, h: 2.7 });
                 if (dAvg)   s.addImage({ data: dAvg,   x: 6.9, y: 1.0, w: 6.2, h: 2.7 });
 
                 // 월별 비교 데이터 계산 (renderDailyAvgChart와 동일 로직)
+                // 현재 고객사/폐기물/차량 필터가 적용된 _b4DataFull만 사용해
+                // 화면 차트와 PPT의 월 총량/회당 평균이 동일하게 계산되도록 한다.
                 const selectedMMs = [...document.querySelectorAll('#dailyMonthCheckboxes .yoy-month-cb:checked')].map(cb=>cb.value);
                 const selectedYYs = [...document.querySelectorAll('#dailyYearCheckboxes .yoy-year-cb:checked')].map(cb=>cb.value);
                 const mmYearMap = {};
-                const filteredTripKeys = new Set();
+                const tripTotalWeight = {};
+                const tripMonthYear = {};
+
                 _b4DataFull.forEach(d => {
                     if (!d.month || d.month.length !== 4) return;
                     const mm = d.month.substring(2,4);
                     const yy = '20' + d.month.substring(0,2);
                     if (selectedMMs.length && !selectedMMs.includes(mm)) return;
                     if (selectedYYs.length && !selectedYYs.includes(yy)) return;
-                    const tripKey = (d.tripDate || d.date || d.month) + '|' + (d.vehicle || '') + '|' + (d.customer || '');
-                    filteredTripKeys.add(tripKey);
-                });
-                const tripTotalWeight = {};
-                const tripMonthYear = {};
-                (window.rawData || []).forEach(d => {
-                    if (!d.month || d.month.length !== 4) return;
-                    const tripKey = (d.tripDate || d.date || d.month) + '|' + (d.vehicle || '') + '|' + (d.customer || '');
-                    if (!filteredTripKeys.has(tripKey)) return;
+
+                    const todayCmp = getTodayYYMM();
+                    const rowDay = dayOfRow(d);
+                    if (_dataBasis === 'perform' && mm === todayCmp.yymm.substring(2,4) && rowDay !== null && rowDay > todayCmp.day) return;
+                    const tripKey = getTripKey(d);
                     tripTotalWeight[tripKey] = (tripTotalWeight[tripKey] || 0) + (d.weight || 0);
                     if (!tripMonthYear[tripKey]) {
-                        tripMonthYear[tripKey] = {
-                            mm: d.month.substring(2,4),
-                            yy: '20' + d.month.substring(0,2)
-                        };
+                        tripMonthYear[tripKey] = { mm, yy };
                     }
                 });
+
                 Object.entries(tripTotalWeight).forEach(([key, weight]) => {
                     const { mm, yy } = tripMonthYear[key];
                     if (!mmYearMap[mm]) mmYearMap[mm] = {};
@@ -5401,7 +5573,7 @@ ${yChartInsight}`
                         fill: { color: C.gold }, line: { type: 'none' }
                     });
                     // 월 헤더
-                    s.addText(`${mm}월 일평균 발생량 비교`, {
+                    s.addText(`${mm}월 회당 평균 발생량 비교`, {
                         x: cardX + 0.22, y: cardY + 0.06, w: cardW - 0.3, h: 0.3,
                         fontFace: FONT_KO, fontSize: 11, color: C.navy, bold: true, valign: 'middle'
                     });
@@ -5419,7 +5591,7 @@ ${yChartInsight}`
                             x: boxX, y: boxY, w: yearBoxW - 0.05, h: boxH,
                             fill: { color: C.white }, line: { color: color, width: 0.75 }
                         });
-                        s.addText(`${td.toFixed(2)} t/d`, {
+                        s.addText(`${td.toFixed(2)} T/회`, {
                             x: boxX, y: boxY + 0.05, w: yearBoxW - 0.05, h: boxH > 0.6 ? 0.5 : 0.3,
                             fontFace: FONT_KO, fontSize: actualCardH > 1.8 ? 22 : 14, bold: true, color: color, align: 'center', valign: 'middle'
                         });
@@ -5439,7 +5611,7 @@ ${yChartInsight}`
                         const aPct = dPrev > 0 ? ((aDiff / dPrev) * 100).toFixed(1) : '-';
                         const isUp = aDiff >= 0;
                         s.addText(
-                            `${isUp ? '▲' : '▼'} ${Math.abs(aDiff).toFixed(2)} t/d (${aPct}% ${isUp ? '증가' : '감소'})`,
+                            `${isUp ? '▲' : '▼'} ${Math.abs(aDiff).toFixed(2)} T/회 (${aPct}% ${isUp ? '증가' : '감소'})`,
                             {
                                 x: cardX + 0.15, y: cardY + actualCardH - 0.32, w: cardW - 0.3, h: 0.3,
                                 fontFace: FONT_KO, fontSize: 11, bold: true,
@@ -5450,7 +5622,7 @@ ${yChartInsight}`
                     }
                 });
 
-                // 발표자 노트 (월별 일평균 발생량) - 운반 1회당 효율 관점에 집중
+                // 발표자 노트 (월별 회당 평균 발생량) - 운반 1회당 효율 관점에 집중
                 const dailyMonthSentences = months.map(mm => {
                     const yearData = mmYearMap[mm] || {};
                     const sortedYears = Object.keys(yearData).sort();
@@ -5473,7 +5645,7 @@ ${yChartInsight}`
 
                 const avgDNote = tripCount > 0 ? totalWeight / tripCount : 0;
                 s.addNotes(
-`[월별 일평균 발생량 비교 브리핑]
+`[월별 회당 평균 발생량 비교 브리핑]
 
 회당 수거량 비교입니다. 한 번 수거할 때 얼마나 무거운 폐기물을 처리했는지 보여주는 수치이며, 전체 평균은 회당 ${avgDNote.toFixed(2)}T입니다.
 
@@ -5481,7 +5653,7 @@ ${yChartInsight}`
 
 ▣ 인사이트
 회당 수거량이 늘었다는 건 같은 횟수를 다녀도 더 무거운 폐기물을 가져갔다는 의미로, 사업장 배출량 자체가 늘고 있다는 신호로 볼 수 있습니다.
-* 계산식: 운반 단위 전체 중량(다른 폐기물 포함) ÷ 실제 운반 횟수`
+* 계산식: 현재 선택된 고객사/폐기물/차량 기준 월 총중량 ÷ 실제 운반 횟수`
                 );
 
                 addFooter(s, pageNum++, totalPages);
@@ -5739,7 +5911,7 @@ ${yChartInsight}`
                 monthMap[d.month].cost   += d.totalRev;
                 wasteMap[d.waste] = (wasteMap[d.waste] || 0) + d.weight;
 
-                const tripKey = (d.tripDate || d.date || d.month) + '|' + (d.vehicle || '') + '|' + (d.customer || '');
+                const tripKey = getTripKey(d);
                 if (!tripAggr[tripKey]) {
                     tripAggr[tripKey] = { weight: 0, date: d.tripDate || d.date, waste: d.waste, month: d.month };
                 }
@@ -9552,7 +9724,7 @@ function stmtPdfFirstPage(c,pageCount){
         <div>
           <table class="stmt-doc-table">
             <colgroup><col style="width:24px"><col><col style="width:74px"><col style="width:86px"><col style="width:102px"></colgroup>
-            <tr><td class="v" rowspan="2">요금정보</td><td class="g">요금제명</td><td class="g">기본수거량</td><td class="g">기본금액</td><td class="g">계약 단가</td></tr>
+            <tr><td class="v stmt-rate-v" rowspan="2">요금정보</td><td class="g">요금제명</td><td class="g">기본수거량</td><td class="g">기본금액</td><td class="g">계약 단가</td></tr>
             <tr><td>${stmtEsc(c.planName)}</td><td>-</td><td>-</td><td>${stmtPdfRateHtml(c)}</td></tr>
           </table>
         </div>
@@ -9661,6 +9833,3 @@ async function stmtDownloadPdf(){
 
 </body>
 </html>
-
-
-
