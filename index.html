@@ -853,6 +853,28 @@
                 </div>
             </div>
 
+            <!-- 전년 동기간 합계 비교 -->
+            <div id="b4section-period-compare" class="bg-white rounded-xl p-6 card-shadow border border-slate-100">
+                <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">📌 전년 동기간 합계 비교</h2>
+                        <p class="text-xs text-slate-400 mt-1">업체·차량·폐기물 필터는 그대로 적용하고, 년/월 필터와 별도로 두 기간의 합계를 바로 비교합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="b4ComparePrevYear" onchange="renderB4PeriodCompare()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white"></select>
+                        <span class="text-xs font-bold text-slate-400">vs</span>
+                        <select id="b4CompareCurrYear" onchange="renderB4PeriodCompare()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white"></select>
+                        <select id="b4CompareStartMonth" onchange="renderB4PeriodCompare()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white"></select>
+                        <span class="text-xs font-bold text-slate-400">~</span>
+                        <select id="b4CompareEndMonth" onchange="renderB4PeriodCompare()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white"></select>
+                        <button onclick="setB4ComparePreset('completed')" class="text-xs font-bold px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100">1~최근 완료월</button>
+                        <button onclick="setB4ComparePreset('filter')" class="text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100">현재 필터 월 적용</button>
+                    </div>
+                </div>
+                <div id="b4PeriodCompareSummary" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+                <div id="b4PeriodCompareHeadline" class="mt-4 rounded-xl border border-teal-100 bg-teal-50/60 px-4 py-3 text-sm font-bold text-teal-900"></div>
+            </div>
+
             <!-- 차트 row 1: 배출량 추이 + 비용 추이 -->
             <div id="b4section-trend" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="bg-white rounded-xl p-6 card-shadow border border-slate-100 flex flex-col">
@@ -3484,6 +3506,198 @@
             <td class="p-3 text-right text-teal-900">${formatNumber(totalTripsUnique>0?totalWeight/totalTripsUnique:0)}Ton</td>
         </tr>`;
         document.getElementById('b4SummaryTableBody').innerHTML = html;
+
+        // 전년 동기간 합계 비교 컨트롤/카드 갱신
+        initB4PeriodCompareControls();
+        renderB4PeriodCompare();
+    }
+
+    // ── 전년 동기간 합계 비교 ──
+    function _b4CompareAvailableYears() {
+        return [...new Set((_b4DataFull || [])
+            .map(d => d.month && d.month.length === 4 ? '20' + d.month.substring(0,2) : null)
+            .filter(Boolean))].sort();
+    }
+
+    function _b4CompareMonthsForYear(year) {
+        return [...new Set((_b4DataFull || [])
+            .filter(d => d.month && d.month.length === 4 && ('20' + d.month.substring(0,2)) === String(year))
+            .map(d => d.month.substring(2,4)))].sort();
+    }
+
+    function initB4PeriodCompareControls() {
+        const prevSel = document.getElementById('b4ComparePrevYear');
+        const currSel = document.getElementById('b4CompareCurrYear');
+        const startSel = document.getElementById('b4CompareStartMonth');
+        const endSel = document.getElementById('b4CompareEndMonth');
+        if (!prevSel || !currSel || !startSel || !endSel) return;
+
+        const years = _b4CompareAvailableYears();
+        if (years.length < 2) {
+            document.getElementById('b4section-period-compare')?.classList.add('hidden');
+            return;
+        }
+        document.getElementById('b4section-period-compare')?.classList.remove('hidden');
+
+        const oldPrev = prevSel.value;
+        const oldCurr = currSel.value;
+        const options = years.map(y => `<option value="${y}">${y}년</option>`).join('');
+        prevSel.innerHTML = options;
+        currSel.innerHTML = options;
+
+        // 글로벌 년/월 필터에서 2개 연도가 선택돼 있으면 그 연도를 우선 사용
+        const selectedYM = (getFilterVals(tsMon) || []).filter(v => /^\d{4}$/.test(v));
+        const selectedYears = [...new Set(selectedYM.map(v => '20' + v.substring(0,2)))].sort();
+        const defaultPrev = selectedYears.length >= 2 ? selectedYears[selectedYears.length-2] : years[years.length-2];
+        const defaultCurr = selectedYears.length >= 2 ? selectedYears[selectedYears.length-1] : years[years.length-1];
+        prevSel.value = years.includes(oldPrev) ? oldPrev : defaultPrev;
+        currSel.value = years.includes(oldCurr) ? oldCurr : defaultCurr;
+        if (prevSel.value === currSel.value) prevSel.value = years[Math.max(0, years.indexOf(currSel.value)-1)];
+
+        const monthOpts = Array.from({length:12}, (_,i) => {
+            const mm = String(i+1).padStart(2,'0');
+            return `<option value="${mm}">${mm}월</option>`;
+        }).join('');
+        if (!startSel.options.length) startSel.innerHTML = monthOpts;
+        if (!endSel.options.length) endSel.innerHTML = monthOpts;
+
+        // 사용자가 글로벌 필터에서 01~08처럼 선택했다면 비교기간도 자동으로 그 범위를 따라감
+        const filterMMs = [...new Set(selectedYM.map(v => v.substring(2,4)))].sort();
+        if (!startSel.dataset.initialized) {
+            startSel.value = filterMMs.length ? filterMMs[0] : '01';
+            if (filterMMs.length) {
+                endSel.value = filterMMs[filterMMs.length-1];
+            } else {
+                const today = new Date();
+                let completed = today.getMonth(); // 9월이면 8 -> 08월
+                if (completed < 1) completed = 12;
+                const candidate = String(completed).padStart(2,'0');
+                const prevMonths = _b4CompareMonthsForYear(prevSel.value);
+                const currMonths = _b4CompareMonthsForYear(currSel.value);
+                const common = prevMonths.filter(m => currMonths.includes(m) && m <= candidate);
+                endSel.value = common.length ? common[common.length-1] : (currMonths[currMonths.length-1] || '12');
+            }
+            startSel.dataset.initialized = '1';
+            endSel.dataset.initialized = '1';
+        }
+    }
+
+    function setB4ComparePreset(type) {
+        const startSel = document.getElementById('b4CompareStartMonth');
+        const endSel = document.getElementById('b4CompareEndMonth');
+        const prevSel = document.getElementById('b4ComparePrevYear');
+        const currSel = document.getElementById('b4CompareCurrYear');
+        if (!startSel || !endSel || !prevSel || !currSel) return;
+        startSel.value = '01';
+        if (type === 'filter') {
+            const selectedYM = (getFilterVals(tsMon) || []).filter(v => /^\d{4}$/.test(v));
+            const mms = [...new Set(selectedYM.map(v => v.substring(2,4)))].sort();
+            const yrs = [...new Set(selectedYM.map(v => '20' + v.substring(0,2)))].sort();
+            if (yrs.length >= 2) {
+                prevSel.value = yrs[yrs.length-2];
+                currSel.value = yrs[yrs.length-1];
+            }
+            if (mms.length) {
+                startSel.value = mms[0];
+                endSel.value = mms[mms.length-1];
+            }
+        } else {
+            const today = new Date();
+            let completed = today.getMonth();
+            if (completed < 1) completed = 12;
+            const candidate = String(completed).padStart(2,'0');
+            const prevMonths = _b4CompareMonthsForYear(prevSel.value);
+            const currMonths = _b4CompareMonthsForYear(currSel.value);
+            const common = prevMonths.filter(m => currMonths.includes(m) && m <= candidate);
+            endSel.value = common.length ? common[common.length-1] : candidate;
+        }
+        renderB4PeriodCompare();
+    }
+
+    function getB4PeriodCompareData() {
+        const prevYear = document.getElementById('b4ComparePrevYear')?.value;
+        const currYear = document.getElementById('b4CompareCurrYear')?.value;
+        let startMM = document.getElementById('b4CompareStartMonth')?.value || '01';
+        let endMM = document.getElementById('b4CompareEndMonth')?.value || '12';
+        if (!prevYear || !currYear || !_b4DataFull?.length) return null;
+        if (startMM > endMM) [startMM, endMM] = [endMM, startMM];
+
+        const statFor = year => {
+            const rows = _b4DataFull.filter(d => {
+                if (!d.month || d.month.length !== 4) return false;
+                const yy = '20' + d.month.substring(0,2);
+                const mm = d.month.substring(2,4);
+                return yy === String(year) && mm >= startMM && mm <= endMM;
+            });
+            const weight = rows.reduce((s,d)=>s+(Number(d.weight)||0),0);
+            const cost = rows.reduce((s,d)=>s+(Number(d.totalRev)||0),0);
+            const trips = new Set(rows.map(d=>getTripKey(d))).size;
+            const activeMonths = new Set(rows.map(d=>d.month)).size;
+            return {
+                rows, weight, cost, trips, activeMonths,
+                perTrip: trips > 0 ? weight/trips : 0,
+                monthAvg: activeMonths > 0 ? weight/activeMonths : 0
+            };
+        };
+        return { prevYear, currYear, startMM, endMM, prev:statFor(prevYear), curr:statFor(currYear) };
+    }
+
+    function renderB4PeriodCompare() {
+        const wrap = document.getElementById('b4PeriodCompareSummary');
+        const headline = document.getElementById('b4PeriodCompareHeadline');
+        if (!wrap || !headline) return;
+        const cmp = getB4PeriodCompareData();
+        if (!cmp) {
+            wrap.innerHTML = '<p class="text-sm text-slate-400">비교 가능한 2개 연도 데이터가 필요합니다.</p>';
+            headline.textContent = '';
+            return;
+        }
+
+        const diffMeta = (a,b, unitFormatter) => {
+            const diff = b-a;
+            const pct = a !== 0 ? diff/a*100 : (b !== 0 ? null : 0);
+            const up = diff >= 0;
+            const pctText = pct === null ? '신규' : `${Math.abs(pct).toFixed(1)}%`;
+            return { diff, pct, up, pctText, text: `${up?'▲':'▼'} ${unitFormatter(Math.abs(diff))} (${pctText} ${up?'증가':'감소'})` };
+        };
+        const fT = v => `${Number(v).toFixed(1)}T`;
+        const fWon = v => `${Math.round(Number(v)).toLocaleString('ko-KR')}원`;
+        const fCnt = v => `${Math.round(Number(v)).toLocaleString('ko-KR')}회`;
+        const fPer = v => `${Number(v).toFixed(2)}T/회`;
+
+        const metrics = [
+            {title:'총 배출량', key:'weight', fmt:fT, diffFmt:fT},
+            {title:'총 처리 비용', key:'cost', fmt:fWon, diffFmt:fWon},
+            {title:'운반 횟수', key:'trips', fmt:fCnt, diffFmt:fCnt},
+            {title:'회당 평균 중량', key:'perTrip', fmt:fPer, diffFmt:fPer},
+        ];
+        wrap.innerHTML = metrics.map(m => {
+            const p = cmp.prev[m.key] || 0, c = cmp.curr[m.key] || 0;
+            const dm = diffMeta(p,c,m.diffFmt);
+            const diffColor = dm.up ? 'text-emerald-700' : 'text-red-700';
+            return `<div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <p class="text-xs font-bold text-slate-500 mb-3">${m.title}</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="rounded-lg bg-white border border-slate-200 p-3 text-center">
+                        <p class="text-[11px] text-slate-400">${cmp.prevYear}년</p>
+                        <p class="text-lg font-extrabold text-slate-700 mt-1">${m.fmt(p)}</p>
+                    </div>
+                    <div class="rounded-lg bg-white border border-teal-200 p-3 text-center">
+                        <p class="text-[11px] text-teal-500">${cmp.currYear}년</p>
+                        <p class="text-lg font-extrabold text-teal-700 mt-1">${m.fmt(c)}</p>
+                    </div>
+                </div>
+                <p class="text-sm font-extrabold text-center mt-3 ${diffColor}">${dm.text}</p>
+            </div>`;
+        }).join('');
+
+        const wDiff = cmp.curr.weight - cmp.prev.weight;
+        const wPct = cmp.prev.weight > 0 ? (wDiff/cmp.prev.weight*100) : null;
+        const direction = wDiff >= 0 ? '증가' : '감소';
+        headline.innerHTML = `<span class="text-slate-500 mr-2">비교기간</span>
+            ${cmp.prevYear}년 ${cmp.startMM}~${cmp.endMM}월 <span class="text-slate-400 mx-1">vs</span> ${cmp.currYear}년 ${cmp.startMM}~${cmp.endMM}월
+            <span class="mx-3 text-teal-300">|</span>
+            총 배출량 ${direction}: <span class="${wDiff>=0?'text-emerald-700':'text-red-700'}">${wDiff>=0?'▲':'▼'} ${Math.abs(wDiff).toFixed(1)}T${wPct===null?'':` (${Math.abs(wPct).toFixed(1)}%)`}</span>`;
     }
 
     // ── YoY 차트 ──
@@ -5017,9 +5231,12 @@
             const _yoyYears = new Set();
             _b4DataFull.forEach(d => { if (d.month && d.month.length === 4) _yoyYears.add(d.month.substring(0,2)); });
             const canYoY = _yoyYears.size >= 2;
+            const periodCmp = getB4PeriodCompareData();
+            const hasPeriodCmp = !!(periodCmp && periodCmp.prev && periodCmp.curr);
             let totalPages = 2; // 표지 + 요약
             if (wChart) totalPages++;
             if (cChart) totalPages++;
+            if (hasPeriodCmp) totalPages++; // 전년 동기간 합계 비교
             if (canYoY) totalPages++;  // YoY 표 슬라이드
             if (yChart) totalPages++;
             if (dTotal || dAvg) totalPages++;
@@ -5224,6 +5441,55 @@ ${wMaxStr}에 발생량이 가장 많았던 만큼 해당 시기의 생산·운�
             }
 
             // ════════════════════════════════════════════
+            // 슬라이드: 전년 동기간 합계 비교
+            // ════════════════════════════════════════════
+            if (hasPeriodCmp) {
+                const s = pptx.addSlide();
+                s.background = { color: C.white };
+                addHeaderBar(s, '전년 동기간 합계 비교');
+
+                const pc = periodCmp;
+                s.addText(`${pc.prevYear}년 ${pc.startMM}~${pc.endMM}월  vs  ${pc.currYear}년 ${pc.startMM}~${pc.endMM}월`, {
+                    x:0.55, y:1.02, w:12.2, h:0.45, fontFace:FONT_KO, fontSize:16, bold:true, color:C.navy, align:'center'
+                });
+                s.addText('업체·차량·폐기물 필터는 동일하게 적용하고, 두 연도의 같은 월 구간 합계를 비교합니다.', {
+                    x:0.7, y:1.48, w:11.9, h:0.3, fontFace:FONT_KO, fontSize:9.5, color:C.textLight, align:'center'
+                });
+
+                const pctText = (prev,curr) => prev > 0 ? `${((curr-prev)/prev*100)>=0?'+':''}${((curr-prev)/prev*100).toFixed(1)}%` : (curr>0?'신규':'0.0%');
+                const metrics = [
+                    { label:'총 배출량', p:pc.prev.weight, c:pc.curr.weight, fmt:v=>`${v.toFixed(1)}T`, color:C.navy },
+                    { label:'총 처리 비용', p:pc.prev.cost, c:pc.curr.cost, fmt:v=>`${Math.round(v/10000).toLocaleString()}만원`, color:C.blue },
+                    { label:'운반 횟수', p:pc.prev.trips, c:pc.curr.trips, fmt:v=>`${Math.round(v)}회`, color:C.green },
+                    { label:'회당 평균 중량', p:pc.prev.perTrip, c:pc.curr.perTrip, fmt:v=>`${v.toFixed(2)}T/회`, color:C.orange },
+                ];
+                metrics.forEach((m,i) => {
+                    const x = 0.55 + i*3.15;
+                    const diff = m.c - m.p;
+                    const up = diff >= 0;
+                    s.addShape(pptx.ShapeType.roundRect, { x, y:2.0, w:2.95, h:3.15, fill:{color:C.cardBg}, line:{color:'D7DEE8',pt:0.7}, rectRadius:0.12 });
+                    s.addShape(pptx.ShapeType.rect, { x, y:2.0, w:2.95, h:0.08, fill:{color:m.color}, line:{type:'none'} });
+                    s.addText(m.label, { x:x+0.18,y:2.25,w:2.6,h:0.35,fontFace:FONT_KO,fontSize:12,bold:true,color:C.textLight,align:'center' });
+                    s.addText(`${pc.prevYear}년`, { x:x+0.2,y:2.75,w:1.1,h:0.28,fontFace:FONT_KO,fontSize:9,color:C.textLight,align:'center' });
+                    s.addText(`${pc.currYear}년`, { x:x+1.65,y:2.75,w:1.1,h:0.28,fontFace:FONT_KO,fontSize:9,color:C.textLight,align:'center' });
+                    s.addText(m.fmt(m.p), { x:x+0.15,y:3.08,w:1.25,h:0.55,fontFace:FONT_KO,fontSize:17,bold:true,color:C.text,align:'center' });
+                    s.addText(m.fmt(m.c), { x:x+1.55,y:3.08,w:1.25,h:0.55,fontFace:FONT_KO,fontSize:17,bold:true,color:m.color,align:'center' });
+                    s.addText(`${up?'▲':'▼'} ${pctText(m.p,m.c)}`, { x:x+0.2,y:4.15,w:2.55,h:0.5,fontFace:FONT_KO,fontSize:15,bold:true,color:up?'065F46':'991B1B',align:'center' });
+                });
+
+                const wDiff = pc.curr.weight - pc.prev.weight;
+                const wPct = pc.prev.weight > 0 ? Math.abs(wDiff/pc.prev.weight*100).toFixed(1) : '-';
+                s.addShape(pptx.ShapeType.roundRect, { x:0.7,y:5.55,w:11.95,h:0.85,fill:{color:C.bg},line:{type:'none'},rectRadius:0.08 });
+                s.addText(
+                    `${pc.currYear}년 동기간 총 배출량은 ${pc.prevYear}년 대비 ${wDiff>=0?'증가':'감소'}했습니다.  ${Math.abs(wDiff).toFixed(1)}T / ${wPct}% ${wDiff>=0?'증가':'감소'}`,
+                    { x:0.95,y:5.75,w:11.45,h:0.4,fontFace:FONT_KO,fontSize:15,bold:true,color:wDiff>=0?'065F46':'991B1B',align:'center',valign:'middle' }
+                );
+
+                s.addNotes(`[전년 동기간 합계 비교 브리핑]\n\n${pc.prevYear}년 ${pc.startMM}~${pc.endMM}월과 ${pc.currYear}년 같은 기간의 합계 비교입니다.\n총 배출량은 ${pc.prev.weight.toFixed(1)}T에서 ${pc.curr.weight.toFixed(1)}T로 ${wDiff>=0?'증가':'감소'}했습니다. 운반 횟수는 ${pc.prev.trips}회에서 ${pc.curr.trips}회, 회당 평균 중량은 ${pc.prev.perTrip.toFixed(2)}T/회에서 ${pc.curr.perTrip.toFixed(2)}T/회입니다.`);
+                addFooter(s, pageNum++, totalPages);
+            }
+
+            // ════════════════════════════════════════════
             // 슬라이드: 전년 동월 대비 상세 비교 (배출량 + 비용 표)
             // ════════════════════════════════════════════
             if (canYoY) {
@@ -5251,7 +5517,7 @@ ${wMaxStr}에 발생량이 가장 많았던 만큼 해당 시기의 생산·운�
                 const currYY = sortedYY[sortedYY.length - 1];
 
                 // 표시할 월 (필터 적용 시 그 월만)
-                const selMMs = (getFilterVals(tsMon) || []).map(m => m.slice(2,4));
+                const selMMs = [...new Set((getFilterVals(tsMon) || []).map(m => m.slice(2,4)))];
                 const months = (selMMs.length ? selMMs : Object.keys(monthMap)).sort();
 
                 // 표 데이터 생성 함수
@@ -5425,8 +5691,8 @@ ${insightYoY}`
                     if (!yoyData[mm][yy]) yoyData[mm][yy] = 0;
                     yoyData[mm][yy] += d.weight;
                 });
-                const yoySelMMs = (getFilterVals(tsMon) || []).map(m=>m.slice(2,4));
-                const yoyMMs = yoySelMMs.length ? yoySelMMs : Object.keys(yoyData).sort();
+                const yoySelMMs = [...new Set((getFilterVals(tsMon) || []).map(m=>m.slice(2,4)))];
+                const yoyMMs = yoySelMMs.length ? yoySelMMs.sort() : Object.keys(yoyData).sort();
                 let yIdx = 0;
                 yoyMMs.slice(0,5).forEach(mm => {
                     const yrs = Object.keys(yoyData[mm]||{}).sort();
