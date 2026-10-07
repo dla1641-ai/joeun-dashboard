@@ -505,6 +505,7 @@
         <div class="flex items-end gap-4 border-b border-teal-200 min-w-max">
             <button id="btnTab1" onclick="switchTab(1)" class="px-6 py-3 font-bold text-teal-700 bg-white border border-b-0 border-teal-200 rounded-t-xl transition-all -mb-[1px]">전체 매출 현황</button>
             <button id="btnTab2" onclick="switchTab(2)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">고객사별 트렌드</button>
+            <button id="btnTab8" onclick="switchTab(8)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">🔗 고객사·처리장 계약현황</button>
             <button id="btnTab3" onclick="switchTab(3)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">차량별 실적 현황</button>
             <button id="btnTab4" onclick="switchTab(4)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">📋 고객사 브리핑</button>
             <button id="btnTab5" onclick="switchTab(5)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">🚛 운반자 실적 · 도급비</button>
@@ -649,38 +650,6 @@
                     <h3 id="avgWeightCard" class="text-2xl font-bold text-slate-900">0.0<span class="text-base font-normal text-slate-500 ml-1">Ton</span></h3>
                 </div>
             </div>
-            <!-- 고객사 계약 연결 현황 · DB RAW 기준 -->
-            <section class="bg-white rounded-xl p-5 card-shadow border border-slate-100" id="commercialContractSection">
-                <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-                    <div>
-                        <h2 class="text-lg font-bold text-slate-800">🔗 고객사별 처리장 계약 현황</h2>
-                        <p class="text-xs text-slate-500 mt-1">DB RAW 계약 등록 기준 · 고객사+폐기물 단위 단일/복수 처리장 모니터링 (실제 계약 유효성은 별도 확인)</p>
-                    </div>
-                    <button type="button" onclick="loadCommercialContractData(true)" class="px-3 py-2 rounded-lg border border-teal-200 text-teal-700 font-bold text-xs hover:bg-teal-50">↻ 계약 DB 갱신</button>
-                </div>
-                <p id="commercialContractStatus" class="text-xs text-slate-500 mb-3">계약 DB 연결 준비 중...</p>
-                <div id="commercialSelectedContract" class="mb-4 rounded-xl border border-teal-100 bg-teal-50/50 p-4 text-sm text-slate-700">고객사를 선택하면 해당 업체의 계약 처리장 현황이 표시됩니다.</div>
-                <div class="flex flex-wrap gap-2 items-end mb-3">
-                    <label class="text-xs font-bold text-slate-600 flex flex-col gap-1">처리장 역조회
-                        <select id="commercialContractPlant" onchange="renderCommercialContractView()" class="rounded-lg border border-slate-200 bg-white p-2 min-w-[180px] text-sm"><option value="">전체 처리장</option></select>
-                    </label>
-                    <label class="text-xs font-bold text-slate-600 flex flex-col gap-1">고객사 / 폐기물 / 계약코드 검색
-                        <input id="commercialContractSearch" oninput="renderCommercialContractView()" class="rounded-lg border border-slate-200 p-2 min-w-[230px] text-sm" placeholder="업체명·폐기물·계약코드" />
-                    </label>
-                    <label class="inline-flex gap-1.5 items-center px-3 py-2.5 rounded-lg border border-orange-200 bg-orange-50 text-sm font-bold text-orange-800 cursor-pointer">
-                        <input id="commercialSingleOnly" type="checkbox" onchange="renderCommercialContractView()" /> 단일 처리장 계약만
-                    </label>
-                </div>
-                <div id="commercialContractStats" class="text-xs text-slate-500 mb-2"></div>
-                <div class="max-h-[420px] overflow-auto border border-slate-200 rounded-lg">
-                    <table class="w-full text-sm border-collapse min-w-[780px]">
-                        <thead class="sticky top-0 bg-slate-100 z-[1] text-slate-700"><tr><th class="p-2 text-left">고객사 / 폐기물</th><th class="p-2 text-left">계약 처리장</th><th class="p-2 text-center">구분</th><th class="p-2 text-left">계약코드 · 처리단가 · 계약시기</th><th class="p-2 text-center">실적 보기</th></tr></thead>
-                        <tbody id="commercialContractBody"><tr><td colspan="5" class="p-4 text-center text-slate-400">계약 DB 로딩 중...</td></tr></tbody>
-                    </table>
-                </div>
-                <p class="text-xs text-amber-700 mt-2">⚠️ DB 등록 건수 기준입니다. 계약 만료·실효 여부는 자동 판정하지 않으며, 단일 처리장 표시는 추가 계약 검토 대상입니다.</p>
-            </section>
-
             <!-- 선택 기간 발생량 구성 및 월별 추적 -->
             <section class="bg-white rounded-xl p-5 card-shadow border border-slate-100" id="commercialVolumeSection">
                 <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
@@ -1861,6 +1830,47 @@
             <div id="stmtPdfMount" aria-hidden="true"></div>
         </div>
 
+        <!-- 탭8: 고객사·처리장 계약 현황 · 별도 DB RAW 모니터링 -->
+        <div id="tab8-content" class="hidden space-y-5">
+            <div class="flex flex-wrap justify-between items-start gap-3">
+                <div><h2 class="text-xl font-bold text-teal-900">고객사 · 처리장 계약 모니터링</h2>
+                <p class="text-sm text-slate-500 mt-1">계약 현황을 별도 화면에서 조회합니다. 상단 고객사 필터와 아래 처리장·검색·단일계약 필터를 활용하세요.</p></div>
+                <button type="button" onclick="switchTab(2)" class="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-100">← 고객사별 트렌드로</button>
+            </div>
+            <!-- 고객사 계약 연결 현황 · DB RAW 기준 -->
+            <section class="bg-white rounded-xl p-5 card-shadow border border-slate-100" id="commercialContractSection">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">🔗 고객사별 처리장 계약 현황</h2>
+                        <p class="text-xs text-slate-500 mt-1">DB RAW 계약 등록 기준 · 고객사+폐기물 단위 단일/복수 처리장 모니터링 (실제 계약 유효성은 별도 확인)</p>
+                    </div>
+                    <button type="button" onclick="loadCommercialContractData(true)" class="px-3 py-2 rounded-lg border border-teal-200 text-teal-700 font-bold text-xs hover:bg-teal-50">↻ 계약 DB 갱신</button>
+                </div>
+                <p id="commercialContractStatus" class="text-xs text-slate-500 mb-3">계약 DB 연결 준비 중...</p>
+                <div id="commercialSelectedContract" class="mb-4 rounded-xl border border-teal-100 bg-teal-50/50 p-4 text-sm text-slate-700">고객사를 선택하면 해당 업체의 계약 처리장 현황이 표시됩니다.</div>
+                <div class="flex flex-wrap gap-2 items-end mb-3">
+                    <label class="text-xs font-bold text-slate-600 flex flex-col gap-1">처리장 역조회
+                        <select id="commercialContractPlant" onchange="renderCommercialContractView()" class="rounded-lg border border-slate-200 bg-white p-2 min-w-[180px] text-sm"><option value="">전체 처리장</option></select>
+                    </label>
+                    <label class="text-xs font-bold text-slate-600 flex flex-col gap-1">고객사 / 폐기물 / 계약코드 검색
+                        <input id="commercialContractSearch" oninput="renderCommercialContractView()" class="rounded-lg border border-slate-200 p-2 min-w-[230px] text-sm" placeholder="업체명·폐기물·계약코드" />
+                    </label>
+                    <label class="inline-flex gap-1.5 items-center px-3 py-2.5 rounded-lg border border-orange-200 bg-orange-50 text-sm font-bold text-orange-800 cursor-pointer">
+                        <input id="commercialSingleOnly" type="checkbox" onchange="renderCommercialContractView()" /> 단일 처리장 계약만
+                    </label>
+                </div>
+                <div id="commercialContractStats" class="text-xs text-slate-500 mb-2"></div>
+                <div class="max-h-[420px] overflow-auto border border-slate-200 rounded-lg">
+                    <table class="w-full text-sm border-collapse min-w-[780px]">
+                        <thead class="sticky top-0 bg-slate-100 z-[1] text-slate-700"><tr><th class="p-2 text-left">고객사 / 폐기물</th><th class="p-2 text-left">계약 처리장</th><th class="p-2 text-center">구분</th><th class="p-2 text-left">계약코드 · 처리단가 · 계약시기</th><th class="p-2 text-center">실적 보기</th></tr></thead>
+                        <tbody id="commercialContractBody"><tr><td colspan="5" class="p-4 text-center text-slate-400">계약 DB 로딩 중...</td></tr></tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-amber-700 mt-2">⚠️ DB 등록 건수 기준입니다. 계약 만료·실효 여부는 자동 판정하지 않으며, 단일 처리장 표시는 추가 계약 검토 대상입니다.</p>
+            </section>
+
+        </div>
+
     </main>
 </div>
 
@@ -2527,7 +2537,7 @@
 
     // ── 애니메이션 트리거 ──
     function animateDashboard() {
-        const containers = ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content'];
+        const containers = ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab8-content'];
         containers.forEach(id => {
             const el = document.getElementById(id);
             if (!el.classList.contains('hidden')) {
@@ -2556,7 +2566,7 @@
         currentTab = tabId;
         const active = "px-6 py-3 font-bold text-teal-700 bg-white border border-b-0 border-teal-200 rounded-t-xl transition-all -mb-[1px]";
         const inactive = "px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]";
-        [1,2,3,4,5,6,7].forEach(i => {
+        [1,2,3,4,5,6,7,8].forEach(i => {
             const btn = document.getElementById(`btnTab${i}`);
             const pane = document.getElementById(`tab${i}-content`);
             if (btn) btn.className = i === tabId ? active : inactive;
@@ -2574,8 +2584,9 @@
         if (tabId !== 6 && tabId !== 7) {
             const filterBlocks = document.querySelectorAll('#globalFilterPanel > div:first-child > .flex.flex-col');
             filterBlocks.forEach((el, idx) => {
-                // 업체명(0), 폐기물명(2)만 탭5에서 숨김
-                if (idx === 0 || idx === 2 || idx === 3) el.style.display = tabId === 5 ? 'none' : '';
+                // 탭8에는 고객사 필터만 표시. 처리장 역조회는 계약 현황 내 선택창 활용.
+                if (tabId === 8) el.style.display = idx === 0 ? '' : 'none';
+                else if (idx === 0 || idx === 2 || idx === 3) el.style.display = tabId === 5 ? 'none' : '';
                 else el.style.display = '';
             });
         }
@@ -2749,7 +2760,7 @@
         if (loginGuide) {
             if (!_currentUserEmail) {
                 loginGuide.classList.remove('hidden');
-                ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content'].forEach(id => {
+                ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content','tab8-content'].forEach(id => {
                     const el = document.getElementById(id); if(el) el.classList.add('hidden');
                 });
                 return;
@@ -2762,7 +2773,7 @@
         if (currentTab === 6) {
             const noDataMsg = document.getElementById('noDataMessage');
             if (noDataMsg) noDataMsg.classList.add('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content'].forEach(id => {
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab8-content'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.classList.add('hidden');
             });
             const ct = document.getElementById('tab6-content');
@@ -2775,12 +2786,25 @@
         if (currentTab === 7) {
             const noDataMsg = document.getElementById('noDataMessage');
             if (noDataMsg) noDataMsg.classList.add('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content'].forEach(id => {
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab8-content'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.classList.add('hidden');
             });
             const pane = document.getElementById('tab7-content');
             if (pane) pane.classList.remove('hidden');
             stmtInit();
+            return;
+        }
+
+        // 계약 현황은 별도 DB RAW를 읽으므로 매출 데이터 유무/월별 필터와 독립적입니다.
+        if (currentTab === 8) {
+            const noDataMsg = document.getElementById('noDataMessage');
+            if (noDataMsg) noDataMsg.classList.add('hidden');
+            [1,2,3,4,5,6,7].forEach(i => document.getElementById(`tab${i}-content`)?.classList.add('hidden'));
+            document.getElementById('tab8-content')?.classList.remove('hidden');
+            renderCommercialContractView();
+            if (!_commercialContractsLoaded) {
+                loadCommercialContractData().catch(e => console.warn('계약 현황 로드 실패', e));
+            }
             return;
         }
 
@@ -2796,7 +2820,7 @@
         if (currentTab === 5) {
             const noDataMsg = document.getElementById('noDataMessage');
             if (noDataMsg) noDataMsg.classList.add('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab6-content','tab7-content'].forEach(id => {
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab6-content','tab7-content','tab8-content'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.classList.add('hidden');
             });
             const pane = document.getElementById('tab5-content');
@@ -2817,7 +2841,7 @@
         const noDataMsg = document.getElementById('noDataMessage');
         if (filtered.length === 0) {
             noDataMsg.classList.remove('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content','tab8-content'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
             return;
         }
         noDataMsg.classList.add('hidden');
@@ -2854,7 +2878,6 @@
             renderTrendCharts(filtered);
             renderContributionChart(filtered);
             renderCommercialVolume(filtered);
-            renderCommercialContractView();
             renderComparisonTable(custVals, vehVals, wasteVals, monVals, yearVals);
         }
         if (currentTab === 3) renderVehicleTab(filtered);
@@ -3451,7 +3474,7 @@ const plantValues = getFilterVals(tsPlant);
         const search=String(document.getElementById('commercialContractSearch')?.value||'').trim().toLowerCase();
         const single=!!document.getElementById('commercialSingleOnly')?.checked;
         const localPlant=String(document.getElementById('commercialContractPlant')?.value||'');
-        const globalPlants=getFilterVals(tsPlant);
+        const globalPlants=currentTab===8?[]:getFilterVals(tsPlant);
         const view=focused.filter(g=>(!single||g.plantCount===1) && (!localPlant || g.plantNames.includes(localPlant)) && (!globalPlants.length || g.plantNames.some(p=>globalPlants.includes(p))) && (!search || [g.customer,g.waste,g.plantNames.join(' '),...g.items.map(x=>x.id)].join(' ').toLowerCase().includes(search)))
             .sort((a,b)=>(a.plantCount===1?-1:1)-(b.plantCount===1?-1:1)||a.customer.localeCompare(b.customer,'ko'))
             .map(g=>({...g,visibleItems:g.items.filter(x=>(!localPlant||x.plant===localPlant)&&(!globalPlants.length||globalPlants.includes(x.plant)))}));
@@ -3464,7 +3487,7 @@ const plantValues = getFilterVals(tsPlant);
             <td class="p-2">${g.plantNames.map(p=>`<span class="inline-block px-2 py-1 rounded-md border border-slate-200 bg-white text-xs mr-1 mb-1">${commercialEsc(p)}</span>`).join('')}</td>
             <td class="p-2 text-center"><span class="inline-block whitespace-nowrap rounded-full text-xs font-bold px-2 py-1 ${g.plantCount===1?'bg-orange-100 text-orange-800':'bg-emerald-100 text-emerald-700'}">${g.plantCount===1?'단일 · 추가계약 검토':`복수 ${g.plantCount}곳`}</span></td>
             <td class="p-2 text-xs">${g.visibleItems.slice(0,3).map(contractLine).join('')}${g.visibleItems.length>3?`<details class="mt-1"><summary class="cursor-pointer font-bold text-teal-700">추가 계약 ${g.visibleItems.length-3}건 펼치기</summary>${g.visibleItems.slice(3).map(contractLine).join('')}</details>`:''}</td>
-            <td class="p-2 text-center"><button type="button" onclick="commercialFocusCustomer(${i})" class="text-teal-700 font-bold text-xs underline">고객사 선택</button></td>
+            <td class="p-2 text-center"><button type="button" onclick="commercialFocusCustomer(${i})" class="text-teal-700 font-bold text-xs underline">고객사 실적 보기</button></td>
         </tr>`).join(''):'<tr><td colspan="5" class="p-5 text-center text-slate-500">일치하는 계약 정보가 없습니다.</td></tr>';
     }
     function renderCommercialVolume(data){
