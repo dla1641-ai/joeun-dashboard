@@ -439,6 +439,11 @@
                         <label class="text-xs font-bold text-teal-700">♻️ 폐기물명</label>
                         <select id="filterWaste" multiple placeholder="전체"></select>
                     </div>
+                    <!-- 처리장명: 원본 처리수입현황 M열 -->
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-bold text-teal-700">🏭 처리장명</label>
+                        <select id="filterProcessor" multiple placeholder="전체"></select>
+                    </div>
                     <!-- 년/월 -->
                     <div class="flex flex-col gap-1">
                         <label class="text-xs font-bold text-teal-700">📅 년/월</label>
@@ -616,11 +621,16 @@
                 <span style="font-size:18px;animation:spin 1s linear infinite;display:inline-block;">⏳</span>
                 <p class="text-sm text-teal-600 font-medium">AI가 데이터를 분석 중입니다...</p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
                 <div class="bg-white rounded-xl p-6 card-shadow border-l-4 border-teal-600">
                     <p class="text-sm font-semibold text-slate-500 mb-1">총매출액 (해당구간)</p>
                     <h3 id="sumTotalRevCard" class="text-2xl font-bold text-slate-900">0<span class="text-base font-normal text-slate-500 ml-1">원</span></h3>
                     <p class="text-xs text-teal-600 font-bold mt-2"><span id="tripCount">0</span>건 배차</p>
+                </div>
+                <div class="bg-white rounded-xl p-6 card-shadow border-l-4 border-green-600">
+                    <p class="text-sm font-semibold text-slate-500 mb-1">총순매출액 (해당구간)</p>
+                    <h3 id="sumNetRevCard" class="text-2xl font-bold text-slate-900">0<span class="text-base font-normal text-slate-500 ml-1">원</span></h3>
+                    <p class="text-xs text-green-600 font-bold mt-2">처리수입현황 순매출액 합계</p>
                 </div>
                 <div class="bg-white rounded-xl p-6 card-shadow border-l-4 border-sky-500">
                     <p class="text-sm font-semibold text-slate-500 mb-1">월 평균 수거 횟수</p>
@@ -639,6 +649,65 @@
                     <h3 id="avgWeightCard" class="text-2xl font-bold text-slate-900">0.0<span class="text-base font-normal text-slate-500 ml-1">Ton</span></h3>
                 </div>
             </div>
+            <!-- 고객사 계약 연결 현황 · DB RAW 기준 -->
+            <section class="bg-white rounded-xl p-5 card-shadow border border-slate-100" id="commercialContractSection">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">🔗 고객사별 처리장 계약 현황</h2>
+                        <p class="text-xs text-slate-500 mt-1">DB RAW 계약 등록 기준 · 고객사+폐기물 단위 단일/복수 처리장 모니터링 (실제 계약 유효성은 별도 확인)</p>
+                    </div>
+                    <button type="button" onclick="loadCommercialContractData(true)" class="px-3 py-2 rounded-lg border border-teal-200 text-teal-700 font-bold text-xs hover:bg-teal-50">↻ 계약 DB 갱신</button>
+                </div>
+                <p id="commercialContractStatus" class="text-xs text-slate-500 mb-3">계약 DB 연결 준비 중...</p>
+                <div id="commercialSelectedContract" class="mb-4 rounded-xl border border-teal-100 bg-teal-50/50 p-4 text-sm text-slate-700">고객사를 선택하면 해당 업체의 계약 처리장 현황이 표시됩니다.</div>
+                <div class="flex flex-wrap gap-2 items-end mb-3">
+                    <label class="text-xs font-bold text-slate-600 flex flex-col gap-1">처리장 역조회
+                        <select id="commercialContractPlant" onchange="renderCommercialContractView()" class="rounded-lg border border-slate-200 bg-white p-2 min-w-[180px] text-sm"><option value="">전체 처리장</option></select>
+                    </label>
+                    <label class="text-xs font-bold text-slate-600 flex flex-col gap-1">고객사 / 폐기물 / 계약코드 검색
+                        <input id="commercialContractSearch" oninput="renderCommercialContractView()" class="rounded-lg border border-slate-200 p-2 min-w-[230px] text-sm" placeholder="업체명·폐기물·계약코드" />
+                    </label>
+                    <label class="inline-flex gap-1.5 items-center px-3 py-2.5 rounded-lg border border-orange-200 bg-orange-50 text-sm font-bold text-orange-800 cursor-pointer">
+                        <input id="commercialSingleOnly" type="checkbox" onchange="renderCommercialContractView()" /> 단일 처리장 계약만
+                    </label>
+                </div>
+                <div id="commercialContractStats" class="text-xs text-slate-500 mb-2"></div>
+                <div class="max-h-[420px] overflow-auto border border-slate-200 rounded-lg">
+                    <table class="w-full text-sm border-collapse min-w-[780px]">
+                        <thead class="sticky top-0 bg-slate-100 z-[1] text-slate-700"><tr><th class="p-2 text-left">고객사 / 폐기물</th><th class="p-2 text-left">계약 처리장</th><th class="p-2 text-center">구분</th><th class="p-2 text-left">계약코드 · 처리단가 · 계약시기</th><th class="p-2 text-center">실적 보기</th></tr></thead>
+                        <tbody id="commercialContractBody"><tr><td colspan="5" class="p-4 text-center text-slate-400">계약 DB 로딩 중...</td></tr></tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-amber-700 mt-2">⚠️ DB 등록 건수 기준입니다. 계약 만료·실효 여부는 자동 판정하지 않으며, 단일 처리장 표시는 추가 계약 검토 대상입니다.</p>
+            </section>
+
+            <!-- 선택 기간 발생량 구성 및 월별 추적 -->
+            <section class="bg-white rounded-xl p-5 card-shadow border border-slate-100" id="commercialVolumeSection">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <div><h2 class="text-lg font-bold text-slate-800">📦 발생량 분석 · 폐기물 / 처리장</h2><p class="text-xs text-slate-500 mt-1">선택 기간 실적 중량(T) 기준 구성비 · 물량 협의 및 영업 타깃 검토용</p></div>
+                    <span id="commercialVolumeSummary" class="text-xs font-bold text-teal-700"></span>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
+                    <div class="border border-slate-200 rounded-xl p-3">
+                        <h3 class="font-bold text-sm text-slate-800 mb-2">♻️ 폐기물별 발생량 · 비중</h3>
+                        <div class="max-h-[370px] overflow-auto"><table class="w-full text-xs"><thead><tr class="bg-teal-50 text-teal-900"><th class="p-2 text-left">폐기물</th><th class="p-2 text-right">물량(T)</th><th class="p-2 text-right">비중</th><th class="p-2 text-right">총매출(원)</th></tr></thead><tbody id="commercialWasteBody"></tbody></table></div>
+                    </div>
+                    <div class="border border-slate-200 rounded-xl p-3">
+                        <h3 class="font-bold text-sm text-slate-800 mb-2">🏭 처리장별 발생량 · 비중</h3>
+                        <div class="max-h-[370px] overflow-auto"><table class="w-full text-xs"><thead><tr class="bg-sky-50 text-sky-900"><th class="p-2 text-left">처리장</th><th class="p-2 text-right">물량(T)</th><th class="p-2 text-right">비중</th><th class="p-2 text-right">처리비(원)</th><th class="p-2 text-right">평균 처리비/T</th></tr></thead><tbody id="commercialPlantBody"></tbody></table></div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 class="font-bold text-sm text-slate-800">📈 월별 발생량 추적</h3>
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-600">분석 기준
+                        <select id="commercialVolumeDimension" onchange="renderCommercialVolume(window._commercialFilteredRows || [])" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                            <option value="waste">폐기물별</option><option value="processor">처리장별</option><option value="both">폐기물 × 처리장</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="relative w-full h-[290px]"><canvas id="commercialVolumeTrendChart"></canvas></div>
+                <p class="text-xs text-slate-400 mt-2">발생량은 처리수입현황 I열 중량(T), 처리장은 M열 기준입니다. 상위 6개 항목과 나머지를 구분합니다. 평균 처리비/T는 처리수입현황 P열 처리비 합계 ÷ 해당 물량으로 참고용 실효값이며 계약서상의 처리단가와 다를 수 있습니다.</p>
+            </section>
             <!-- 업체 기여도 도넛 차트 -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="bg-white rounded-xl p-6 card-shadow border border-slate-100 flex flex-col">
@@ -1977,7 +2046,7 @@
         const statusEl = document.getElementById('dataStatusText');
         if (statusEl) statusEl.textContent = '📊 데이터 불러오는 중...';
 
-        const range = encodeURIComponent(`${CONFIG.SHEET_TAB}!A:P`);
+        const range = encodeURIComponent(`${CONFIG.SHEET_TAB}!A:U`);
         const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?key=${CONFIG.API_KEY}`;
 
         try {
@@ -1997,7 +2066,7 @@
             // 헤더 공백/개행 차이에도 안정적으로 매핑 (예: '수행 일자', '년 월')
             const normHeaders = headers.map(h => String(h||'').replace(/\s+/g,'').trim());
             const idxMonth      = normHeaders.findIndex(h => h.includes('년/월') || h.includes('년월'));
-            // 매출인식 일자 (D열) - '매출인식'이 포함된 컬럼 우선
+// 매출인식 일자 (D열) - '매출인식'이 포함된 컬럼 우선
             const idxAcctDate   = normHeaders.findIndex(h => h.includes('매출인식'));
             // 수행일자 (E열) - '수행일' 또는 단순 '일자' (매출인식 제외)
             const idxPerformDate = normHeaders.findIndex((h, i) =>
@@ -2008,6 +2077,10 @@
             const idxWeight  = normHeaders.findIndex(h => h.includes('중량'));
             const idxTotal   = normHeaders.findIndex(h => h.includes('총매출액'));
             const idxNet     = normHeaders.findIndex(h => h.includes('순매출액'));
+            const idxProcessingCost = normHeaders.findIndex(h => h === '처리비' || h === '처리비용');
+            // 2026-10: M열 처리장. 헤더를 우선 탐색하고, 헤더가 누락된 경우 M열(12)을 사용.
+            const idxProcessor = normHeaders.findIndex(h => h === '처리장' || h === '처리장명');
+            const processorCol = idxProcessor >= 0 ? idxProcessor : 12;
             // 차량번호: 여러 패턴으로 검색, 모두 실패하면 C열(2) 고정
             let idxVehicle = normHeaders.findIndex(h => h.includes('차량번호'));
             if (idxVehicle === -1) idxVehicle = normHeaders.findIndex(h => h.includes('차량'));
@@ -2082,9 +2155,11 @@
                         tripDate: performDate,
                         customer: String(r[idxCust]   || '').trim(),
                         waste:    String(r[idxWaste]  || '미상').trim(),
+                        processor: String(r[processorCol] || '미등록').trim() || '미등록',
                         weight:   parseNum(r[idxWeight]),
                         totalRev: parseNum(r[idxTotal]),
                         netRev:   parseNum(r[idxNet]),
+                        processingCost: idxProcessingCost >= 0 && r[idxProcessingCost] !== '' && r[idxProcessingCost] != null ? parseNum(r[idxProcessingCost]) : null,
                         vehicle:  String(r[idxVehicle] || '미상').trim(),
                     };
                 });
@@ -2094,6 +2169,7 @@
 
             // applyBasis()에서 현재 기준(수행일/매출인식)의 실제 로드 건수와 제외 건수를 표시한다.
             loadDogupData();
+            loadCommercialContractData().catch(e => console.warn('계약 DB 보조 로드 실패',e));
         } catch(e) {
             if (statusEl) statusEl.textContent = `❌ 오류: ${e.message}`;
         }
@@ -2202,6 +2278,7 @@
                 customer: tsCust  ? getFilterVals(tsCust)  : [],
                 vehicle:  tsVeh   ? getFilterVals(tsVeh)   : [],
                 waste:    tsWaste ? getFilterVals(tsWaste) : [],
+                processor: tsPlant ? getFilterVals(tsPlant) : [],
                 month:    tsMon   ? getFilterVals(tsMon)   : [],
                 year:     tsYear  ? getFilterVals(tsYear)  : [],
             };
@@ -2244,6 +2321,7 @@
             restoreFilter(tsCust,  savedFilters.customer);
             restoreFilter(tsVeh,   savedFilters.vehicle);
             restoreFilter(tsWaste, savedFilters.waste);
+            restoreFilter(tsPlant, savedFilters.processor);
             restoreFilter(tsMon,   savedFilters.month);
             restoreFilter(tsYear,  savedFilters.year);
 
@@ -2297,7 +2375,7 @@
     let _driverType = 'all'; // 'all' | 'out' | 'direct'
     let _dataBasis = 'perform';
     let currentTab = 1;
-    let tsCust = null, tsVeh = null, tsWaste = null, tsMon = null, tsYear = null;
+    let tsCust = null, tsVeh = null, tsWaste = null, tsPlant = null, tsMon = null, tsYear = null;
     let _compRows = [];       // 비교 테이블 데이터 캐시
     let _compSortKey = 'curRev';
     let _compSortAsc = false;
@@ -2402,7 +2480,7 @@
     }
 
     // ── 활성 pill 렌더링 ──
-    const FILTER_LABELS = { customer:'업체명', vehicle:'차량번호', waste:'폐기물명', month:'년/월', year:'년도' };
+    const FILTER_LABELS = { customer:'업체명', vehicle:'차량번호', waste:'폐기물명', processor:'처리장명', month:'년/월', year:'년도' };
     function renderPills() {
         const row = document.getElementById('activePillsRow');
         const btn = document.getElementById('btnResetFilters');
@@ -2413,6 +2491,7 @@
             { key:'customer', ts: tsCust },
             { key:'vehicle',  ts: tsVeh },
             { key:'waste',    ts: tsWaste },
+            { key:'processor', ts: tsPlant },
             { key:'month',    ts: tsMon },
             { key:'year',     ts: tsYear },
         ];
@@ -2427,7 +2506,9 @@
                 const displayVal = key === 'month' && v.length === 4 && !isNaN(v)
                     ? `${v.substring(0,2)}년 ${v.substring(2,4)}월`
                     : key === 'year' ? `20${v}년` : v;
-                pill.innerHTML = `<span>${label}: ${displayVal}</span><button onclick="removePill('${key}','${v}')">✕</button>`;
+                pill.innerHTML = '<span></span><button type="button">✕</button>';
+                pill.querySelector('span').textContent = `${label}: ${displayVal}`;
+                pill.querySelector('button').addEventListener('click', () => removePill(key, v));
                 row.appendChild(pill);
             });
         });
@@ -2435,13 +2516,13 @@
     }
 
     function removePill(key, val) {
-        const tsMap = { customer:tsCust, vehicle:tsVeh, waste:tsWaste, month:tsMon, year:tsYear };
+        const tsMap = { customer:tsCust, vehicle:tsVeh, waste:tsWaste, processor:tsPlant, month:tsMon, year:tsYear };
         const ts = tsMap[key];
         if (ts) { ts.removeItem(val); }
     }
 
     function resetAllFilters() {
-        [tsCust, tsVeh, tsWaste, tsMon, tsYear].forEach(ts => { if(ts) ts.clear(); });
+        [tsCust, tsVeh, tsWaste, tsPlant, tsMon, tsYear].forEach(ts => { if(ts) ts.clear(); });
     }
 
     // ── 애니메이션 트리거 ──
@@ -2463,7 +2544,7 @@
     }
 
     function animateNumbers() {
-        document.querySelectorAll('#overallTotalRev, #overallNetRev, #overallMonthlyAvg, #overallWeeklyAvg, #overallDailyAvg, #sumTotalRevCard, #avgTotalRevCard, #avgNetRevCard, #avgWeightCard').forEach(el => {
+        document.querySelectorAll('#overallTotalRev, #overallNetRev, #overallMonthlyAvg, #overallWeeklyAvg, #overallDailyAvg, #sumTotalRevCard, #sumNetRevCard, #avgTotalRevCard, #avgNetRevCard, #avgWeightCard').forEach(el => {
             el.classList.remove('num-animate');
             void el.offsetWidth;
             el.classList.add('num-animate');
@@ -2494,7 +2575,7 @@
             const filterBlocks = document.querySelectorAll('#globalFilterPanel > div:first-child > .flex.flex-col');
             filterBlocks.forEach((el, idx) => {
                 // 업체명(0), 폐기물명(2)만 탭5에서 숨김
-                if (idx === 0 || idx === 2) el.style.display = tabId === 5 ? 'none' : '';
+                if (idx === 0 || idx === 2 || idx === 3) el.style.display = tabId === 5 ? 'none' : '';
                 else el.style.display = '';
             });
         }
@@ -2621,6 +2702,7 @@
         const customers = uniq(window.rawData.map(d => d.customer));
         const vehicles  = uniq(window.rawData.map(d => d.vehicle));
         const wastes    = uniq(window.rawData.map(d => d.waste));
+        const processors = uniq(window.rawData.map(d => d.processor || '미등록'));
         const months    = uniq(window.rawData.map(d => d.month));
         const years     = uniq(window.rawData.map(d => d.month?.substring(0,2))).filter(y => !isNaN(y));
 
@@ -2633,8 +2715,8 @@
 
         // 기준 전환 중 destroy()가 change 이벤트를 발생시키더라도 렌더링하지 않도록 위에서 잠금.
         const destroyTs = (ts) => { try { if (ts) ts.destroy(); } catch (_) {} };
-        destroyTs(tsCust); destroyTs(tsVeh); destroyTs(tsWaste); destroyTs(tsMon); destroyTs(tsYear);
-        tsCust = tsVeh = tsWaste = tsMon = tsYear = null;
+        destroyTs(tsCust); destroyTs(tsVeh); destroyTs(tsWaste); destroyTs(tsPlant); destroyTs(tsMon); destroyTs(tsYear);
+        tsCust = tsVeh = tsWaste = tsPlant = tsMon = tsYear = null;
 
         tsCust  = buildTomSelect('filterCustomer', customers.map(v => ({ value:v, label:v })), true, () => {
             if (_basisSwitching) return;
@@ -2643,6 +2725,7 @@
         });
         tsVeh   = buildTomSelect('filterVehicle',  vehicles.map(v  => ({ value:v, label:v })), true, onFilterChange);
         tsWaste = buildTomSelect('filterWaste',    wastes.map(v    => ({ value:v, label:v })), true, onFilterChange);
+        tsPlant = buildTomSelect('filterProcessor', processors.map(v => ({ value:v, label:v })), true, onFilterChange);
         tsMon   = buildTomSelect('filterMonth',    months.map(v    => ({ value:v, label: v.length===4&&!isNaN(v) ? `${v.substring(0,2)}년 ${v.substring(2,4)}월` : v })), true, onFilterChange);
         tsYear  = buildTomSelect('filterYear',     years.map(v     => ({ value:v, label:`20${v}년` })), true, onFilterChange);
     }
@@ -2704,6 +2787,7 @@
         const custVals  = getFilterVals(tsCust);
         const vehVals   = getFilterVals(tsVeh);
         const wasteVals = getFilterVals(tsWaste);
+        const plantVals = getFilterVals(tsPlant);
         const monVals   = getFilterVals(tsMon);
         const yearVals  = getFilterVals(tsYear);
 
@@ -2725,6 +2809,7 @@
             matchesFilter(custVals,  d.customer) &&
             matchesFilter(vehVals,   d.vehicle)  &&
             matchesFilter(wasteVals, d.waste)    &&
+            matchesFilter(plantVals, d.processor || '미등록') &&
             matchesFilter(monVals,   d.month)    &&
             (yearVals.length === 0 || yearVals.some(y => d.month?.startsWith(y)))
         );
@@ -2761,12 +2846,15 @@
             const trendTripCount = countUniqueTrips(filtered) || 1;
             document.getElementById('tripCount').innerText = countUniqueTrips(filtered).toLocaleString('ko-KR');
             document.getElementById('sumTotalRevCard').innerHTML = `${formatCurrency(sumTotalRev)}<span class="text-base font-normal text-slate-500 ml-1">원</span>`;
+            document.getElementById('sumNetRevCard').innerHTML = `${formatCurrency(sumNetRev)}<span class="text-base font-normal text-slate-500 ml-1">원</span>`;
             document.getElementById('avgMonthlyTripsCard').innerHTML = `${(countUniqueTrips(filtered)/totalMonths).toFixed(1)}<span class="text-base font-normal text-slate-500 ml-1">회/월</span>`;
             document.getElementById('avgTotalRevCard').innerHTML = `${formatCurrency(sumTotalRev/trendTripCount)}<span class="text-base font-normal text-slate-500 ml-1">원</span>`;
             document.getElementById('avgNetRevCard').innerHTML   = `${formatCurrency(sumNetRev/trendTripCount)}<span class="text-base font-normal text-slate-500 ml-1">원</span>`;
             document.getElementById('avgWeightCard').innerHTML   = `${formatNumber(sumWeight/trendTripCount)}<span class="text-base font-normal text-slate-500 ml-1">Ton</span>`;
             renderTrendCharts(filtered);
             renderContributionChart(filtered);
+            renderCommercialVolume(filtered);
+            renderCommercialContractView();
             renderComparisonTable(custVals, vehVals, wasteVals, monVals, yearVals);
         }
         if (currentTab === 3) renderVehicleTab(filtered);
@@ -2851,6 +2939,7 @@
             const _custV2  = getFilterVals(tsCust);
             const _wasteV2 = getFilterVals(tsWaste);
             const _vehV2   = getFilterVals(tsVeh);
+            const _plantV2 = getFilterVals(tsPlant);
             let periodCompare = '';
             _tab2WebSearch = false;
 
@@ -2868,7 +2957,8 @@
                         d.month === month &&
                         matchesFilter(_custV2, d.customer) &&
                         matchesFilter(_wasteV2, d.waste) &&
-                        matchesFilter(_vehV2, d.vehicle)
+                        matchesFilter(_vehV2, d.vehicle) &&
+                        matchesFilter(_plantV2, d.processor || '미등록')
                     );
                     const byWaste = {}; let tot = 0, cost = 0;
                     rows.forEach(d => { byWaste[d.waste] = (byWaste[d.waste]||0) + d.weight; tot += d.weight; cost += d.totalRev; });
@@ -2997,8 +3087,8 @@
         const { yymm, day } = getTodayYYMM();
         const prevM = getPrevMonth(yymm);
         const yoyM  = getYoYMonth(yymm);
-
-        const baseMatch = d => matchesFilter(custVals, d.customer) && matchesFilter(vehVals, d.vehicle) && matchesFilter(wasteVals, d.waste);
+const plantValues = getFilterVals(tsPlant);
+        const baseMatch = d => matchesFilter(custVals, d.customer) && matchesFilter(vehVals, d.vehicle) && matchesFilter(wasteVals, d.waste) && matchesFilter(plantValues, d.processor || '미등록');
         const agg = (month, uptoDay) => {
             let rev = 0, net = 0;
             const tripKeys = new Set();
@@ -3272,6 +3362,155 @@
         chartAvgWeightInst = mk('trendChartAvgWeight', chartAvgWeightInst, 'line', dsWeight, 'Ton', false);
     }
 
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 영업/소싱 대시보드: 발생량 비중 + 계약 처리장 모니터링
+    // 실적은 처리수입현황, 계약은 DB RAW 각각 읽음. 등록=유효 계약 아님.
+    // ═══════════════════════════════════════════════════════════════════════
+    let _commercialContracts = [];
+    let _commercialContractsLoaded = false;
+    let _commercialContractViewRows = [];
+    let _commercialVolumeChart = null;
+    window._commercialFilteredRows = [];
+    function commercialEsc(v){return String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    function commercialKey(v){return String(v || '').normalize('NFKC').replace(/^#+/,'').replace(/\s+/g,'').replace(/\(주\)|주식회사|㈜/gi,'').trim().toLowerCase();}
+    function commercialNormPlant(v){return String(v || '').trim() || '미등록';}
+    async function loadCommercialContractData(force=false){
+        if(_commercialContractsLoaded && !force) return _commercialContracts;
+        const status = document.getElementById('commercialContractStatus');
+        if(status) status.textContent = 'DB RAW 계약 관계 읽는 중...';
+        try{
+            const a1 = encodeURIComponent("'DB RAW'!A:J");
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${a1}`;
+            const access = _googleAccessToken || _accessToken;
+            let response;
+            if(access) response=await fetch(url,{headers:{Authorization:`Bearer ${access}`}});
+            if(!response?.ok) response=await fetch(`${url}?key=${CONFIG.API_KEY}`);
+            if(!response.ok) throw new Error(`계약 DB 읽기 실패 (${response.status})`);
+            const values=(await response.json()).values || [];
+            const header=(values[0]||[]).map(v=>String(v||'').replace(/\s+/g,''));
+            const col=(name,fallback)=>{const k=header.findIndex(v=>v===name);return k>=0?k:fallback;};
+            const C={id:col('계약코드',0),customer:col('위탁업체',1),waste:col('폐기물명',2),plant:col('처리장',3),totalPrice:col('총단가',4),processPrice:col('처리단가',5),transportPrice:col('운반단가',6),date:col('계약시기',7)};
+            const records=values.slice(1).map(r=>({
+                id:String(r[C.id]||'').trim(),customer:String(r[C.customer]||'').trim(),waste:String(r[C.waste]||'').trim(),
+                plant:commercialNormPlant(r[C.plant]),totalPrice:String(r[C.totalPrice]||'').trim(),processPrice:String(r[C.processPrice]||'').trim(),
+                transportPrice:String(r[C.transportPrice]||'').trim(),date:String(r[C.date]||'').trim()
+            })).filter(x=>x.customer && x.plant!=='미등록' && x.id);
+            // 동일 계약코드 + 고객사 + 폐기물 + 처리장의 중복 원본 행 제거
+            _commercialContracts=[...new Map(records.map(x=>[[x.id,commercialKey(x.customer),commercialKey(x.waste),commercialKey(x.plant)].join('|'),x])).values()];
+            _commercialContractsLoaded=true;
+            if(status) status.textContent=`✅ DB RAW ${_commercialContracts.length.toLocaleString('ko-KR')}건 등록 정보 조회 · 유효/만료 상태는 별도 확인 필요`;
+            const plant=document.getElementById('commercialContractPlant');
+            if(plant){
+                const old=plant.value;
+                const names=[...new Set(_commercialContracts.map(c=>c.plant))].sort((a,b)=>a.localeCompare(b,'ko'));
+                plant.innerHTML='<option value="">전체 처리장</option>'+names.map(n=>`<option value="${commercialEsc(n)}">${commercialEsc(n)}</option>`).join('');
+                if(names.includes(old))plant.value=old;
+            }
+            renderCommercialContractView();
+        }catch(e){
+            _commercialContractsLoaded=false;
+            if(status)status.textContent=`⚠️ 계약 DB 조회 실패: ${e.message} · 실적 분석은 계속 사용 가능`;
+            console.warn('계약 DB 보조 읽기 실패',e);
+        }
+        return _commercialContracts;
+    }
+    function commercialContractGroups(){
+        const groups=new Map();
+        for(const c of _commercialContracts){
+            const k=commercialKey(c.customer)+'|'+commercialKey(c.waste);
+            if(!groups.has(k))groups.set(k,{customer:c.customer,waste:c.waste,items:[],plants:new Set(),codes:new Set()});
+            const g=groups.get(k);g.items.push(c);g.plants.add(commercialKey(c.plant));g.codes.add(c.id);
+        }
+        return [...groups.values()].map(g=>({...g,plantCount:g.plants.size,plantNames:[...new Set(g.items.map(x=>x.plant))]}));
+    }
+    function commercialFocusCustomer(index){
+        const g=_commercialContractViewRows[index];
+        if(!g || !tsCust)return;
+        const chosen=Object.keys(tsCust.options||{}).find(x=>commercialKey(x)===commercialKey(g.customer));
+        if(!chosen){alert('이 고객사는 계약 DB에는 있으나 선택한 실적 기준의 처리수입현황 업체명에서 찾지 못했습니다.');return;}
+        tsCust.clear(true);tsCust.addItem(chosen);switchTab(2);
+    }
+    function renderCommercialContractView(){
+        const tbody=document.getElementById('commercialContractBody');
+        if(!tbody)return;
+        const groups=commercialContractGroups();
+        const selected=getFilterVals(tsCust);
+        const wanted=selected.map(commercialKey);
+        const focused=groups.filter(g=>!wanted.length || wanted.includes(commercialKey(g.customer)));
+        const banner=document.getElementById('commercialSelectedContract');
+        if(banner){
+            if(!selected.length){banner.innerHTML=`<b>계약 처리장 현황</b> · 고객사를 선택하면 등록 처리장과 단일 계약 여부를 바로 확인할 수 있습니다. <span class="text-xs text-slate-500">(전체 ${groups.length}개 고객사×폐기물 조합)</span>`;}
+            else if(!focused.length){banner.innerHTML=`<b>${commercialEsc(selected.join(', '))}</b> · DB RAW에서 연결된 계약을 찾지 못했습니다. (업체명 불일치·미등록 가능)`;}
+            else{
+                const allPlants=[...new Set(focused.flatMap(g=>g.plantNames))];
+                const singles=focused.filter(g=>g.plantCount===1);
+                banner.innerHTML=`<div class="flex flex-wrap items-center gap-2"><b class="text-teal-900">${commercialEsc(selected.join(', '))}</b><span class="text-xs rounded-full bg-white border border-teal-200 px-2 py-1">처리장 ${allPlants.length}곳</span><span class="text-xs rounded-full px-2 py-1 ${singles.length?'bg-orange-100 text-orange-800':'bg-emerald-100 text-emerald-800'}">폐기물별 단일 처리장 ${singles.length}건</span></div><p class="text-xs mt-2">${allPlants.map(p=>`<span class="inline-block px-2 py-1 mr-1 mb-1 bg-white border border-slate-200 rounded-full">🏭 ${commercialEsc(p)}</span>`).join('')}</p>`;
+            }
+        }
+        const search=String(document.getElementById('commercialContractSearch')?.value||'').trim().toLowerCase();
+        const single=!!document.getElementById('commercialSingleOnly')?.checked;
+        const localPlant=String(document.getElementById('commercialContractPlant')?.value||'');
+        const globalPlants=getFilterVals(tsPlant);
+        const view=focused.filter(g=>(!single||g.plantCount===1) && (!localPlant || g.plantNames.includes(localPlant)) && (!globalPlants.length || g.plantNames.some(p=>globalPlants.includes(p))) && (!search || [g.customer,g.waste,g.plantNames.join(' '),...g.items.map(x=>x.id)].join(' ').toLowerCase().includes(search)))
+            .sort((a,b)=>(a.plantCount===1?-1:1)-(b.plantCount===1?-1:1)||a.customer.localeCompare(b.customer,'ko'))
+            .map(g=>({...g,visibleItems:g.items.filter(x=>(!localPlant||x.plant===localPlant)&&(!globalPlants.length||globalPlants.includes(x.plant)))}));
+        _commercialContractViewRows=view;
+        const st=document.getElementById('commercialContractStats');
+        if(st)st.innerHTML=`조회 ${view.length.toLocaleString()}개 고객사×폐기물 조합 · <span class="font-bold text-orange-700">단일 처리장 ${view.filter(g=>g.plantCount===1).length.toLocaleString()}건</span> · <span class="font-bold text-emerald-700">복수 처리장 ${view.filter(g=>g.plantCount>1).length.toLocaleString()}건</span>`;
+        const contractLine=x=>`<div class="py-0.5"><b>${commercialEsc(x.id)}</b> · ${commercialEsc(x.plant)}${x.processPrice?' · 처리 '+commercialEsc(x.processPrice):''}${x.date?' · '+commercialEsc(x.date):''}</div>`;
+        tbody.innerHTML=view.length?view.map((g,i)=>`<tr class="border-b border-slate-100 hover:bg-teal-50/50">
+            <td class="p-2"><b>${commercialEsc(g.customer)}</b><p class="text-xs text-slate-500">${commercialEsc(g.waste||'미등록')}</p></td>
+            <td class="p-2">${g.plantNames.map(p=>`<span class="inline-block px-2 py-1 rounded-md border border-slate-200 bg-white text-xs mr-1 mb-1">${commercialEsc(p)}</span>`).join('')}</td>
+            <td class="p-2 text-center"><span class="inline-block whitespace-nowrap rounded-full text-xs font-bold px-2 py-1 ${g.plantCount===1?'bg-orange-100 text-orange-800':'bg-emerald-100 text-emerald-700'}">${g.plantCount===1?'단일 · 추가계약 검토':`복수 ${g.plantCount}곳`}</span></td>
+            <td class="p-2 text-xs">${g.visibleItems.slice(0,3).map(contractLine).join('')}${g.visibleItems.length>3?`<details class="mt-1"><summary class="cursor-pointer font-bold text-teal-700">추가 계약 ${g.visibleItems.length-3}건 펼치기</summary>${g.visibleItems.slice(3).map(contractLine).join('')}</details>`:''}</td>
+            <td class="p-2 text-center"><button type="button" onclick="commercialFocusCustomer(${i})" class="text-teal-700 font-bold text-xs underline">고객사 선택</button></td>
+        </tr>`).join(''):'<tr><td colspan="5" class="p-5 text-center text-slate-500">일치하는 계약 정보가 없습니다.</td></tr>';
+    }
+    function renderCommercialVolume(data){
+        const wtbody=document.getElementById('commercialWasteBody');
+        const ptbody=document.getElementById('commercialPlantBody');
+        if(!wtbody || !ptbody) return;
+        window._commercialFilteredRows = data;
+        const sumWeight=data.reduce((s,r)=>s+(Number(r.weight)||0),0);
+        const aggBy=(fn)=>{
+            const m=new Map();
+            data.forEach(d=>{
+                const label=String(fn(d)||'미등록');
+                if(!m.has(label))m.set(label,{label,weight:0,revenue:0,processCost:0,processWeight:0});
+                const v=m.get(label);v.weight+=Number(d.weight)||0;v.revenue+=Number(d.totalRev)||0;
+                if(d.processingCost!==null && d.processingCost!==undefined && Number.isFinite(Number(d.processingCost))){v.processCost+=Number(d.processingCost);v.processWeight+=Number(d.weight)||0;}
+            });
+            return [...m.values()].sort((a,b)=>b.weight-a.weight);
+        };
+        const waste=aggBy(d=>d.waste),plants=aggBy(d=>d.processor||'미등록');
+        const summary=document.getElementById('commercialVolumeSummary');
+        if(summary)summary.textContent=`총 ${sumWeight.toLocaleString('ko-KR',{maximumFractionDigits:1})}T · 폐기물 ${waste.length}종 · 처리장 ${plants.length}곳`;
+        const drawRows=(arr)=>arr.map((v,i)=>{
+            const share=sumWeight>0?v.weight/sumWeight*100:0;
+            return `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-2 text-slate-700 font-semibold max-w-[160px] break-words">${commercialEsc(v.label)}<div class="rounded-full bg-slate-100 h-1.5 mt-1 overflow-hidden"><div class="h-full ${i===0?'bg-teal-600':'bg-sky-400'}" style="width:${Math.min(100,Math.max(0,share))}%"></div></div></td><td class="p-2 text-right font-bold">${v.weight.toLocaleString('ko-KR',{maximumFractionDigits:1})}</td><td class="p-2 text-right text-teal-700">${share.toFixed(1)}%</td><td class="p-2 text-right">${formatCurrency(v.revenue)}</td></tr>`;
+        }).join('');
+        wtbody.innerHTML=drawRows(waste)||'<tr><td colspan="4" class="p-3 text-center text-slate-500">데이터 없음</td></tr>';
+        ptbody.innerHTML=plants.map((v,i)=>{const share=sumWeight>0?v.weight/sumWeight*100:0;return `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-2 text-slate-700 font-semibold">${commercialEsc(v.label)}<div class="rounded-full bg-slate-100 h-1.5 mt-1"><div class="h-full bg-sky-400 rounded-full" style="width:${Math.min(100,Math.max(0,share))}%"></div></div></td><td class="p-2 text-right font-bold">${v.weight.toLocaleString('ko-KR',{maximumFractionDigits:1})}</td><td class="p-2 text-right text-teal-700">${share.toFixed(1)}%</td><td class="p-2 text-right">${v.processWeight?formatCurrency(v.processCost):'-'}</td><td class="p-2 text-right font-semibold">${v.processWeight?formatCurrency(v.processCost/v.processWeight):'-'}</td></tr>`;}).join('')||'<tr><td colspan="5" class="p-3 text-center text-slate-500">데이터 없음</td></tr>';
+        const type=document.getElementById('commercialVolumeDimension')?.value||'waste';
+        const keyFor=d=>type==='processor'?(d.processor||'미등록'):type==='both'?`${d.waste||'미상'} · ${d.processor||'미등록'}`:(d.waste||'미상');
+        const items=aggBy(keyFor).slice(0,6).map(x=>x.label);
+        const months=[...new Set(data.map(d=>d.month).filter(Boolean))].sort();
+        if(_commercialVolumeChart){try{_commercialVolumeChart.destroy();}catch(e){} _commercialVolumeChart=null;}
+        if(window.Chart?.getChart){const old=Chart.getChart('commercialVolumeTrendChart');if(old)old.destroy();}
+        const canvas=document.getElementById('commercialVolumeTrendChart');
+        if(!canvas || !months.length)return;
+        const colors=['#0d9488','#0284c7','#8b5cf6','#f59e0b','#10b981','#ef4444','#94a3b8'];
+        const datasets=[...items,...(aggBy(keyFor).length>6?['그 외 항목']:[])].map((label,i)=>({
+            label,backgroundColor:colors[i%colors.length],borderRadius:3,
+            data:months.map(month=>data.filter(d=>d.month===month && (label==='그 외 항목'?!items.includes(keyFor(d)):keyFor(d)===label)).reduce((a,d)=>a+(Number(d.weight)||0),0))
+        }));
+        _commercialVolumeChart=new Chart(canvas,{type:'bar',data:{labels:months.map(x=>`20${x.slice(0,2)}.${x.slice(2)}월`),datasets},options:{
+            responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${Number(c.raw||0).toLocaleString('ko-KR',{maximumFractionDigits:2})}T`}}},
+            scales:{x:{stacked:true,ticks:{font:{size:10}}},y:{stacked:true,beginAtZero:true,title:{display:true,text:'배출량 (T)'}}}
+        }});
+    }
+
     // ── 탭4: 고객사 브리핑 ──
     function renderBriefingTab(data) {
         if (!data.length) return;
@@ -3280,10 +3519,12 @@
         const _custV = getFilterVals(tsCust);
         const _wasteV = getFilterVals(tsWaste);
         const _vehV = getFilterVals(tsVeh);
+        const _plantV = getFilterVals(tsPlant);
         _b4DataFull = window.rawData.filter(d =>
             matchesFilter(_custV, d.customer) &&
             matchesFilter(_wasteV, d.waste) &&
-            matchesFilter(_vehV, d.vehicle)
+            matchesFilter(_vehV, d.vehicle) &&
+            matchesFilter(_plantV, d.processor || '미등록')
         );
 
         // 집계
@@ -3614,6 +3855,18 @@
         renderB4PeriodCompare();
     }
 
+
+    // 비교 가능한 월만 사용: 한쪽 연도 전체 데이터에 아직 없는 월은 0으로 간주하지 않음.
+    // 현재 진행 중인 월은 집계 중이므로 전년 완전월 대비에서 제외한다.
+    function b4ComparableMonths(prevYear,currYear,startMM='01',endMM='12'){
+        const all=window.rawData||[];
+        const monthsFor=year=>new Set(all.filter(d=>d.month && d.month.length===4 && '20'+d.month.slice(0,2)===String(year)).map(d=>d.month.slice(2,4)));
+        const prev=monthsFor(prevYear),curr=monthsFor(currYear);
+        const now=new Date();
+        const currentY=String(now.getFullYear()), currentMM=String(now.getMonth()+1).padStart(2,'0');
+        return Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0')).filter(mm=>mm>=startMM && mm<=endMM && prev.has(mm) && curr.has(mm) && !(String(currYear)===currentY && mm>=currentMM) && !(String(prevYear)===currentY && mm>=currentMM));
+    }
+
     function getB4PeriodCompareData() {
         const prevYear = document.getElementById('b4ComparePrevYear')?.value;
         const currYear = document.getElementById('b4CompareCurrYear')?.value;
@@ -3621,13 +3874,16 @@
         let endMM = document.getElementById('b4CompareEndMonth')?.value || '12';
         if (!prevYear || !currYear || !_b4DataFull?.length) return null;
         if (startMM > endMM) [startMM, endMM] = [endMM, startMM];
+        const comparableMonths=b4ComparableMonths(prevYear,currYear,startMM,endMM);
+        if(!comparableMonths.length)return null;
+        const rangeStart=comparableMonths[0],rangeEnd=comparableMonths[comparableMonths.length-1];
 
         const statFor = year => {
             const rows = _b4DataFull.filter(d => {
                 if (!d.month || d.month.length !== 4) return false;
                 const yy = '20' + d.month.substring(0,2);
                 const mm = d.month.substring(2,4);
-                return yy === String(year) && mm >= startMM && mm <= endMM;
+                return yy === String(year) && comparableMonths.includes(mm);
             });
             const weight = rows.reduce((s,d)=>s+(Number(d.weight)||0),0);
             const cost = rows.reduce((s,d)=>s+(Number(d.totalRev)||0),0);
@@ -3639,7 +3895,7 @@
                 monthAvg: activeMonths > 0 ? weight/activeMonths : 0
             };
         };
-        return { prevYear, currYear, startMM, endMM, prev:statFor(prevYear), curr:statFor(currYear) };
+        return { prevYear, currYear, startMM:rangeStart, endMM:rangeEnd, comparedMonths:comparableMonths, prev:statFor(prevYear), curr:statFor(currYear) };
     }
 
     function renderB4PeriodCompare() {
@@ -3648,7 +3904,7 @@
         if (!wrap || !headline) return;
         const cmp = getB4PeriodCompareData();
         if (!cmp) {
-            wrap.innerHTML = '<p class="text-sm text-slate-400">비교 가능한 2개 연도 데이터가 필요합니다.</p>';
+            wrap.innerHTML = '<p class="text-sm text-slate-400">두 연도에 실적이 집계된 공통 월이 없습니다. 미집계·진행 중인 월은 0으로 비교하지 않습니다.</p>';
             headline.textContent = '';
             return;
         }
@@ -3997,7 +4253,7 @@
 
     function toggleD5Dropdown() {
         const dd = document.getElementById('d5Dropdown');
-        if (!dd) return;
+if (!dd) return;
         if (dd.classList.contains('hidden')) {
             buildD5Dropdown();
             dd.classList.remove('hidden');
@@ -4916,7 +5172,8 @@
         const base = window.rawData.filter(d =>
             matchesFilter(custVals,  d.customer) &&
             matchesFilter(vehVals,   d.vehicle)  &&
-            matchesFilter(wasteVals, d.waste)
+            matchesFilter(wasteVals, d.waste) &&
+            matchesFilter(getFilterVals(tsPlant), d.processor || '미등록')
         );
         if (!base.length) return;
 
@@ -4997,7 +5254,7 @@
             if (key === 'c') { va = va || ''; vb = vb || ''; return asc ? va.localeCompare(vb, 'ko') : vb.localeCompare(va, 'ko'); }
             va = va ?? -Infinity; vb = vb ?? -Infinity;
             return asc ? va - vb : vb - va;
-        });
+});
 
         const fmt = m => m ? `${m.substring(0,2)}년 ${m.substring(2,4)}월` : '-';
         let html = '';
@@ -5230,7 +5487,8 @@
             // YoY 비교 가능 여부 (2개 이상 연도 데이터 존재)
             const _yoyYears = new Set();
             _b4DataFull.forEach(d => { if (d.month && d.month.length === 4) _yoyYears.add(d.month.substring(0,2)); });
-            const canYoY = _yoyYears.size >= 2;
+            const yoyYearList=[..._yoyYears].sort();
+            const canYoY = _yoyYears.size >= 2 && b4ComparableMonths('20'+yoyYearList[yoyYearList.length-2],'20'+yoyYearList[yoyYearList.length-1]).length > 0;
             const periodCmp = getB4PeriodCompareData();
             const hasPeriodCmp = !!(periodCmp && periodCmp.prev && periodCmp.curr);
             let totalPages = 2; // 표지 + 요약
@@ -5518,7 +5776,11 @@ ${wMaxStr}에 발생량이 가장 많았던 만큼 해당 시기의 생산·운�
 
                 // 표시할 월 (필터 적용 시 그 월만)
                 const selMMs = [...new Set((getFilterVals(tsMon) || []).map(m => m.slice(2,4)))];
-                const months = (selMMs.length ? selMMs : Object.keys(monthMap)).sort();
+                // 이전에는 2025년 10~12월이 있으나 2026년 미집계 월이 없는 경우
+                // 2026년을 0으로 보고 -100% 및 연간 합계를 계산했음. 공통 완료월만 비교.
+                const commonMMs=b4ComparableMonths(prevYY,currYY);
+                const selectedCommonMMs=commonMMs.filter(mm => !selMMs.length || selMMs.includes(mm));
+                const months = selectedCommonMMs.length ? selectedCommonMMs : commonMMs;
 
                 // 표 데이터 생성 함수
                 const buildTable = (metric, unit, formatter) => {
@@ -5997,7 +6259,7 @@ ${yChartInsight}`
                         sA.addText(card.interpretation || card.text, {
                             x: x+0.18, y: y+1.2, w: cellW-0.3, h: cellH-1.5,
                             fontFace: FONT_KO, fontSize: 11, color: '475569', valign: 'top'
-                        });
+});
                     }
                     // 매출 정보 (있을 때만)
                     if (card.revenue_data) {
@@ -6997,7 +7259,7 @@ E. YoY 변동 — 전년 대비 추세
         const s=String(yymm||'');
         if(!/^\d{4}$/.test(s)) return null;
         const yy=2000+Number(s.slice(0,2)), mm=Number(s.slice(2));
-        if(mm<1||mm>12) return null;
+if(mm<1||mm>12) return null;
         return yy*12+(mm-1);
     }
 
@@ -7997,7 +8259,7 @@ function ctReplaceAcrossTextNodes(paragraphXml, oldText, newText) {
         patches.push({start:innerStart,end:innerEnd,value});
     }
     let out=paragraphXml;
-    patches.sort((a,b)=>b.start-a.start).forEach(p=>{ out=out.slice(0,p.start)+p.value+out.slice(p.end); });
+patches.sort((a,b)=>b.start-a.start).forEach(p=>{ out=out.slice(0,p.start)+p.value+out.slice(p.end); });
     return out;
 }
 function ctPrepareOriginalDocumentXml(xml) {
@@ -8997,7 +9259,7 @@ async function stInitSutakSection(){
    const d=ctEl('stIssueDate'); if(d&&!d.value)d.value=ctTodayLocal();
    _stInitialized=true;
  }
- stUpdateAdminUi(); stSyncFromContract(false); stRecalculateCapacity(); await stRefreshStatus();
+stUpdateAdminUi(); stSyncFromContract(false); stRecalculateCapacity(); await stRefreshStatus();
 }
 function stSyncFromContract(resetDynamic=false){
  const pid=ctVal('ctProcessorSelect'), tid=stProcessorToTemplateId(pid), sel=ctEl('stTemplateSelect');
@@ -9996,8 +10258,7 @@ function stmtPdfFirstPage(c,pageCount){
         </div>
         <table class="stmt-doc-table"><tr><td class="g">납부기한</td></tr><tr><td>${stmtEsc(c.dueDate||'-')}</td></tr></table>
       </div>
-
-      <div style="height:8px"></div>
+<div style="height:8px"></div>
       <div style="display:grid;grid-template-columns:1.18fr .82fr;gap:18px">
         <div>
           <table class="stmt-doc-table">
