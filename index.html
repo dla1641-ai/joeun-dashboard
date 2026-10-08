@@ -714,6 +714,49 @@
                     </table>
                 </div>
             </div>
+
+            <!-- v41: 처리장·폐기물 월별 물동량 (독립 펼침/접힘) -->
+            <section class="bg-white rounded-xl card-shadow border border-slate-100" id="v41TrendSection">
+                <button type="button" onclick="v41TogglePanel('v41Trend')" aria-controls="v41TrendBody" aria-expanded="false" class="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-slate-50 rounded-xl">
+                    <span><span class="font-bold text-slate-800">🏭 처리장·폐기물별 월간 물동량 / MoM·YoY</span><span class="block text-xs mt-1 text-slate-500">매출 지표와 별도 · 필요할 때 펼쳐서 물량 비교</span></span>
+                    <span id="v41TrendArrow" class="text-sm font-bold text-teal-700 whitespace-nowrap">▼ 펼치기</span>
+                </button>
+                <div id="v41TrendBody" class="hidden" style="display:none;"> 
+                    <div class="px-5 pb-5 border-t border-slate-100 pt-4">
+                        <div class="flex flex-wrap gap-3 mb-3 items-end">
+                            <label class="text-xs text-slate-600 font-bold">집계 기준
+                                <select id="v41TrendMode" onchange="v41RenderMatrix('v41Trend')" class="block mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+                                    <option value="plant-waste">처리장 → 폐기물별</option>
+                                    <option value="waste-plant">폐기물 → 처리장별</option>
+                                    <option value="plant">처리장 합계</option>
+                                    <option value="waste">폐기물 합계</option>
+                                </select>
+                            </label>
+                            <label class="text-xs text-slate-600 font-bold">물량 기준
+                                <select id="v41TrendMetric" onchange="v41RenderMatrix('v41Trend')" class="block mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+                                    <option value="processed">처리톤수 (N열)</option>
+                                    <option value="weight">운반중량 (I열)</option>
+                                </select>
+                            </label>
+                            <label class="text-xs text-slate-600 font-bold">기준월(MoM·YoY)
+                                <select id="v41TrendMonth" onchange="v41RenderMatrix('v41Trend')" class="block mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"><option value="">최근 집계월</option></select>
+                            </label>
+                            <label class="text-xs text-slate-600 font-bold">빠른 검색
+                                <input id="v41TrendSearch" oninput="v41RenderMatrix('v41Trend')" placeholder="처리장 / 폐기물" class="block mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm w-44">
+                            </label>
+                            <button type="button" onclick="v41DownloadMatrix('v41Trend')" class="px-3 py-2 text-xs font-bold border border-teal-200 text-teal-800 rounded-lg hover:bg-teal-50">↓ 집계 CSV</button>
+                        </div>
+                        <div id="v41TrendMeta" class="text-xs text-slate-500 mb-2"></div>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-[520px]">
+                            <table class="text-xs min-w-[1050px] w-full border-collapse" id="v41TrendTable">
+                                <thead id="v41TrendHead" class="sticky top-0 z-[1] bg-slate-100 text-slate-700"></thead>
+                                <tbody id="v41TrendRows"></tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">상단 공통 필터에 따라 조회합니다. 기본값은 처리수입현황 N열 처리톤수이며 운반중량(I열)로 전환 가능합니다. 증감률은 기준월과 전월·전년 동월 비교이며, 비교월 전체 데이터가 없으면 '—'입니다. 진행 중인 월의 증감률은 잠정치입니다.</p>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <!-- 탭3: 차량별 실적 -->
@@ -765,6 +808,49 @@
 
         <!-- 탭4: 고객사 브리핑 -->
         <div id="tab4-content" class="hidden space-y-6">
+
+            <!-- v41: 처리장·폐기물 월별 물동량 (독립 펼침/접힘) -->
+            <section class="bg-white rounded-xl card-shadow border border-slate-100" id="v41BriefSection">
+                <button type="button" onclick="v41TogglePanel('v41Brief')" aria-controls="v41BriefBody" aria-expanded="false" class="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-slate-50 rounded-xl">
+                    <span><span class="font-bold text-slate-800">🏭 처리장·폐기물별 월간 물동량 / MoM·YoY</span><span class="block text-xs mt-1 text-slate-500">고객사 브리핑 선택기간의 처리장·폐기물별 물량 확인</span></span>
+                    <span id="v41BriefArrow" class="text-sm font-bold text-teal-700 whitespace-nowrap">▼ 펼치기</span>
+                </button>
+                <div id="v41BriefBody" class="hidden" style="display:none;"> 
+                    <div class="px-5 pb-5 border-t border-slate-100 pt-4">
+                        <div class="flex flex-wrap gap-3 mb-3 items-end">
+                            <label class="text-xs text-slate-600 font-bold">집계 기준
+                                <select id="v41BriefMode" onchange="v41RenderMatrix('v41Brief')" class="block mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+                                    <option value="plant-waste">처리장 → 폐기물별</option>
+                                    <option value="waste-plant">폐기물 → 처리장별</option>
+                                    <option value="plant">처리장 합계</option>
+                                    <option value="waste">폐기물 합계</option>
+                                </select>
+                            </label>
+                            <label class="text-xs text-slate-600 font-bold">물량 기준
+                                <select id="v41BriefMetric" onchange="v41RenderMatrix('v41Brief')" class="block mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+                                    <option value="processed">처리톤수 (N열)</option>
+                                    <option value="weight">운반중량 (I열)</option>
+                                </select>
+                            </label>
+                            <label class="text-xs text-slate-600 font-bold">기준월(MoM·YoY)
+                                <select id="v41BriefMonth" onchange="v41RenderMatrix('v41Brief')" class="block mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"><option value="">최근 집계월</option></select>
+                            </label>
+                            <label class="text-xs text-slate-600 font-bold">빠른 검색
+                                <input id="v41BriefSearch" oninput="v41RenderMatrix('v41Brief')" placeholder="처리장 / 폐기물" class="block mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm w-44">
+                            </label>
+                            <button type="button" onclick="v41DownloadMatrix('v41Brief')" class="px-3 py-2 text-xs font-bold border border-teal-200 text-teal-800 rounded-lg hover:bg-teal-50">↓ 집계 CSV</button>
+                        </div>
+                        <div id="v41BriefMeta" class="text-xs text-slate-500 mb-2"></div>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-[520px]">
+                            <table class="text-xs min-w-[1050px] w-full border-collapse" id="v41BriefTable">
+                                <thead id="v41BriefHead" class="sticky top-0 z-[1] bg-slate-100 text-slate-700"></thead>
+                                <tbody id="v41BriefRows"></tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">상단 공통 필터에 따라 조회합니다. 기본값은 처리수입현황 N열 처리톤수이며 운반중량(I열)로 전환 가능합니다. 증감률은 기준월과 전월·전년 동월 비교이며, 비교월 전체 데이터가 없으면 '—'입니다. 진행 중인 월의 증감률은 잠정치입니다.</p>
+                    </div>
+                </div>
+            </section>
             <!-- 표시 설정 패널 -->
             <div class="bg-white rounded-xl card-shadow border border-slate-100">
                 <div class="flex items-center">
@@ -1808,7 +1894,7 @@
             <div class="flex flex-wrap justify-between items-start gap-3">
                 <div><h2 class="text-xl font-bold text-teal-900">고객사 · 처리장 계약 및 발생량 분석</h2>
                 <p class="text-sm text-slate-500 mt-1">DB RAW 계약 관계와 처리수입현황의 실제 발생량을 한 화면에서 확인합니다. 상단 필터는 아래 발생량 분석에 적용되며, 계약 목록은 고객사 및 목록 전용 필터로 검색합니다.</p></div>
-                <button type="button" onclick="switchTab(2)" class="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-100">← 고객사별 트렌드로</button>
+                <div class="flex items-center flex-wrap gap-2"><button type="button" onclick="v41ToggleAllContract()" id="v41ToggleAllBtn" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">▲ 분석 영역 모두 접기</button><button type="button" onclick="switchTab(2)" class="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-100">← 고객사별 트렌드로</button></div>
             </div>
             <!-- 고객사 계약 연결 현황 · DB RAW 기준 -->
             <section class="bg-white rounded-xl p-5 card-shadow border border-slate-100" id="commercialContractSection">
@@ -1817,8 +1903,9 @@
                         <h2 class="text-lg font-bold text-slate-800">🔗 고객사별 처리장 계약 현황</h2>
                         <p class="text-xs text-slate-500 mt-1">DB RAW 계약 등록 기준 · 고객사+폐기물 단위 단일/복수 처리장 모니터링 (실제 계약 유효성은 별도 확인)</p>
                     </div>
-                    <button type="button" onclick="loadCommercialContractData(true)" class="px-3 py-2 rounded-lg border border-teal-200 text-teal-700 font-bold text-xs hover:bg-teal-50">↻ 계약 DB 갱신</button>
+                    <div class="flex items-center gap-2"><button type="button" onclick="v41LegacyToggle('Contract')" id="v41LegacyContractToggle" class="text-xs text-teal-700 font-bold rounded-lg border border-teal-200 px-3 py-2">▲ 접기</button><button type="button" onclick="loadCommercialContractData(true)" class="px-3 py-2 rounded-lg border border-teal-200 text-teal-700 font-bold text-xs hover:bg-teal-50">↻ 계약 DB 갱신</button></div>
                 </div>
+                <div id="v41LegacyContractBody">
                 <p id="commercialContractStatus" class="text-xs text-slate-500 mb-3">계약 DB 연결 준비 중...</p>
                 <div id="commercialSelectedContract" class="mb-4 rounded-xl border border-teal-100 bg-teal-50/50 p-4 text-sm text-slate-700">고객사를 선택하면 해당 업체의 계약 처리장 현황이 표시됩니다.</div>
                 <div class="flex flex-wrap gap-2 items-end mb-3">
@@ -1840,6 +1927,7 @@
                     </table>
                 </div>
                 <p class="text-xs text-amber-700 mt-2">⚠️ DB 등록 건수 기준입니다. 계약 만료·실효 여부는 자동 판정하지 않으며, 단일 처리장 표시는 추가 계약 검토 대상입니다.</p>
+                </div>
             </section>
 
             <!-- 실적 DB 발생량 분석 · 고객사 트렌드에서 이관 -->
@@ -1847,8 +1935,9 @@
             <section class="bg-white rounded-xl p-5 card-shadow border border-slate-100" id="commercialVolumeSection">
                 <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
                     <div><h2 class="text-lg font-bold text-slate-800">📦 발생량 분석 · 폐기물 / 처리장</h2><p class="text-xs text-slate-500 mt-1">상단 고객사·차량·폐기물·처리장·년/월 필터 적용 · 처리수입현황 실제 중량(T) 기준 구성비, 월별 물량 및 실효 처리비</p></div>
-                    <span id="commercialVolumeSummary" class="text-xs font-bold text-teal-700"></span>
+                    <div class="flex items-center gap-2"><span id="commercialVolumeSummary" class="text-xs font-bold text-teal-700"></span><button type="button" onclick="v41LegacyToggle('Volume')" id="v41LegacyVolumeToggle" class="rounded-lg border border-teal-200 px-3 py-2 text-xs font-bold text-teal-700">▲ 접기</button></div>
                 </div>
+                <div id="v41LegacyVolumeBody">
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
                     <div class="border border-slate-200 rounded-xl p-3">
                         <h3 class="font-bold text-sm text-slate-800 mb-2">♻️ 폐기물별 발생량 · 비중</h3>
@@ -1869,8 +1958,78 @@
                 </div>
                 <div class="relative w-full h-[290px]"><canvas id="commercialVolumeTrendChart"></canvas></div>
                 <p class="text-xs text-slate-400 mt-2">발생량은 처리수입현황 I열 중량(T), 처리장은 M열 기준입니다. 상위 6개 항목과 나머지를 구분합니다. 평균 처리비/T는 처리수입현황 P열 처리비 합계 ÷ 해당 물량으로 참고용 실효값이며 계약서상의 처리단가와 다를 수 있습니다.</p>
+                </div>
             </section>
 
+            <!-- v41: 처리장·폐기물 월별 물동량 (독립 펼침/접힘) -->
+            <section class="bg-white rounded-xl card-shadow border border-slate-100" id="v41ContractSection">
+                <button type="button" onclick="v41TogglePanel('v41Contract')" aria-controls="v41ContractBody" aria-expanded="true" class="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-slate-50 rounded-xl">
+                    <span><span class="font-bold text-slate-800">🏭 처리장·폐기물별 월간 물동량 / MoM·YoY</span><span class="block text-xs mt-1 text-slate-500">처리장 / 폐기물 / 월별 발생량 매트릭스 · MoM·YoY 비교</span></span>
+                    <span id="v41ContractArrow" class="text-sm font-bold text-teal-700 whitespace-nowrap">▲ 접기</span>
+                </button>
+                <div id="v41ContractBody" class="" style="display:block;"> 
+                    <div class="px-5 pb-5 border-t border-slate-100 pt-4">
+                        <div class="flex flex-wrap gap-3 mb-3 items-end">
+                            <label class="text-xs text-slate-600 font-bold">집계 기준
+                                <select id="v41ContractMode" onchange="v41RenderMatrix('v41Contract')" class="block mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+                                    <option value="plant-waste">처리장 → 폐기물별</option>
+                                    <option value="waste-plant">폐기물 → 처리장별</option>
+                                    <option value="plant">처리장 합계</option>
+                                    <option value="waste">폐기물 합계</option>
+                                </select>
+                            </label>
+                            <label class="text-xs text-slate-600 font-bold">물량 기준
+                                <select id="v41ContractMetric" onchange="v41RenderMatrix('v41Contract')" class="block mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+                                    <option value="processed">처리톤수 (N열)</option>
+                                    <option value="weight">운반중량 (I열)</option>
+                                </select>
+                            </label>
+                            <label class="text-xs text-slate-600 font-bold">기준월(MoM·YoY)
+                                <select id="v41ContractMonth" onchange="v41RenderMatrix('v41Contract')" class="block mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"><option value="">최근 집계월</option></select>
+                            </label>
+                            <label class="text-xs text-slate-600 font-bold">빠른 검색
+                                <input id="v41ContractSearch" oninput="v41RenderMatrix('v41Contract')" placeholder="처리장 / 폐기물" class="block mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm w-44">
+                            </label>
+                            <button type="button" onclick="v41DownloadMatrix('v41Contract')" class="px-3 py-2 text-xs font-bold border border-teal-200 text-teal-800 rounded-lg hover:bg-teal-50">↓ 집계 CSV</button>
+                        </div>
+                        <div id="v41ContractMeta" class="text-xs text-slate-500 mb-2"></div>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-[520px]">
+                            <table class="text-xs min-w-[1050px] w-full border-collapse" id="v41ContractTable">
+                                <thead id="v41ContractHead" class="sticky top-0 z-[1] bg-slate-100 text-slate-700"></thead>
+                                <tbody id="v41ContractRows"></tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">상단 공통 필터에 따라 조회합니다. 기본값은 처리수입현황 N열 처리톤수이며 운반중량(I열)로 전환 가능합니다. 증감률은 기준월과 전월·전년 동월 비교이며, 비교월 전체 데이터가 없으면 '—'입니다. 진행 중인 월의 증감률은 잠정치입니다.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- v41: 처리수입현황 원본 실적 로우데이터 목록 -->
+            <section class="bg-white rounded-xl border border-slate-100 card-shadow" id="v41RawSection">
+                <button type="button" onclick="v41TogglePanel('v41Raw')" aria-controls="v41RawBody" aria-expanded="false" class="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-slate-50 rounded-xl">
+                    <span><b class="text-slate-800">📋 처리장·고객사별 실적 로우데이터</b><small class="text-slate-500 block mt-1">처리수입현황 실제 행 기준 · 월별 집계 아래 원본 건별 상세 조회</small></span>
+                    <span id="v41RawArrow" class="text-sm font-bold text-teal-700">▼ 펼치기</span>
+                </button>
+                <div id="v41RawBody" class="hidden px-5 pb-5 pt-4 border-t border-slate-100" style="display:none;">
+                    <div class="flex gap-2 flex-wrap items-end justify-between mb-3">
+                        <label class="text-xs font-semibold text-slate-600">로우데이터 검색
+                            <input id="v41RawSearch" oninput="v41RenderRaw(true)" class="block mt-1 w-72 max-w-full rounded-lg border border-slate-200 p-2 text-sm" placeholder="고객사, 폐기물, 처리장, 차량번호" />
+                        </label>
+                        <div class="flex gap-2 items-center">
+                            <span id="v41RawCount" class="text-xs font-bold text-slate-500"></span>
+                            <button type="button" onclick="v41DownloadRaw()" class="rounded-lg border border-teal-200 px-3 py-2 text-xs font-bold text-teal-800">↓ 전체 조회결과 CSV</button>
+                        </div>
+                    </div>
+                    <div class="overflow-auto max-h-[490px] rounded-lg border border-slate-200">
+                        <table class="min-w-[1320px] w-full text-xs border-collapse">
+                            <thead class="sticky top-0 z-[1] bg-slate-100 text-slate-700"><tr>
+                                <th class="p-2 text-left">년/월</th><th class="p-2 text-left">수거일</th><th class="p-2 text-left">고객사</th><th class="p-2 text-left">폐기물명</th><th class="p-2 text-left">처리장</th><th class="p-2 text-left">차량</th><th class="p-2 text-right">운반중량(T)</th><th class="p-2 text-right">처리톤수(T)</th><th class="p-2 text-right">총매출(원)</th><th class="p-2 text-right">순매출(원)</th><th class="p-2 text-right">처리비(원)</th>
+                            </tr></thead><tbody id="v41RawRows"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex items-center justify-between gap-2 pt-3"><small class="text-slate-500">Google Sheet 처리수입현황 원본 실적 · 한 페이지 최대 100행</small><div class="flex items-center gap-2"><button type="button" onclick="v41RawPage(-1)" class="border border-slate-200 rounded-lg px-3 py-1.5 text-xs">◀ 이전</button><span id="v41RawPaging" class="text-xs"></span><button type="button" onclick="v41RawPage(1)" class="border border-slate-200 rounded-lg px-3 py-1.5 text-xs">다음 ▶</button></div></div>
+                </div>
+            </section>
         </div>
 
     </main>
@@ -2090,6 +2249,7 @@
             const idxTotal   = normHeaders.findIndex(h => h.includes('총매출액'));
             const idxNet     = normHeaders.findIndex(h => h.includes('순매출액'));
             const idxProcessingCost = normHeaders.findIndex(h => h === '처리비' || h === '처리비용');
+            const idxProcessedWeight = normHeaders.findIndex(h => h === '처리톤수');  // N열, 피벗의 처리톤수
             // 2026-10: M열 처리장. 헤더를 우선 탐색하고, 헤더가 누락된 경우 M열(12)을 사용.
             const idxProcessor = normHeaders.findIndex(h => h === '처리장' || h === '처리장명');
             const processorCol = idxProcessor >= 0 ? idxProcessor : 12;
@@ -2169,6 +2329,7 @@
                         waste:    String(r[idxWaste]  || '미상').trim(),
                         processor: String(r[processorCol] || '미등록').trim() || '미등록',
                         weight:   parseNum(r[idxWeight]),
+                        processedWeight: idxProcessedWeight >= 0 && r[idxProcessedWeight] !== '' && r[idxProcessedWeight] != null ? parseNum(r[idxProcessedWeight]) : null,
                         totalRev: parseNum(r[idxTotal]),
                         netRev:   parseNum(r[idxNet]),
                         processingCost: idxProcessingCost >= 0 && r[idxProcessingCost] !== '' && r[idxProcessingCost] != null ? parseNum(r[idxProcessingCost]) : null,
@@ -2822,6 +2983,8 @@
                 (selectedYears.length === 0 || selectedYears.some(y => d.month?.startsWith(y)))
             );
             renderCommercialVolume(volumeRows);
+            v41UpdateData('v41Contract',volumeRows);
+            v41UpdateData('v41Raw',volumeRows);
             if (!_commercialContractsLoaded) {
                 loadCommercialContractData().catch(e => console.warn('계약 현황 로드 실패', e));
             }
@@ -2898,9 +3061,10 @@
             renderTrendCharts(filtered);
             renderContributionChart(filtered);
             renderComparisonTable(custVals, vehVals, wasteVals, monVals, yearVals);
+            v41UpdateData('v41Trend',filtered);
         }
         if (currentTab === 3) renderVehicleTab(filtered);
-        if (currentTab === 4) renderBriefingTab(filtered);
+        if (currentTab === 4) { renderBriefingTab(filtered); v41UpdateData('v41Brief',filtered); }
         if (currentTab === 5) renderDogupTab();
 
         // 필터 변경 시 AI 요약 초기화 (새 데이터에 맞게 다시 요청 유도)
@@ -3553,6 +3717,166 @@ const plantValues = getFilterVals(tsPlant);
         }});
     }
 
+
+    // ═════════════ v41: 처리장·폐기물 월별 발생량 / 전월·전년 비교 + 로우데이터 ═════════════
+    const _v41Cache = Object.create(null);
+    let _v41RawPage = 0;
+    function v41IsExpanded(prefix){const el=document.getElementById(prefix+'Body');return !!el && el.style.display!=='none';}
+    function v41TogglePanel(prefix){
+        const panel=document.getElementById(prefix+'Body'); if(!panel)return;
+        const open=panel.style.display==='none';
+        panel.style.display=open?'block':'none'; panel.classList.toggle('hidden',!open);
+        const arrow=document.getElementById(prefix+'Arrow');if(arrow)arrow.textContent=open?'▲ 접기':'▼ 펼치기';
+        const button=document.querySelector('[aria-controls="'+prefix+'Body"]');if(button)button.setAttribute('aria-expanded',String(open));
+        if(open){if(prefix==='v41Raw')v41RenderRaw(true);else v41RenderMatrix(prefix);}
+    }
+    function v41SourceRows(){
+        // 비교값 계산 시 '현재 월/년도 필터'만 제외해 직전 월 및 전년 동월을 조회할 수 있게 함.
+        const cust=getFilterVals(tsCust),veh=getFilterVals(tsVeh),waste=getFilterVals(tsWaste),plant=getFilterVals(tsPlant);
+        return (window.rawData||[]).filter(d=>matchesFilter(cust,d.customer)&&matchesFilter(veh,d.vehicle)&&matchesFilter(waste,d.waste)&&matchesFilter(plant,d.processor||'미등록'));
+    }
+    function v41UpdateData(prefix,rows){
+        _v41Cache[prefix]=(rows||[]).slice();
+        if(prefix==='v41Raw') {if(v41IsExpanded(prefix))v41RenderRaw(true);return;}
+        if(v41IsExpanded(prefix))v41RenderMatrix(prefix);
+    }
+    function v41PrevMonth(ym,back){
+        if(!/^\d{4}$/.test(String(ym||'')))return '';
+        const y=2000+Number(ym.slice(0,2)),m=Number(ym.slice(2))-1-back;
+        if(y<2000||m<-500)return '';
+        const d=new Date(y,m,1);
+        return String(d.getFullYear()).slice(-2)+String(d.getMonth()+1).padStart(2,'0');
+    }
+    function v41MonthLabel(ym){return /^\d{4}$/.test(ym)?`20${ym.slice(0,2)}.${ym.slice(2)}`:ym;}
+    function v41VolumeNumber(num){return Number(num||0).toLocaleString('ko-KR',{maximumFractionDigits:2});}
+    function v41MatrixCalc(prefix){
+        const selected=_v41Cache[prefix]||[];
+        const mode=document.getElementById(prefix+'Mode')?.value||'plant-waste';
+        const metric=document.getElementById(prefix+'Metric')?.value||'processed';
+        const measure=d=>metric==='processed'?d.processedWeight:d.weight;
+        const keyword=(document.getElementById(prefix+'Search')?.value||'').trim().toLowerCase();
+        const key=d=>mode==='plant'?(d.processor||'미등록'):mode==='waste'?(d.waste||'미상'):
+          mode==='waste-plant'?`${d.waste||'미상'} → ${d.processor||'미등록'}`:`${d.processor||'미등록'} → ${d.waste||'미상'}`;
+        const all=v41SourceRows();
+        const monthsAll=[...new Set(all.filter(x=>measure(x)!=null).map(x=>x.month).filter(m=>/^\d{4}$/.test(m)))].sort();
+        const monthsSelected=[...new Set(selected.filter(x=>measure(x)!=null).map(x=>x.month).filter(m=>/^\d{4}$/.test(m)))].sort();
+        // 최종 24개월만 화면에 표시. 모든 기간의 상세 조회는 하단 원본과 CSV 이용.
+        const displayMonths=monthsSelected.slice(-24).reverse();
+        const monthDropdown=document.getElementById(prefix+'Month');
+        if(monthDropdown){
+            const old=monthDropdown.value;
+            monthDropdown.innerHTML='<option value="">최근 집계월</option>'+monthsAll.slice().reverse().map(x=>`<option value="${x}">${v41MonthLabel(x)}</option>`).join('');
+            monthDropdown.value=monthsAll.includes(old)?old:'';
+        }
+        // Selected month, if chosen explicitly, is allowed to be outside currently selected months (compare across filters).
+        const chosen=monthDropdown?.value||'';
+        const latest=chosen||monthsSelected.at(-1)||monthsAll.at(-1)||'';
+        const basePrev=v41PrevMonth(latest,1),baseYoY=v41PrevMonth(latest,12);
+        const basisAvailable=new Set(monthsAll);
+        const byKey=new Map(),monthsSelectedSet=new Set(monthsSelected);
+        const push=(d,source)=>{
+            const label=key(d),month=d.month;
+            const raw=measure(d);
+            if(!label||!/^\d{4}$/.test(month)||raw===null||raw===undefined||!Number.isFinite(Number(raw)))return;
+            let agg=byKey.get(label);
+            if(!agg){agg={label,selected:0,values:new Map()};byKey.set(label,agg);}
+            const wt=Number(raw)||0;
+            if(source==='selected')agg.selected+=wt;
+            agg.values.set(month,(agg.values.get(month)||0)+wt);
+        };
+        // Whole source including all filtered months, so YoY/MoM works when current filters are only Oct 2026.
+        all.forEach(d=>push(d,monthsSelectedSet.has(d.month)?'selected':'baseline'));
+        const rows=[...byKey.values()].filter(x=>!keyword||x.label.toLowerCase().includes(keyword))
+            .filter(x=>x.selected>0||(chosen&&x.values.has(chosen)))
+            .sort((a,b)=>b.selected-a.selected||a.label.localeCompare(b.label,'ko'));
+        return {mode,metric,measure,rows,displayMonths,latest,basePrev,baseYoY,basisAvailable,selected,all};
+    }
+    function v41Growth(cur,prev,available){
+        if(!available)return {label:'—',cls:'text-slate-400'};
+        if(prev===0)return {label:cur>0?'신규':'0.0%',cls:cur>0?'text-teal-700':'text-slate-500'};
+        const pct=(cur-prev)/Math.abs(prev)*100;
+        return {label:`${pct>=0?'+':''}${pct.toFixed(1)}%`,cls:pct>0?'text-teal-700':pct<0?'text-rose-700':'text-slate-500'};
+    }
+    function v41RenderMatrix(prefix){
+        if(!v41IsExpanded(prefix))return;
+        const head=document.getElementById(prefix+'Head'),body=document.getElementById(prefix+'Rows');if(!head||!body)return;
+        const view=v41MatrixCalc(prefix);
+        const cols=view.displayMonths;
+        const htmlTh=(t,classes='')=>`<th class="whitespace-nowrap p-2 border-b border-slate-200 ${classes}">${commercialEsc(t)}</th>`;
+        const latestLabel=view.latest?v41MonthLabel(view.latest):'-';
+        const meta=document.getElementById(prefix+'Meta');
+        if(meta){
+            const now=new Date();const nowYM=String(now.getFullYear()).slice(-2)+String(now.getMonth()+1).padStart(2,'0');
+            const provisional=view.latest===nowYM?' · ⚠️ 당월 진행 중(증감률 잠정치)':'';
+            meta.textContent=`${view.metric==='processed'?'처리톤수 N열':'운반중량 I열'} · 현재 선택범위 ${v41VolumeNumber(view.selected.reduce((s,r)=>s+(Number(view.measure(r))||0),0))}T · 그룹 ${view.rows.length}개 · 비교 기준월 ${latestLabel} · 화면 최근 ${cols.length}개월${provisional}`;
+        }
+        head.innerHTML='<tr>'+htmlTh('처리장 / 폐기물','text-left sticky left-0 z-[2] bg-slate-100 min-w-[180px]')+htmlTh('선택 기간 합계(T)','text-right')+htmlTh('기준월(T)','text-right')+htmlTh('MoM','text-right')+htmlTh('YoY','text-right')+cols.map(m=>htmlTh(v41MonthLabel(m),'text-right')).join('')+'</tr>';
+        const current=view.latest;
+        const momOk=view.basisAvailable.has(view.basePrev);
+        const yoyOk=view.basisAvailable.has(view.baseYoY);
+        body.innerHTML=view.rows.map((r,i)=>{
+            const cur=r.values.get(current)||0,prev=r.values.get(view.basePrev)||0,yoy=r.values.get(view.baseYoY)||0;
+            const mom=v41Growth(cur,prev,momOk),yoyG=v41Growth(cur,yoy,yoyOk);
+            return `<tr class="border-b border-slate-100 hover:bg-teal-50/50 ${i%2?'bg-slate-50/40':''}"><td class="p-2 font-semibold sticky left-0 z-[1] bg-white min-w-[180px]">${commercialEsc(r.label)}</td><td class="p-2 text-right font-bold">${v41VolumeNumber(r.selected)}</td><td class="p-2 text-right">${v41VolumeNumber(cur)}</td><td class="p-2 text-right font-bold ${mom.cls}">${mom.label}</td><td class="p-2 text-right font-bold ${yoyG.cls}">${yoyG.label}</td>${cols.map(m=>`<td class="p-2 text-right">${r.values.has(m)?v41VolumeNumber(r.values.get(m)):'—'}</td>`).join('')}</tr>`;
+        }).join('')||`<tr><td class="p-5 text-center text-slate-400" colspan="${cols.length+5}">선택 조건에 해당하는 물동량이 없습니다.</td></tr>`;
+        _v41Cache[prefix+'Export']=view;
+    }
+    function v41Csv(rows,filename){
+        const safe=cell=>'"'+String(cell??'').replace(/"/g,'""')+'"';
+        const csv='\uFEFF'+rows.map(row=>row.map(safe).join(',')).join('\r\n');
+        const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+    function v41DownloadMatrix(prefix){
+        const v=v41MatrixCalc(prefix),prevOk=v.basisAvailable.has(v.basePrev),yoyOk=v.basisAvailable.has(v.baseYoY);
+        const result=[['처리장/폐기물','물량기준','선택기간 합계(T)','기준월','기준월(T)','MoM','YoY',...v.displayMonths.map(v41MonthLabel)]];
+        for(const r of v.rows){const cur=r.values.get(v.latest)||0,p=r.values.get(v.basePrev)||0,y=r.values.get(v.baseYoY)||0;
+            result.push([r.label,v.metric==='processed'?'처리톤수(N)':'운반중량(I)',r.selected,v41MonthLabel(v.latest),cur,v41Growth(cur,p,prevOk).label,v41Growth(cur,y,yoyOk).label,...v.displayMonths.map(m=>r.values.has(m)?r.values.get(m):'')]);}
+        v41Csv(result,'처리장_폐기물_월별물동량_'+(v.latest||'전체')+'.csv');
+    }
+    function v41GetRawRows(){
+        const q=(document.getElementById('v41RawSearch')?.value||'').trim().toLowerCase();
+        return (_v41Cache.v41Raw||[]).filter(r=>!q||[r.customer,r.waste,r.processor,r.vehicle,r.date,r.month].join(' ').toLowerCase().includes(q))
+          .slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.month||'').localeCompare(a.month||''));
+    }
+    function v41RenderRaw(reset=false){
+        if(!v41IsExpanded('v41Raw'))return;
+        if(reset)_v41RawPage=0;
+        const rows=v41GetRawRows(),pages=Math.max(1,Math.ceil(rows.length/100));
+        _v41RawPage=Math.max(0,Math.min(_v41RawPage,pages-1));
+        const body=document.getElementById('v41RawRows'),cnt=document.getElementById('v41RawCount'),paging=document.getElementById('v41RawPaging');
+        if(cnt)cnt.textContent=`조회 ${rows.length.toLocaleString()}건 · 운반중량 ${v41VolumeNumber(rows.reduce((s,r)=>s+(Number(r.weight)||0),0))}T · 처리톤수 ${v41VolumeNumber(rows.reduce((s,r)=>s+(Number(r.processedWeight)||0),0))}T`;
+        if(paging)paging.textContent=`${_v41RawPage+1} / ${pages}`;
+        if(!body)return;
+        body.innerHTML=rows.slice(_v41RawPage*100,(_v41RawPage+1)*100).map((r,i)=>`<tr class="border-b border-slate-100 hover:bg-teal-50/50 ${i%2?'bg-slate-50/40':''}">
+            ${[v41MonthLabel(r.month||''),r.date||r.tripDate||'',r.customer||'',r.waste||'',r.processor||'미등록',r.vehicle||''].map(v=>`<td class="p-2 whitespace-nowrap">${commercialEsc(v)}</td>`).join('')}
+            <td class="p-2 text-right font-bold">${v41VolumeNumber(r.weight)}</td><td class="p-2 text-right font-bold">${r.processedWeight==null?'—':v41VolumeNumber(r.processedWeight)}</td><td class="p-2 text-right">${formatCurrency(r.totalRev)}</td><td class="p-2 text-right">${formatCurrency(r.netRev)}</td><td class="p-2 text-right">${r.processingCost==null?'—':formatCurrency(r.processingCost)}</td></tr>`).join('')||'<tr><td colspan="11" class="p-5 text-center text-slate-500">해당 조건의 로우데이터가 없습니다.</td></tr>';
+    }
+    function v41RawPage(delta){_v41RawPage+=delta;v41RenderRaw(false);}
+    function v41DownloadRaw(){
+        const arr=[['년월','수거일','고객사','폐기물명','처리장','차량','운반중량(T)','처리톤수(T)','총매출(원)','순매출(원)','처리비(원)']];
+        v41GetRawRows().forEach(r=>arr.push([v41MonthLabel(r.month||''),r.date||r.tripDate||'',r.customer,r.waste,r.processor,r.vehicle,r.weight,r.processedWeight??'',r.totalRev,r.netRev,r.processingCost??'']));
+        v41Csv(arr,'처리장_발생량_상세로우데이터.csv');
+    }
+    // v41: 기존 계약 목록·발생량 차트도 각각 접을 수 있도록 하며, 모두 접기 지원.
+    function v41LegacyToggle(name, desired){
+        const el=document.getElementById('v41Legacy'+name+'Body');if(!el)return;
+        const open=typeof desired==='boolean'?desired:el.style.display==='none';
+        el.style.display=open?'block':'none';el.classList.toggle('hidden',!open);
+        const btn=document.getElementById('v41Legacy'+name+'Toggle');if(btn)btn.textContent=open?'▲ 접기':'▼ 펼치기';
+        if(open&&name==='Volume')renderCommercialVolume(window._commercialFilteredRows||[]);
+    }
+    function v41ToggleAllContract(){
+        const all=['Contract','Volume'].every(k=>document.getElementById('v41Legacy'+k+'Body')?.style.display==='none') &&
+          ['v41Contract','v41Raw'].every(k=>!v41IsExpanded(k));
+        const open=all;
+        for(const n of ['Contract','Volume'])v41LegacyToggle(n,open);
+        for(const prefix of ['v41Contract','v41Raw']){
+            if(v41IsExpanded(prefix)!==open)v41TogglePanel(prefix);
+        }
+        const b=document.getElementById('v41ToggleAllBtn');if(b)b.textContent=open?'▲ 분석 영역 모두 접기':'▼ 분석 영역 모두 펼치기';
+    }
+    // ═════════════ END v41 ═════════════
     // ── 탭4: 고객사 브리핑 ──
     function renderBriefingTab(data) {
         if (!data.length) return;
