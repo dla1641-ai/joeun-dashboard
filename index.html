@@ -650,33 +650,6 @@
                     <h3 id="avgWeightCard" class="text-2xl font-bold text-slate-900">0.0<span class="text-base font-normal text-slate-500 ml-1">Ton</span></h3>
                 </div>
             </div>
-            <!-- 선택 기간 발생량 구성 및 월별 추적 -->
-            <section class="bg-white rounded-xl p-5 card-shadow border border-slate-100" id="commercialVolumeSection">
-                <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
-                    <div><h2 class="text-lg font-bold text-slate-800">📦 발생량 분석 · 폐기물 / 처리장</h2><p class="text-xs text-slate-500 mt-1">선택 기간 실적 중량(T) 기준 구성비 · 물량 협의 및 영업 타깃 검토용</p></div>
-                    <span id="commercialVolumeSummary" class="text-xs font-bold text-teal-700"></span>
-                </div>
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
-                    <div class="border border-slate-200 rounded-xl p-3">
-                        <h3 class="font-bold text-sm text-slate-800 mb-2">♻️ 폐기물별 발생량 · 비중</h3>
-                        <div class="max-h-[370px] overflow-auto"><table class="w-full text-xs"><thead><tr class="bg-teal-50 text-teal-900"><th class="p-2 text-left">폐기물</th><th class="p-2 text-right">물량(T)</th><th class="p-2 text-right">비중</th><th class="p-2 text-right">총매출(원)</th></tr></thead><tbody id="commercialWasteBody"></tbody></table></div>
-                    </div>
-                    <div class="border border-slate-200 rounded-xl p-3">
-                        <h3 class="font-bold text-sm text-slate-800 mb-2">🏭 처리장별 발생량 · 비중</h3>
-                        <div class="max-h-[370px] overflow-auto"><table class="w-full text-xs"><thead><tr class="bg-sky-50 text-sky-900"><th class="p-2 text-left">처리장</th><th class="p-2 text-right">물량(T)</th><th class="p-2 text-right">비중</th><th class="p-2 text-right">처리비(원)</th><th class="p-2 text-right">평균 처리비/T</th></tr></thead><tbody id="commercialPlantBody"></tbody></table></div>
-                    </div>
-                </div>
-                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <h3 class="font-bold text-sm text-slate-800">📈 월별 발생량 추적</h3>
-                    <label class="flex items-center gap-2 text-xs font-bold text-slate-600">분석 기준
-                        <select id="commercialVolumeDimension" onchange="renderCommercialVolume(window._commercialFilteredRows || [])" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
-                            <option value="waste">폐기물별</option><option value="processor">처리장별</option><option value="both">폐기물 × 처리장</option>
-                        </select>
-                    </label>
-                </div>
-                <div class="relative w-full h-[290px]"><canvas id="commercialVolumeTrendChart"></canvas></div>
-                <p class="text-xs text-slate-400 mt-2">발생량은 처리수입현황 I열 중량(T), 처리장은 M열 기준입니다. 상위 6개 항목과 나머지를 구분합니다. 평균 처리비/T는 처리수입현황 P열 처리비 합계 ÷ 해당 물량으로 참고용 실효값이며 계약서상의 처리단가와 다를 수 있습니다.</p>
-            </section>
             <!-- 업체 기여도 도넛 차트 -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="bg-white rounded-xl p-6 card-shadow border border-slate-100 flex flex-col">
@@ -1833,8 +1806,8 @@
         <!-- 탭8: 고객사·처리장 계약 현황 · 별도 DB RAW 모니터링 -->
         <div id="tab8-content" class="hidden space-y-5">
             <div class="flex flex-wrap justify-between items-start gap-3">
-                <div><h2 class="text-xl font-bold text-teal-900">고객사 · 처리장 계약 모니터링</h2>
-                <p class="text-sm text-slate-500 mt-1">계약 현황을 별도 화면에서 조회합니다. 상단 고객사 필터와 아래 처리장·검색·단일계약 필터를 활용하세요.</p></div>
+                <div><h2 class="text-xl font-bold text-teal-900">고객사 · 처리장 계약 및 발생량 분석</h2>
+                <p class="text-sm text-slate-500 mt-1">DB RAW 계약 관계와 처리수입현황의 실제 발생량을 한 화면에서 확인합니다. 상단 필터는 아래 발생량 분석에 적용되며, 계약 목록은 고객사 및 목록 전용 필터로 검색합니다.</p></div>
                 <button type="button" onclick="switchTab(2)" class="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-100">← 고객사별 트렌드로</button>
             </div>
             <!-- 고객사 계약 연결 현황 · DB RAW 기준 -->
@@ -1867,6 +1840,35 @@
                     </table>
                 </div>
                 <p class="text-xs text-amber-700 mt-2">⚠️ DB 등록 건수 기준입니다. 계약 만료·실효 여부는 자동 판정하지 않으며, 단일 처리장 표시는 추가 계약 검토 대상입니다.</p>
+            </section>
+
+            <!-- 실적 DB 발생량 분석 · 고객사 트렌드에서 이관 -->
+            <!-- 선택 기간 발생량 구성 및 월별 추적 -->
+            <section class="bg-white rounded-xl p-5 card-shadow border border-slate-100" id="commercialVolumeSection">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <div><h2 class="text-lg font-bold text-slate-800">📦 발생량 분석 · 폐기물 / 처리장</h2><p class="text-xs text-slate-500 mt-1">상단 고객사·차량·폐기물·처리장·년/월 필터 적용 · 처리수입현황 실제 중량(T) 기준 구성비, 월별 물량 및 실효 처리비</p></div>
+                    <span id="commercialVolumeSummary" class="text-xs font-bold text-teal-700"></span>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
+                    <div class="border border-slate-200 rounded-xl p-3">
+                        <h3 class="font-bold text-sm text-slate-800 mb-2">♻️ 폐기물별 발생량 · 비중</h3>
+                        <div class="max-h-[370px] overflow-auto"><table class="w-full text-xs"><thead><tr class="bg-teal-50 text-teal-900"><th class="p-2 text-left">폐기물</th><th class="p-2 text-right">물량(T)</th><th class="p-2 text-right">비중</th><th class="p-2 text-right">총매출(원)</th></tr></thead><tbody id="commercialWasteBody"></tbody></table></div>
+                    </div>
+                    <div class="border border-slate-200 rounded-xl p-3">
+                        <h3 class="font-bold text-sm text-slate-800 mb-2">🏭 처리장별 발생량 · 비중</h3>
+                        <div class="max-h-[370px] overflow-auto"><table class="w-full text-xs"><thead><tr class="bg-sky-50 text-sky-900"><th class="p-2 text-left">처리장</th><th class="p-2 text-right">물량(T)</th><th class="p-2 text-right">비중</th><th class="p-2 text-right">처리비(원)</th><th class="p-2 text-right">평균 처리비/T</th></tr></thead><tbody id="commercialPlantBody"></tbody></table></div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 class="font-bold text-sm text-slate-800">📈 월별 발생량 추적</h3>
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-600">분석 기준
+                        <select id="commercialVolumeDimension" onchange="renderCommercialVolume(window._commercialFilteredRows || [])" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                            <option value="waste">폐기물별</option><option value="processor">처리장별</option><option value="both">폐기물 × 처리장</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="relative w-full h-[290px]"><canvas id="commercialVolumeTrendChart"></canvas></div>
+                <p class="text-xs text-slate-400 mt-2">발생량은 처리수입현황 I열 중량(T), 처리장은 M열 기준입니다. 상위 6개 항목과 나머지를 구분합니다. 평균 처리비/T는 처리수입현황 P열 처리비 합계 ÷ 해당 물량으로 참고용 실효값이며 계약서상의 처리단가와 다를 수 있습니다.</p>
             </section>
 
         </div>
@@ -2577,15 +2579,16 @@
         const basis = document.getElementById('basisControl');
         const globalFilters = document.getElementById('globalFilterPanel');
         // 수행일/매출인식 기준은 운영 매출 데이터 기반 탭(1~4)에만 적용.
-        if (basis) basis.style.display = (tabId >= 5) ? 'none' : '';
+        if (basis) basis.style.display = (tabId >= 5 && tabId !== 8) ? 'none' : '';
         if (globalFilters) globalFilters.style.display = (tabId === 6 || tabId === 7) ? 'none' : '';
 
         // 탭5에서는 업체/폐기물 공통 필터를 사용하지 않음 (기존 동작 유지)
         if (tabId !== 6 && tabId !== 7) {
             const filterBlocks = document.querySelectorAll('#globalFilterPanel > div:first-child > .flex.flex-col');
             filterBlocks.forEach((el, idx) => {
-                // 탭8에는 고객사 필터만 표시. 처리장 역조회는 계약 현황 내 선택창 활용.
-                if (tabId === 8) el.style.display = idx === 0 ? '' : 'none';
+                // 탭8도 발생량 분석에 전체 운영 필터가 필요합니다.
+                // 계약 목록은 상단 고객사 + 목록 내부 필터로 검색하고, 발생량은 6개 전체 필터를 따릅니다.
+                if (tabId === 8) el.style.display = '';
                 else if (idx === 0 || idx === 2 || idx === 3) el.style.display = tabId === 5 ? 'none' : '';
                 else el.style.display = '';
             });
@@ -2802,6 +2805,23 @@
             [1,2,3,4,5,6,7].forEach(i => document.getElementById(`tab${i}-content`)?.classList.add('hidden'));
             document.getElementById('tab8-content')?.classList.remove('hidden');
             renderCommercialContractView();
+            // 발생량은 처리수입현황 실적을 사용하고, 계약 목록은 DB RAW에서 독립적으로 읽습니다.
+            // 상단 공통 필터는 발생량에 모두 적용하되, 계약 등록현황 자체는 월 필터로 누락시키지 않습니다.
+            const selectedCustomers = getFilterVals(tsCust);
+            const selectedVehicles = getFilterVals(tsVeh);
+            const selectedWastes = getFilterVals(tsWaste);
+            const selectedPlants = getFilterVals(tsPlant);
+            const selectedMonths = getFilterVals(tsMon);
+            const selectedYears = getFilterVals(tsYear);
+            const volumeRows = (window.rawData || []).filter(d =>
+                matchesFilter(selectedCustomers, d.customer) &&
+                matchesFilter(selectedVehicles, d.vehicle) &&
+                matchesFilter(selectedWastes, d.waste) &&
+                matchesFilter(selectedPlants, d.processor || '미등록') &&
+                matchesFilter(selectedMonths, d.month) &&
+                (selectedYears.length === 0 || selectedYears.some(y => d.month?.startsWith(y)))
+            );
+            renderCommercialVolume(volumeRows);
             if (!_commercialContractsLoaded) {
                 loadCommercialContractData().catch(e => console.warn('계약 현황 로드 실패', e));
             }
@@ -2877,7 +2897,6 @@
             document.getElementById('avgWeightCard').innerHTML   = `${formatNumber(sumWeight/trendTripCount)}<span class="text-base font-normal text-slate-500 ml-1">Ton</span>`;
             renderTrendCharts(filtered);
             renderContributionChart(filtered);
-            renderCommercialVolume(filtered);
             renderComparisonTable(custVals, vehVals, wasteVals, monVals, yearVals);
         }
         if (currentTab === 3) renderVehicleTab(filtered);
@@ -3508,7 +3527,7 @@ const plantValues = getFilterVals(tsPlant);
         };
         const waste=aggBy(d=>d.waste),plants=aggBy(d=>d.processor||'미등록');
         const summary=document.getElementById('commercialVolumeSummary');
-        if(summary)summary.textContent=`총 ${sumWeight.toLocaleString('ko-KR',{maximumFractionDigits:1})}T · 폐기물 ${waste.length}종 · 처리장 ${plants.length}곳`;
+        if(summary)summary.textContent=data.length ? `총 ${sumWeight.toLocaleString('ko-KR',{maximumFractionDigits:1})}T · 폐기물 ${waste.length}종 · 처리장 ${plants.length}곳` : '선택 조건에 해당하는 실적 없음 · 계약 DB 조회와 별개';
         const drawRows=(arr)=>arr.map((v,i)=>{
             const share=sumWeight>0?v.weight/sumWeight*100:0;
             return `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-2 text-slate-700 font-semibold max-w-[160px] break-words">${commercialEsc(v.label)}<div class="rounded-full bg-slate-100 h-1.5 mt-1 overflow-hidden"><div class="h-full ${i===0?'bg-teal-600':'bg-sky-400'}" style="width:${Math.min(100,Math.max(0,share))}%"></div></div></td><td class="p-2 text-right font-bold">${v.weight.toLocaleString('ko-KR',{maximumFractionDigits:1})}</td><td class="p-2 text-right text-teal-700">${share.toFixed(1)}%</td><td class="p-2 text-right">${formatCurrency(v.revenue)}</td></tr>`;
