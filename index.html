@@ -506,6 +506,7 @@
             <button id="btnTab1" onclick="switchTab(1)" class="px-6 py-3 font-bold text-teal-700 bg-white border border-b-0 border-teal-200 rounded-t-xl transition-all -mb-[1px]">전체 매출 현황</button>
             <button id="btnTab2" onclick="switchTab(2)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">고객사별 트렌드</button>
             <button id="btnTab8" onclick="switchTab(8)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">🔗 고객사·처리장 계약현황</button>
+            <button id="btnTab9" onclick="switchTab(9)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">📈 영업 전략 분석</button>
             <button id="btnTab3" onclick="switchTab(3)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">차량별 실적 현황</button>
             <button id="btnTab4" onclick="switchTab(4)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">📋 고객사 브리핑</button>
             <button id="btnTab5" onclick="switchTab(5)" class="px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]">🚛 운반자 실적 · 도급비</button>
@@ -2032,6 +2033,73 @@
             </section>
         </div>
 
+        <!-- v42: 전사 영업 전략 정량 비교: 수행월·매출인식 기준에 모두 대응 -->
+        <div id="tab9-content" class="hidden space-y-5">
+            <div class="flex flex-wrap gap-3 items-start justify-between">
+                <div>
+                    <div class="flex items-center gap-2"><h2 class="text-xl font-extrabold text-slate-900">📈 영업 전략 · 종합 실적 분석</h2><span class="text-[11px] bg-teal-50 border border-teal-200 rounded-full px-2 py-1 font-bold text-teal-700">내부 분석용</span></div>
+                    <p class="text-sm text-slate-500 mt-1">기간별 전사·고객사·폐기물·처리장 증감률과 매출 기여도를 비교해 영업 대상, 물량·단가 협의 후보를 찾습니다.</p>
+                </div>
+                <div class="flex gap-2 items-center"><button type="button" onclick="s42Download('groups')" class="px-3 py-2 text-xs font-bold text-teal-800 border border-teal-200 rounded-lg bg-white">↓ 비교표 CSV</button><button type="button" onclick="s42Refresh()" class="px-3 py-2 text-xs font-bold text-slate-700 border border-slate-200 rounded-lg">↻ 지표 새로고침</button></div>
+            </div>
+            <section class="bg-white border border-slate-100 shadow-sm rounded-2xl p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-3"><h3 class="font-bold text-slate-800">비교 기간 설정</h3><span id="s42Basis" class="text-xs text-slate-500">상단 업체·차량·폐기물·처리장 필터 연동 (상단 연도·월 필터는 이 탭에서 제외)</span></div>
+                <div class="flex flex-wrap items-end gap-3">
+                    <label class="text-xs text-slate-600 font-bold">빠른 비교
+                        <select id="s42Preset" onchange="s42PresetChange()" class="block mt-1 rounded-lg border border-slate-200 p-2.5 text-sm bg-white min-w-[175px]"><option value="yoy">전년 동기간 (YoY)</option><option value="mom">최근 확정월 vs 전월 (MoM)</option><option value="qoq">직전 3개월 vs 이전 3개월</option><option value="custom">사용자 지정 비교</option></select>
+                    </label>
+                    <label class="text-xs text-slate-600 font-bold">기준기간 시작<input id="s42AStart" type="month" onchange="s42DatesChanged()" class="block mt-1 rounded-lg border border-slate-200 p-2 text-sm bg-white"></label>
+                    <label class="text-xs text-slate-600 font-bold">기준기간 종료<input id="s42AEnd" type="month" onchange="s42DatesChanged()" class="block mt-1 rounded-lg border border-slate-200 p-2 text-sm bg-white"></label>
+                    <span class="text-slate-400 font-bold mb-2">→</span>
+                    <label class="text-xs text-teal-800 font-bold">비교기간 시작<input id="s42BStart" type="month" onchange="s42DatesChanged()" class="block mt-1 rounded-lg border border-teal-200 p-2 text-sm bg-teal-50"></label>
+                    <label class="text-xs text-teal-800 font-bold">비교기간 종료<input id="s42BEnd" type="month" onchange="s42DatesChanged()" class="block mt-1 rounded-lg border border-teal-200 p-2 text-sm bg-teal-50"></label>
+                    <button type="button" onclick="s42ResetFilters()" class="px-3 py-2 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg">기간 기본값</button>
+                </div>
+                <div id="s42PeriodNote" class="text-xs text-amber-700 mt-3 bg-amber-50 rounded-lg px-3 py-2">자료가 로드되면 비교 기간을 설정합니다.</div>
+            </section>
+            <div id="s42Cards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+            <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
+                <section class="xl:col-span-3 bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-2 flex-wrap mb-3"><div><h3 class="font-bold text-slate-800">📉 월별 흐름 비교</h3><p class="text-xs text-slate-500 mt-1">두 기간의 1개월차부터 동일 위치에 겹쳐서 비교합니다 (없는 월은 0이 아닌 빈값)</p></div>
+                        <select id="s42TrendMetric" onchange="s42RenderCharts()" class="rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold"><option value="gross">총매출</option><option value="net">순매출</option><option value="transport">운반부문 매출(계산)</option><option value="weight">운반중량(T)</option><option value="processed">처리톤수(T)</option><option value="cost">처리비</option><option value="trip">배차 건수</option></select>
+                    </div><div class="relative h-[300px]"><canvas id="s42TrendChart"></canvas></div>
+                </section>
+                <section class="xl:col-span-2 bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between flex-wrap gap-2"><div><h3 class="font-bold text-slate-800">🎯 매출 기여도 상위 고객사</h3><p class="text-xs text-slate-500 mt-1">비교기간(B) 매출 기준 · 고객 집중도 확인</p></div><select id="s42ShareMetric" onchange="s42RenderCharts()" class="rounded-lg border border-slate-200 px-2 py-2 text-xs"><option value="gross">총매출</option><option value="net">순매출</option><option value="weight">물량</option></select></div>
+                    <div class="relative h-[300px]"><canvas id="s42ShareChart"></canvas></div>
+                </section>
+            </div>
+            <section class="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                <div class="flex items-start justify-between flex-wrap gap-3 mb-3"><div><h3 class="font-bold text-slate-800">🔎 영업 검토 후보 · 정량 신호</h3><p class="text-xs text-slate-500 mt-1">자동 판정은 영업 검토용 신호이며 실제 계약단가·고객 이탈 원인을 확정하지 않습니다.</p></div><span id="s42StrategyCount" class="text-xs text-slate-500"></span></div>
+                <div id="s42Strategy" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+            </section>
+            <section class="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-start gap-2 flex-wrap"><div><h3 class="font-bold text-slate-800">📊 고객사·폐기물·처리장 증감 및 비중 비교</h3><p class="text-xs text-slate-500 mt-1">기준/비교 기간 합계, 증감액, 증감률, 비중 변화(%p)를 동시에 비교합니다.</p></div><button type="button" onclick="s42Toggle('s42MainBody')" class="text-xs border border-slate-200 rounded-lg px-3 py-2 text-slate-600">접기 / 펼치기</button></div>
+                <div id="s42MainBody" class="mt-4">
+                    <div class="flex gap-3 items-end flex-wrap mb-3">
+                        <label class="text-xs text-slate-600 font-bold">분석 차원<select id="s42GroupDim" onchange="s42RenderGroups()" class="block mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"><option value="customer">고객사별</option><option value="waste">폐기물별</option><option value="processor">처리장별</option><option value="customer-waste">고객사 × 폐기물</option><option value="waste-processor">폐기물 × 처리장</option><option value="customer-processor">고객사 × 처리장</option></select></label>
+                        <label class="text-xs text-slate-600 font-bold">비교 지표<select id="s42GroupMetric" onchange="s42RenderGroups()" class="block mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"><option value="gross">총매출</option><option value="net">순매출</option><option value="transport">운반부문 매출(계산)</option><option value="weight">운반중량(T)</option><option value="processed">처리톤수(T)</option><option value="cost">처리비</option><option value="trip">배차 건수</option></select></label>
+                        <label class="text-xs text-slate-600 font-bold">정렬<select id="s42GroupSort" onchange="s42RenderGroups()" class="block mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"><option value="share">비교기간 비중 높은 순</option><option value="down">감소량 큰 순</option><option value="up">증가량 큰 순</option><option value="rate">증가율 높은 순</option><option value="name">이름 순</option></select></label>
+                        <label class="text-xs text-slate-600 font-bold flex-1 min-w-[170px]">키워드 검색<input id="s42GroupSearch" oninput="s42RenderGroups()" placeholder="고객사·폐기물·처리장" class="block mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm w-full"></label>
+                        <span id="s42GroupStatus" class="text-xs text-slate-500 mb-2"></span>
+                    </div>
+                    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4"><div class="xl:col-span-3 overflow-auto max-h-[480px] border border-slate-200 rounded-lg"><table class="min-w-[850px] w-full text-xs"><thead class="sticky top-0 bg-slate-100 text-slate-700"><tr><th class="text-left p-2">고객사 / 항목</th><th class="text-right p-2">기준(A)</th><th class="text-right p-2">비교(B)</th><th class="text-right p-2">증감(B−A)</th><th class="text-right p-2">증감률</th><th class="text-right p-2">B 비중</th><th class="text-right p-2">비중 변화</th><th class="p-2">상세</th></tr></thead><tbody id="s42GroupRows"></tbody></table></div><div class="xl:col-span-2"><h4 class="text-xs font-bold text-slate-600 mb-2">비교기간 주요 항목 상위 10</h4><div class="h-[385px] relative"><canvas id="s42GroupChart"></canvas></div></div></div>
+                </div>
+            </section>
+            <div class="flex flex-wrap items-center justify-end gap-2"><label class="text-xs font-bold text-slate-600" for="s42VolumeBasis">아래 폐기물·처리장 발생량 기준</label><select id="s42VolumeBasis" onchange="s42RenderDetails()" class="border border-slate-200 px-3 py-2 rounded-lg text-xs font-bold bg-white"><option value="processed">처리톤수 (N열)</option><option value="weight">운반중량 (I열)</option></select></div>
+            <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div class="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm"><div class="flex justify-between flex-wrap gap-2 mb-3"><div><h3 class="font-bold text-slate-800">♻️ 폐기물별 발생량 · 증감</h3><p class="text-xs text-slate-500 mt-1">영업 타깃 폐기물 확인</p></div><button onclick="s42Download('waste')" class="border border-teal-200 px-3 py-2 text-xs font-bold rounded-lg text-teal-800">↓ CSV</button></div><div class="max-h-[370px] overflow-auto"><table class="w-full text-xs"><thead class="sticky top-0 bg-slate-100"><tr><th class="p-2 text-left">폐기물</th><th class="p-2 text-right">기준 물량</th><th class="p-2 text-right">비교 물량</th><th class="p-2 text-right">증감(T)</th><th class="p-2 text-right">YoY/MoM</th><th class="p-2 text-right">비중</th></tr></thead><tbody id="s42WasteRows"></tbody></table></div></div>
+                <div class="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm"><div class="flex justify-between flex-wrap gap-2 mb-3"><div><h3 class="font-bold text-slate-800">🏭 처리장별 물량 · 처리비/T</h3><p class="text-xs text-slate-500 mt-1">물량 배분·처리비 협의 참고</p></div><button onclick="s42Download('plant')" class="border border-teal-200 px-3 py-2 text-xs font-bold rounded-lg text-teal-800">↓ CSV</button></div><div class="max-h-[370px] overflow-auto"><table class="w-full text-xs"><thead class="sticky top-0 bg-slate-100"><tr><th class="p-2 text-left">처리장</th><th class="p-2 text-right">기준 물량</th><th class="p-2 text-right">비교 물량</th><th class="p-2 text-right">증감(T)</th><th class="p-2 text-right">비중</th><th class="p-2 text-right">B 처리비/T</th></tr></thead><tbody id="s42PlantRows"></tbody></table></div></div>
+            </section>
+            <section class="bg-white border border-slate-100 rounded-2xl shadow-sm">
+                <button type="button" onclick="s42Toggle('s42RawBody')" class="w-full flex justify-between items-center text-left px-5 py-4"><span><strong class="text-slate-800">📋 원본 실적 조회</strong><small class="block mt-1 text-slate-500">기간 A·B의 실제 처리수입현황 개별 행 · 고객사/폐기물/처리장 검색·CSV</small></span><span class="text-sm text-teal-700">▾ 펼치기 / 접기</span></button>
+                <div id="s42RawBody" style="display:none" class="px-5 pb-5 border-t border-slate-100 pt-4">
+                    <div class="flex items-center flex-wrap justify-between gap-3 mb-3"><div class="flex gap-2 items-center flex-wrap"><input id="s42RawSearch" oninput="s42RenderRaw(true)" class="border border-slate-200 rounded-lg p-2 text-sm w-64" placeholder="업체 · 처리장 · 폐기물 · 차량"><select id="s42RawPeriod" onchange="s42RenderRaw(true)" class="border border-slate-200 rounded-lg p-2 text-sm"><option value="both">A+B 모두</option><option value="A">기준기간 A</option><option value="B">비교기간 B</option></select></div><div class="flex gap-2 items-center"><span class="text-xs text-slate-500" id="s42RawInfo"></span><button type="button" onclick="s42Download('raw')" class="border border-teal-200 rounded-lg px-3 py-2 text-xs font-bold text-teal-800">↓ 조회결과 CSV</button></div></div>
+                    <div class="overflow-auto max-h-[540px] border border-slate-200 rounded-lg"><table class="min-w-[1200px] w-full text-xs"><thead class="sticky top-0 bg-slate-100"><tr><th class="p-2">기간</th><th class="p-2">년/월</th><th class="p-2">일자</th><th class="p-2 text-left">고객사</th><th class="p-2 text-left">폐기물</th><th class="p-2 text-left">처리장</th><th class="p-2">차량</th><th class="p-2 text-right">중량(T)</th><th class="p-2 text-right">처리톤수(T)</th><th class="p-2 text-right">총매출</th><th class="p-2 text-right">순매출</th><th class="p-2 text-right">처리비</th></tr></thead><tbody id="s42RawRows"></tbody></table></div><div class="flex justify-between items-center mt-3"><span class="text-xs text-slate-500">1페이지 최대 80건 · 선택한 조건만 다운로드</span><div class="flex gap-2 items-center"><button onclick="s42RawMove(-1)" class="border border-slate-200 rounded-lg px-3 py-1.5 text-xs">◀ 이전</button><span id="s42RawPage" class="text-xs"></span><button onclick="s42RawMove(1)" class="border border-slate-200 rounded-lg px-3 py-1.5 text-xs">다음 ▶</button></div></div>
+                </div>
+            </section>
+            <p class="text-xs text-slate-500">** 데이터 정의: 총매출=K열, 순매출=L열, 처리비=P열, 운반중량=I열, 처리톤수=N열. 운반부문 매출(계산)=총매출−처리비(처리비 없는 건 제외)이며 실제 계약 운반료나 운반비매출 별도 확정값과 다를 수 있습니다. 증감률은 기준값이 0일 때 0%로 표시하지 않습니다. 일부 월 실적이 없으면 그래프에는 빈값으로 표시합니다.</p>
+        </div>
     </main>
 </div>
 
@@ -2700,7 +2768,7 @@
 
     // ── 애니메이션 트리거 ──
     function animateDashboard() {
-        const containers = ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab8-content'];
+        const containers = ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab8-content','tab9-content'];
         containers.forEach(id => {
             const el = document.getElementById(id);
             if (!el.classList.contains('hidden')) {
@@ -2729,7 +2797,7 @@
         currentTab = tabId;
         const active = "px-6 py-3 font-bold text-teal-700 bg-white border border-b-0 border-teal-200 rounded-t-xl transition-all -mb-[1px]";
         const inactive = "px-6 py-3 font-bold text-slate-500 bg-slate-50 hover:bg-white border border-b-0 border-slate-200 rounded-t-xl transition-all -mb-[1px]";
-        [1,2,3,4,5,6,7,8].forEach(i => {
+        [1,2,3,4,5,6,7,8,9].forEach(i => {
             const btn = document.getElementById(`btnTab${i}`);
             const pane = document.getElementById(`tab${i}-content`);
             if (btn) btn.className = i === tabId ? active : inactive;
@@ -2740,7 +2808,7 @@
         const basis = document.getElementById('basisControl');
         const globalFilters = document.getElementById('globalFilterPanel');
         // 수행일/매출인식 기준은 운영 매출 데이터 기반 탭(1~4)에만 적용.
-        if (basis) basis.style.display = (tabId >= 5 && tabId !== 8) ? 'none' : '';
+        if (basis) basis.style.display = (tabId >= 5 && tabId !== 8 && tabId !== 9) ? 'none' : '';
         if (globalFilters) globalFilters.style.display = (tabId === 6 || tabId === 7) ? 'none' : '';
 
         // 탭5에서는 업체/폐기물 공통 필터를 사용하지 않음 (기존 동작 유지)
@@ -2749,7 +2817,7 @@
             filterBlocks.forEach((el, idx) => {
                 // 탭8도 발생량 분석에 전체 운영 필터가 필요합니다.
                 // 계약 목록은 상단 고객사 + 목록 내부 필터로 검색하고, 발생량은 6개 전체 필터를 따릅니다.
-                if (tabId === 8) el.style.display = '';
+                if (tabId === 8 || tabId === 9) el.style.display = '';
                 else if (idx === 0 || idx === 2 || idx === 3) el.style.display = tabId === 5 ? 'none' : '';
                 else el.style.display = '';
             });
@@ -2924,7 +2992,7 @@
         if (loginGuide) {
             if (!_currentUserEmail) {
                 loginGuide.classList.remove('hidden');
-                ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content','tab8-content'].forEach(id => {
+                ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content','tab8-content','tab9-content'].forEach(id => {
                     const el = document.getElementById(id); if(el) el.classList.add('hidden');
                 });
                 return;
@@ -2937,7 +3005,7 @@
         if (currentTab === 6) {
             const noDataMsg = document.getElementById('noDataMessage');
             if (noDataMsg) noDataMsg.classList.add('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab8-content'].forEach(id => {
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab8-content','tab9-content'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.classList.add('hidden');
             });
             const ct = document.getElementById('tab6-content');
@@ -2950,7 +3018,7 @@
         if (currentTab === 7) {
             const noDataMsg = document.getElementById('noDataMessage');
             if (noDataMsg) noDataMsg.classList.add('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab8-content'].forEach(id => {
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab8-content','tab9-content'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.classList.add('hidden');
             });
             const pane = document.getElementById('tab7-content');
@@ -2963,7 +3031,7 @@
         if (currentTab === 8) {
             const noDataMsg = document.getElementById('noDataMessage');
             if (noDataMsg) noDataMsg.classList.add('hidden');
-            [1,2,3,4,5,6,7].forEach(i => document.getElementById(`tab${i}-content`)?.classList.add('hidden'));
+            [1,2,3,4,5,6,7,9].forEach(i => document.getElementById(`tab${i}-content`)?.classList.add('hidden'));
             document.getElementById('tab8-content')?.classList.remove('hidden');
             renderCommercialContractView();
             // 발생량은 처리수입현황 실적을 사용하고, 계약 목록은 DB RAW에서 독립적으로 읽습니다.
@@ -2991,6 +3059,15 @@
             return;
         }
 
+        if (currentTab === 9) {
+            document.getElementById('noDataMessage')?.classList.add('hidden');
+            [1,2,3,4,5,6,7,8].forEach(i => document.getElementById(`tab${i}-content`)?.classList.add('hidden'));
+            document.getElementById('tab9-content')?.classList.remove('hidden');
+            s42Init();
+            s42Render();
+            return;
+        }
+
         const custVals  = getFilterVals(tsCust);
         const vehVals   = getFilterVals(tsVeh);
         const wasteVals = getFilterVals(tsWaste);
@@ -3003,7 +3080,7 @@
         if (currentTab === 5) {
             const noDataMsg = document.getElementById('noDataMessage');
             if (noDataMsg) noDataMsg.classList.add('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab6-content','tab7-content','tab8-content'].forEach(id => {
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab6-content','tab7-content','tab8-content','tab9-content'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.classList.add('hidden');
             });
             const pane = document.getElementById('tab5-content');
@@ -3024,7 +3101,7 @@
         const noDataMsg = document.getElementById('noDataMessage');
         if (filtered.length === 0) {
             noDataMsg.classList.remove('hidden');
-            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content','tab8-content'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
+            ['tab1-content','tab2-content','tab3-content','tab4-content','tab5-content','tab6-content','tab7-content','tab8-content','tab9-content'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
             return;
         }
         noDataMsg.classList.add('hidden');
@@ -10724,5 +10801,121 @@ async function stmtDownloadPdf(){
 }
 </script>
 
+<script>
+/* v42 — 영업 전략 종합 비교. 독립된 기간 컨트롤, 공유 대상 필터 및 기존 데이터셋 재사용 */
+const s42State={started:false,A:[],B:[],all:[],groupRows:[],wasteRows:[],plantRows:[],rawPage:0,charts:{},periods:null};
+const s42MetricInfo={gross:['총매출','원'],net:['순매출','원'],transport:['운반부문 매출(계산)','원'],weight:['운반중량','T'],processed:['처리톤수','T'],cost:['처리비','원'],trip:['운반 횟수','회']};
+function s42Esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function s42Val(id){return document.getElementById(id)?.value||'';}
+function s42MonthIndex(v){let s=String(v||'').replace(/-/g,'');if(/^20\d{4}$/.test(s))return Number(s.slice(0,4))*12+Number(s.slice(4,6))-1;if(/^\d{4}$/.test(s))return (2000+Number(s.slice(0,2)))*12+Number(s.slice(2,4))-1;return null;}
+function s42IndexToInput(i){const y=Math.floor(i/12),m=i%12+1;return `${y}-${String(m).padStart(2,'0')}`;}
+function s42IndexToYYMM(i){return s42IndexToInput(i).replace('-','').slice(2);}
+function s42IndexLabel(i){const v=s42IndexToInput(i);return `${v.slice(2,4)}년 ${Number(v.slice(5))}월`;}
+function s42Fmt(v,metric){if(v===null||v===undefined||!Number.isFinite(v))return '—';return ['weight','processed'].includes(metric)?Number(v).toLocaleString('ko-KR',{maximumFractionDigits:2,minimumFractionDigits:1}):Math.round(v).toLocaleString('ko-KR');}
+function s42Rate(a,b){if(!Number.isFinite(a)||!Number.isFinite(b))return null;if(a===0)return b===0?null:null;return (b-a)/Math.abs(a)*100;}
+function s42RateHtml(a,b){const n=s42Rate(a,b);if(n===null)return a===0&&b>0?'<span class="text-teal-700 font-bold">비교기준 없음</span>':'<span class="text-slate-400">—</span>';return `<span class="${n>0?'text-emerald-700':n<0?'text-red-600':'text-slate-500'} font-bold">${n>0?'▲ ':n<0?'▼ ':''}${Math.abs(n).toFixed(1)}%</span>`;}
+function s42Sum(rows){
+ const x={gross:0,net:0,cost:0,transport:0,weight:0,processed:0,trip:0,costWeight:0,transportKnown:0,rowCount:rows.length};
+ const keys=new Set();
+ for(const d of rows){const n=(v)=>Number(v)||0;x.gross+=n(d.totalRev);x.net+=n(d.netRev);x.weight+=n(d.weight);if(d.processedWeight!=null)x.processed+=n(d.processedWeight);
+   if(d.processingCost!=null && Number.isFinite(Number(d.processingCost))){x.cost+=n(d.processingCost);x.transport+=n(d.totalRev)-n(d.processingCost);x.transportKnown++;x.costWeight+=d.processedWeight==null?n(d.weight):n(d.processedWeight);}
+   keys.add(typeof getTripKey==='function'?getTripKey(d):`${d.month}|${d.date}|${d.customer}|${d.vehicle}|${d._rowId}`);
+ }
+ x.trip=keys.size;return x;
+}
+function s42SelectorChange(){s42Render();}
+function s42Init(){if(s42State.started)return;const ds=(window.rawData||[]).map(d=>s42MonthIndex(d.month)).filter(x=>x!==null);if(!ds.length)return;s42State.started=true;s42ResetFilters(false);}
+function s42ResetFilters(doRender=true){
+ const available=(window.rawData||[]).map(d=>s42MonthIndex(d.month)).filter(x=>x!==null);
+ if(!available.length)return;
+ const latest=Math.max(...available);const now=new Date();const closed=now.getFullYear()*12+now.getMonth()-1;
+ const end=Math.min(latest,closed);const start=end-(end%12); // 최근 완결 월까지의 해당 연도
+ const set=(id,n)=>{const el=document.getElementById(id);if(el)el.value=s42IndexToInput(n);};
+ set('s42AStart',start-12);set('s42AEnd',end-12);set('s42BStart',start);set('s42BEnd',end);
+ if(document.getElementById('s42Preset'))document.getElementById('s42Preset').value='yoy';
+ if(doRender)s42Render();
+}
+function s42PresetChange(){
+ const preset=s42Val('s42Preset');if(preset==='custom'){s42Render();return;}
+ const months=(window.rawData||[]).map(d=>s42MonthIndex(d.month)).filter(x=>x!==null);if(!months.length)return;
+ const today=new Date(),closed=today.getFullYear()*12+today.getMonth()-1;const latest=Math.min(Math.max(...months),closed);
+ let ast,aen,bst,ben;
+ if(preset==='mom'){ast=latest-1;aen=latest-1;bst=latest;ben=latest;}
+ else if(preset==='qoq'){ast=latest-5;aen=latest-3;bst=latest-2;ben=latest;}
+ else {bst=latest-latest%12;ben=latest;ast=bst-12;aen=ben-12;}
+ [['s42AStart',ast],['s42AEnd',aen],['s42BStart',bst],['s42BEnd',ben]].forEach(([id,n])=>{document.getElementById(id).value=s42IndexToInput(n);});s42Render();
+}
+function s42DatesChanged(){const p=document.getElementById('s42Preset');if(p)p.value='custom';s42Render();}
+function s42Toggle(id){const el=document.getElementById(id);if(!el)return;el.style.display=el.style.display==='none'?'':'none';}
+function s42Scoped(){
+ const tc=getFilterVals(tsCust),tv=getFilterVals(tsVeh),tw=getFilterVals(tsWaste),tp=getFilterVals(tsPlant);
+ return (window.rawData||[]).filter(d=>matchesFilter(tc,d.customer)&&matchesFilter(tv,d.vehicle)&&matchesFilter(tw,d.waste)&&matchesFilter(tp,d.processor||'미등록'));
+}
+function s42Period(){
+ const [as,ae,bs,be]=['s42AStart','s42AEnd','s42BStart','s42BEnd'].map(id=>s42MonthIndex(s42Val(id)));
+ return {as,ae,bs,be,valid:[as,ae,bs,be].every(n=>n!==null)&&as<=ae&&bs<=be};
+}
+function s42Render(){
+ if(!document.getElementById('tab9-content') || currentTab!==9)return;
+ if(!s42State.started){s42Init();if(!s42State.started){document.getElementById('s42PeriodNote').textContent='데이터를 불러온 후 이용할 수 있습니다.';return;}}
+ const p=s42Period(),note=document.getElementById('s42PeriodNote');
+ if(!p.valid){note.textContent='⚠️ 기간 시작·종료 순서를 확인해주세요.';return;}
+ const rows=s42Scoped(), a=rows.filter(d=>{const m=s42MonthIndex(d.month);return m!==null&&m>=p.as&&m<=p.ae;}),b=rows.filter(d=>{const m=s42MonthIndex(d.month);return m!==null&&m>=p.bs&&m<=p.be;});
+ s42State.A=a;s42State.B=b;s42State.all=rows;s42State.periods=p;s42State.rawPage=0;
+ const now=new Date(),incomplete=now.getFullYear()*12+now.getMonth(),partial=p.be>=incomplete||p.ae>=incomplete;
+ const aNames=new Set(a.map(d=>d.month)),bNames=new Set(b.map(d=>d.month));
+ note.innerHTML=`기준 <b>${s42IndexLabel(p.as)} ~ ${s42IndexLabel(p.ae)}</b> (${a.length.toLocaleString()}행 · ${aNames.size}개월) &nbsp;vs&nbsp; 비교 <b>${s42IndexLabel(p.bs)} ~ ${s42IndexLabel(p.be)}</b> (${b.length.toLocaleString()}행 · ${bNames.size}개월)${partial?'<span class="text-red-700 font-bold"> · 진행 중인 월 포함: 잠정 실적</span>':''}${!a.length||!b.length?'<span class="text-red-700 font-bold"> · 일부 비교기간 자료 없음: 증감률 해석 주의</span>':''}`;
+ if(document.getElementById('s42Basis'))document.getElementById('s42Basis').textContent=`${_dataBasis==='account'?'매출인식':'수행월'} 기준 · 상단 고객사/차량/폐기물/처리장 연동 · 연도/월 필터는 탭 내 비교기간 사용`;
+ s42RenderCards();s42RenderCharts();s42RenderGroups();s42RenderDetails();s42RenderStrategy();s42RenderRaw(true);
+}
+function s42RenderCards(){
+ const a=s42Sum(s42State.A),b=s42Sum(s42State.B),entries=[['gross','총매출','매출 규모'],['net','순매출','처리수입현황 L열'],['transport','운반부문 매출(계산)','총매출−처리비, P열 확인 행만'],['weight','운반중량','I열 합계'],['processed','처리톤수','N열 집계'],['trip','운반 건수','동일 일자·차량·고객사 기준']];
+ document.getElementById('s42Cards').innerHTML=entries.map(([k,label,description],i)=>{const av=(k==='transport'&&!a.transportKnown)?null:a[k],bv=(k==='transport'&&!b.transportKnown)?null:b[k],valid=av!==null&&bv!==null,delta=valid?bv-av:null;const unit=s42MetricInfo[k][1];return `<div class="bg-white border border-slate-100 shadow-sm p-4 rounded-2xl" style="border-top:3px solid ${['#0d9488','#10b981','#2563eb','#8b5cf6','#f59e0b','#64748b'][i]}"><div class="text-xs text-slate-500 font-bold">${label} <span class="font-normal">${unit}</span></div><div class="text-[11px] text-slate-400 mt-1">${description}</div><div class="text-xs mt-3 flex justify-between gap-1"><span>A ${s42Fmt(av,k)}</span><span class="text-teal-800 font-bold">B ${s42Fmt(bv,k)}</span></div><div class="text-xl font-extrabold text-slate-900 mt-2 truncate" title="${bv??''}">${s42Fmt(bv,k)}<span class="ml-1 text-sm font-normal text-slate-400">${unit}</span></div><div class="text-xs mt-2 flex justify-between gap-2"><span class="${(delta||0)<0?'text-red-600':'text-slate-600'}">증감 ${delta===null?'—':(delta>0?'+':'')+s42Fmt(delta,k)}</span><span>${valid?s42RateHtml(av,bv):'—'}</span></div></div>`;}).join('');
+}
+function s42Destroy(name){if(s42State.charts[name]){try{s42State.charts[name].destroy();}catch(e){}s42State.charts[name]=null;}}
+function s42ChartOptions(unit,axis='y'){return {responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11,weight:'bold'}}},datalabels:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label||''}: ${s42Fmt(axis==='x'?c.parsed.x:c.parsed.y,c.dataset._metric||'gross')} ${unit}`}}},scales:axis==='y'?{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>Number(v).toLocaleString('ko-KR',{notation:'compact'})}}}:{x:{beginAtZero:true},y:{grid:{display:false}}}};}
+function s42RenderCharts(){
+ if(!s42State.periods||typeof Chart==='undefined')return;
+ const p=s42State.periods,k=s42Val('s42TrendMetric')||'gross',unit=s42MetricInfo[k][1],maxLen=Math.min(36,Math.max(p.ae-p.as+1,p.be-p.bs+1));
+ const calc=(r,start,end)=>{const out=new Map();for(const d of r){const i=s42MonthIndex(d.month);if(i<start||i>end)continue;if(!out.has(i))out.set(i,[]);out.get(i).push(d);}return out;};const aa=calc(s42State.A,p.as,p.ae),bb=calc(s42State.B,p.bs,p.be);
+ const months=Array.from({length:maxLen},(_,i)=>i);const val=(map,start,end,offset)=>{if(start+offset>end||!map.has(start+offset))return null;const group=s42Sum(map.get(start+offset));return k==='transport'&&!group.transportKnown?null:group[k];};
+ s42Destroy('trend');const cv=document.getElementById('s42TrendChart');if(cv)s42State.charts.trend=new Chart(cv,{type:'line',data:{labels:months.map(x=>`${x+1}개월차`),datasets:[{_metric:k,label:`A ${s42IndexLabel(p.as)} 시작`,data:months.map(i=>val(aa,p.as,p.ae,i)),borderColor:'#94a3b8',backgroundColor:'#94a3b820',borderWidth:2.5,pointRadius:3,tension:.25,spanGaps:false},{_metric:k,label:`B ${s42IndexLabel(p.bs)} 시작`,data:months.map(i=>val(bb,p.bs,p.be,i)),borderColor:'#0d9488',backgroundColor:'#0d948822',borderWidth:2.8,pointRadius:4,tension:.25,spanGaps:false}]},options:{...s42ChartOptions(unit),plugins:{...s42ChartOptions(unit).plugins,tooltip:{callbacks:{title:it=>{const off=it[0]?.dataIndex||0;return `A: ${s42IndexLabel(p.as+off)} / B: ${s42IndexLabel(p.bs+off)}`;},label:it=>`${it.dataset.label}: ${s42Fmt(it.raw,k)} ${unit}`}}}}});
+ s42Destroy('share');const mk=s42Val('s42ShareMetric')||'gross',items=s42MakeGroup('customer'),ordered=items.filter(x=>x.B[mk]>0).sort((a,b)=>b.B[mk]-a.B[mk]),top=ordered.slice(0,6),other=ordered.slice(6).reduce((sum,x)=>sum+x.B[mk],0),names=top.map(x=>x.name),values=top.map(x=>x.B[mk]);if(other>0){names.push('나머지');values.push(other);}const colors=['#0d9488','#2563eb','#8b5cf6','#f59e0b','#f97316','#64748b','#cbd5e1'];const el=document.getElementById('s42ShareChart');if(el&&values.length)s42State.charts.share=new Chart(el,{type:'doughnut',data:{labels:names,datasets:[{data:values,backgroundColor:colors,borderColor:'#fff',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:10}}},datalabels:{display:false},tooltip:{callbacks:{label:t=>`${t.label}: ${s42Fmt(t.raw,mk)} ${s42MetricInfo[mk][1]}`}}}}});
+}
+function s42Key(d,mode){switch(mode){case 'waste':return d.waste||'미등록';case 'processor':return d.processor||'미등록';case 'customer-waste':return `${d.customer||'미등록'} · ${d.waste||'미등록'}`;case 'customer-processor':return `${d.customer||'미등록'} · ${d.processor||'미등록'}`;case 'waste-processor':return `${d.waste||'미등록'} · ${d.processor||'미등록'}`;default:return d.customer||'미등록';}}
+function s42MakeGroup(mode){const map=new Map();for(const [period,rows] of [['A',s42State.A],['B',s42State.B]])for(const d of rows){const name=s42Key(d,mode);if(!map.has(name))map.set(name,{name,Arows:[],Brows:[]});map.get(name)[period==='A'?'Arows':'Brows'].push(d);}return [...map.values()].map(x=>({...x,A:s42Sum(x.Arows),B:s42Sum(x.Brows)}));}
+function s42RenderGroups(){if(!s42State.periods)return;const mode=s42Val('s42GroupDim')||'customer',k=s42Val('s42GroupMetric')||'gross',sort=s42Val('s42GroupSort')||'share',q=s42Val('s42GroupSearch').toLowerCase().trim();let entries=s42MakeGroup(mode).filter(x=>!q||x.name.toLowerCase().includes(q));const totalA=s42Sum(s42State.A)[k],totalB=s42Sum(s42State.B)[k];const by=(x)=>{const a=x.A[k],b=x.B[k];if(sort==='down')return a-b;if(sort==='up')return b-a;if(sort==='rate')return s42Rate(a,b)??-Infinity;return b;};entries.sort((x,y)=>sort==='name'?x.name.localeCompare(y.name,'ko'):by(y)-by(x));s42State.groupRows=entries;
+ const groupEntryIndex=Object.fromEntries(entries.map((x,i)=>[x.name,i]));
+ document.getElementById('s42GroupStatus').textContent=`${entries.length.toLocaleString()}개 항목${entries.length>150?' (화면 상위 150개, CSV 전체)':''} · B기간 전체 ${s42Fmt(totalB,k)} ${s42MetricInfo[k][1]}`;
+ document.getElementById('s42GroupRows').innerHTML=entries.slice(0,150).map(x=>{const a=x.A[k],b=x.B[k],diff=b-a,pct=totalB?b/totalB*100:0,ppt=(totalB?b/totalB*100:0)-(totalA?a/totalA*100:0);return `<tr class="border-b border-slate-100 hover:bg-teal-50"><td class="p-2 max-w-[230px] truncate" title="${s42Esc(x.name)}"><b>${s42Esc(x.name)}</b></td><td class="p-2 text-right">${s42Fmt(a,k)}</td><td class="p-2 text-right font-bold">${s42Fmt(b,k)}</td><td class="p-2 text-right ${diff<0?'text-red-600':'text-emerald-700'}">${diff>0?'+':''}${s42Fmt(diff,k)}</td><td class="p-2 text-right">${s42RateHtml(a,b)}</td><td class="p-2 text-right">${pct.toFixed(1)}%</td><td class="p-2 text-right ${ppt!==null&&ppt<0?'text-red-600':'text-teal-700'}">${ppt===null?'—':(ppt>0?'+':'')+ppt.toFixed(1)+'%p'}</td><td class="p-2 text-center">${mode==='customer'?`<button type="button" onclick="s42GoCustomerIndex(${groupEntryIndex[x.name]})" class="underline text-teal-700 text-xs">매출 보기</button>`:'—'}</td></tr>`;}).join('')||'<tr><td colspan="8" class="p-6 text-center text-slate-500">조건에 맞는 비교 데이터가 없습니다.</td></tr>';
+ s42Destroy('group');if(typeof Chart!=='undefined'){const top=[...entries].filter(x=>x.B[k]>0).sort((a,b)=>b.B[k]-a.B[k]).slice(0,10).reverse(),el=document.getElementById('s42GroupChart');if(el&&top.length)s42State.charts.group=new Chart(el,{type:'bar',data:{labels:top.map(x=>x.name.length>18?x.name.slice(0,17)+'…':x.name),datasets:[{_metric:k,label:s42MetricInfo[k][0],data:top.map(x=>x.B[k]),backgroundColor:'#0d9488',borderRadius:3}]},options:{...s42ChartOptions(s42MetricInfo[k][1],'x'),indexAxis:'y',plugins:{...s42ChartOptions(s42MetricInfo[k][1],'x').plugins,legend:{display:false}}}});}
+}
+function s42DetailRows(mode){return s42MakeGroup(mode).sort((a,b)=>b.B.weight-a.B.weight);}
+function s42RenderDetails(){const wastes=s42DetailRows('waste'),plants=s42DetailRows('processor');s42State.wasteRows=wastes;s42State.plantRows=plants;const metric=s42Val('s42VolumeBasis')||'processed';const tot=s42Sum(s42State.B)[metric];
+ document.getElementById('s42WasteRows').innerHTML=wastes.slice(0,100).map(x=>{const a=x.A[metric],b=x.B[metric],d=b-a;return `<tr class="border-b border-slate-100"><td class="p-2 text-slate-800 font-bold">${s42Esc(x.name)}</td><td class="p-2 text-right">${s42Fmt(a,'weight')}</td><td class="p-2 text-right">${s42Fmt(b,'weight')}</td><td class="p-2 text-right ${d<0?'text-red-600':'text-teal-700'}">${d>0?'+':''}${s42Fmt(d,'weight')}</td><td class="p-2 text-right">${s42RateHtml(a,b)}</td><td class="p-2 text-right">${tot?(b/tot*100).toFixed(1):'—'}%</td></tr>`;}).join('')||'<tr><td colspan="6" class="p-4">해당 데이터 없음</td></tr>';
+ document.getElementById('s42PlantRows').innerHTML=plants.slice(0,100).map(x=>{const a=x.A[metric],b=x.B[metric],d=b-a,unit=x.B.costWeight>0?x.B.cost/x.B.costWeight:null;return `<tr class="border-b border-slate-100"><td class="p-2 text-slate-800 font-bold">${s42Esc(x.name)}</td><td class="p-2 text-right">${s42Fmt(a,'weight')}</td><td class="p-2 text-right">${s42Fmt(b,'weight')}</td><td class="p-2 text-right ${d<0?'text-red-600':'text-teal-700'}">${d>0?'+':''}${s42Fmt(d,'weight')}</td><td class="p-2 text-right">${tot?(b/tot*100).toFixed(1):'—'}%</td><td class="p-2 text-right">${s42Fmt(unit,'gross')}</td></tr>`;}).join('')||'<tr><td colspan="6" class="p-4">해당 데이터 없음</td></tr>';
+}
+function s42RenderStrategy(){
+ const group=s42MakeGroup('customer'),plants=s42MakeGroup('processor'),wa=s42MakeGroup('waste'),all=s42Sum(s42State.B),signals=[];
+ const customerDown=group.filter(x=>x.A.gross>=1000000&&x.B.gross<x.A.gross).sort((a,b)=>(a.B.gross-a.A.gross)-(b.B.gross-b.A.gross)).slice(0,2);
+ for(const x of customerDown)signals.push({title:`매출 감소 · ${x.name}`,type:'고객사 재접촉 후보',desc:`총매출 ${s42Fmt(x.A.gross,'gross')} → ${s42Fmt(x.B.gross,'gross')}원 (${s42Fmt(x.B.gross-x.A.gross,'gross')}원). 고객사별 수거량·계약 변경 여부를 확인하세요.`,tone:'orange'});
+ const gain=wa.filter(x=>x.B.weight>x.A.weight&&x.B.weight>100).sort((a,b)=>(b.B.weight-b.A.weight)-(a.B.weight-a.A.weight))[0];if(gain)signals.push({title:`물량 확대 · ${gain.name}`,type:'폐기물 영업 기회',desc:`운반중량 ${s42Fmt(gain.A.weight,'weight')} → ${s42Fmt(gain.B.weight,'weight')}T. 처리장 공급여력 및 신규 거래처 가능성을 검토하세요.`,tone:'teal'});
+ const costRise=plants.filter(x=>x.A.costWeight>0&&x.B.costWeight>0&&x.B.weight>40&&x.B.cost/x.B.costWeight>x.A.cost/x.A.costWeight*1.1).sort((a,b)=>(b.B.cost/b.B.costWeight)/(b.A.cost/b.A.costWeight)-(a.B.cost/a.B.costWeight)/(a.A.cost/a.A.costWeight))[0];if(costRise)signals.push({title:`실효 처리비/T 상승 · ${costRise.name}`,type:'처리장 단가 협의 검토',desc:`기준 ${s42Fmt(costRise.A.cost/costRise.A.costWeight,'gross')}원/T → 비교 ${s42Fmt(costRise.B.cost/costRise.B.costWeight,'gross')}원/T. 폐기물 구성 변화도 함께 확인하세요.`,tone:'orange'});
+ const focus=group.filter(x=>x.B.gross>0).sort((a,b)=>b.B.gross-a.B.gross)[0];if(focus&&all.gross>0)signals.push({title:`매출 집중도 · ${focus.name}`,type:'고객 포트폴리오 점검',desc:`비교기간 전체 매출 중 ${(focus.B.gross/all.gross*100).toFixed(1)}% 차지. 주요 고객 이탈 리스크 대비 및 거래처 다각화를 검토하세요.`,tone:'blue'});
+ const newCust=group.filter(x=>!x.A.gross&&x.B.gross>0).sort((a,b)=>b.B.gross-a.B.gross)[0];if(newCust)signals.push({title:`기준기간 실적 없음 · ${newCust.name}`,type:'신규 실적 모니터링',desc:`비교기간 매출 ${s42Fmt(newCust.B.gross,'gross')}원. 신규 계약인지 단순 실적 발생인지는 계약 DB에서 확인하세요.`,tone:'teal'});
+ if(!signals.length)signals.push({title:'비교 신호 없음',type:'기간 또는 범위 선택',desc:'기간별 실적이 부족하거나 자동 검토 기준에 해당하는 변화가 없습니다. 연도·고객사·폐기물 필터를 조정하세요.',tone:'blue'});
+ const tone={orange:['#fff7ed','#f97316'],teal:['#f0fdfa','#0d9488'],blue:['#eff6ff','#2563eb']};document.getElementById('s42Strategy').innerHTML=signals.slice(0,6).map(x=>{const [bg,c]=tone[x.tone];return `<div class="rounded-xl p-4 border border-slate-100" style="background:${bg};border-left:3px solid ${c}"><div class="text-[11px] font-bold" style="color:${c}">${s42Esc(x.type)}</div><p class="font-bold text-slate-800 mt-1 text-sm">${s42Esc(x.title)}</p><p class="text-xs text-slate-600 mt-2 leading-5">${s42Esc(x.desc)}</p></div>`;}).join('');document.getElementById('s42StrategyCount').textContent=`${signals.length}개 자동 검토 신호`;
+}
+function s42RawFiltered(){const q=s42Val('s42RawSearch').trim().toLowerCase(),p=s42Val('s42RawPeriod')||'both';let rows=[];if(p==='both'||p==='A')rows.push(...s42State.A.map(d=>({period:'A',d})));if(p==='both'||p==='B')rows.push(...s42State.B.map(d=>({period:'B',d})));if(q)rows=rows.filter(x=>[x.d.customer,x.d.waste,x.d.processor,x.d.vehicle,x.d.month].join('|').toLowerCase().includes(q));return rows.sort((x,y)=>String(y.d.month).localeCompare(String(x.d.month))||String(y.d.date).localeCompare(String(x.d.date)));}
+function s42RenderRaw(reset=false){if(reset)s42State.rawPage=0;const rows=s42RawFiltered(),pages=Math.max(1,Math.ceil(rows.length/80));s42State.rawPage=Math.min(Math.max(0,s42State.rawPage),pages-1);const subset=rows.slice(s42State.rawPage*80,(s42State.rawPage+1)*80);document.getElementById('s42RawRows').innerHTML=subset.map(({period,d})=>`<tr class="border-b border-slate-100 hover:bg-teal-50"><td class="p-2 text-center font-bold">${period}</td><td class="p-2 text-center">${s42Esc(d.month)}</td><td class="p-2 whitespace-nowrap">${s42Esc(d.date)}</td><td class="p-2">${s42Esc(d.customer)}</td><td class="p-2">${s42Esc(d.waste)}</td><td class="p-2">${s42Esc(d.processor)}</td><td class="p-2">${s42Esc(d.vehicle)}</td><td class="p-2 text-right">${s42Fmt(Number(d.weight)||0,'weight')}</td><td class="p-2 text-right">${d.processedWeight==null?'—':s42Fmt(Number(d.processedWeight),'processed')}</td><td class="p-2 text-right">${s42Fmt(d.totalRev,'gross')}</td><td class="p-2 text-right">${s42Fmt(d.netRev,'net')}</td><td class="p-2 text-right">${d.processingCost==null?'—':s42Fmt(d.processingCost,'cost')}</td></tr>`).join('')||'<tr><td class="p-6 text-center text-slate-500" colspan="12">원본 실적 없음</td></tr>';document.getElementById('s42RawPage').textContent=`${s42State.rawPage+1} / ${pages}`;document.getElementById('s42RawInfo').textContent=`${rows.length.toLocaleString()}행 조회`;}
+function s42RawMove(d){s42State.rawPage+=d;s42RenderRaw();}
+function s42CSV(name,headers,rows){const safe=v=>{let s=String(v??'');if(/^[=+@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};const csv='\ufeff'+[headers,...rows].map(row=>row.map(safe).join(',')).join('\r\n'),blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);}
+function s42Download(kind){const dates=s42State.periods?`${s42IndexToYYMM(s42State.periods.as)}_${s42IndexToYYMM(s42State.periods.be)}`:'비교';if(kind==='raw'){const rr=s42RawFiltered();s42CSV('실적_원본_'+dates,['구분','년월','일자','고객사','폐기물명','처리장','차량','운반중량T','처리톤수T','총매출','순매출','처리비'],rr.map(({period,d})=>[period,d.month,d.date,d.customer,d.waste,d.processor,d.vehicle,d.weight,d.processedWeight??'',d.totalRev,d.netRev,d.processingCost??'']));return;}
+ const src=kind==='waste'?s42State.wasteRows:kind==='plant'?s42State.plantRows:s42State.groupRows,k=kind==='groups'?s42Val('s42GroupMetric'):'weight',tA=s42Sum(s42State.A)[k],tB=s42Sum(s42State.B)[k];s42CSV('영업전략_'+kind+'_'+dates,['항목','기준기간합계','비교기간합계','증감','증감률%','비교기간비중%','비중변화%p','기준처리비T','비교처리비T'],src.map(x=>[x.name,x.A[k],x.B[k],x.B[k]-x.A[k],s42Rate(x.A[k],x.B[k])??'',tB?x.B[k]/tB*100:0,(tB?x.B[k]/tB*100:0)-(tA?x.A[k]/tA*100:0),x.A.costWeight?x.A.cost/x.A.costWeight:'',x.B.costWeight?x.B.cost/x.B.costWeight:'']));}
+function s42GoCustomerIndex(index){const record=s42State.groupRows[index];if(record)s42GoCustomer(record.name);}
+function s42GoCustomer(name){const chosen=Object.keys(tsCust?.options||{}).find(x=>commercialKey(x)===commercialKey(name));if(!chosen){alert('공통 업체 필터 목록에서 이 고객사를 찾지 못했습니다.');return;}tsCust.clear(true);tsCust.addItem(chosen,true);switchTab(2);}
+function s42Refresh(){s42Render();}
+
+</script>
 </body>
 </html>
