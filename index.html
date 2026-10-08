@@ -2042,6 +2042,13 @@
                 </div>
                 <div class="flex gap-2 items-center"><button type="button" onclick="s42Download('groups')" class="px-3 py-2 text-xs font-bold text-teal-800 border border-teal-200 rounded-lg bg-white">↓ 비교표 CSV</button><button type="button" onclick="s42Refresh()" class="px-3 py-2 text-xs font-bold text-slate-700 border border-slate-200 rounded-lg">↻ 지표 새로고침</button></div>
             </div>
+            <div id="s42CustomerScopeBanner" class="flex flex-wrap items-center justify-between gap-2 border border-teal-200 bg-teal-50/60 rounded-xl px-4 py-3 text-sm">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-bold text-teal-900">🔎 비교 대상</span>
+                    <span id="s42CustomerScopeText" class="text-slate-700">전체 업체 비교 중</span>
+                </div>
+                <button id="s42ClearCustomerBtn" type="button" onclick="s42ClearCustomerOnly()" class="hidden text-xs font-bold rounded-lg border border-teal-300 bg-white text-teal-800 px-3 py-2 hover:bg-teal-50">↺ 전체 업체로 복귀 (고객사만 초기화)</button>
+            </div>
             <section class="bg-white border border-slate-100 shadow-sm rounded-2xl p-5">
                 <div class="flex flex-wrap items-center justify-between gap-3 mb-3"><h3 class="font-bold text-slate-800">비교 기간 설정</h3><span id="s42Basis" class="text-xs text-slate-500">상단 업체·차량·폐기물·처리장 필터 연동 (상단 연도·월 필터는 이 탭에서 제외)</span></div>
                 <div class="mb-3 px-3 py-2.5 bg-teal-50/50 border border-teal-100 rounded-lg text-xs text-slate-700">
@@ -10917,6 +10924,7 @@ function s42Period(){
 }
 function s42Render(){
  if(!document.getElementById('tab9-content') || currentTab!==9)return;
+ s42UpdateCustomerScope();
  if(!s42State.started){s42Init();if(!s42State.started){document.getElementById('s42PeriodNote').textContent='데이터를 불러온 후 이용할 수 있습니다.';return;}}
  const p=s42Period(),note=document.getElementById('s42PeriodNote');
  if(!p.valid){note.textContent='⚠️ 기간 시작·종료 순서를 확인해주세요.';return;}
@@ -10972,8 +10980,29 @@ function s42RawMove(d){s42State.rawPage+=d;s42RenderRaw();}
 function s42CSV(name,headers,rows){const safe=v=>{let s=String(v??'');if(/^[=+@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};const csv='\ufeff'+[headers,...rows].map(row=>row.map(safe).join(',')).join('\r\n'),blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);}
 function s42Download(kind){const dates=s42State.periods?`${s42IndexToYYMM(s42State.periods.as)}_${s42IndexToYYMM(s42State.periods.be)}`:'비교';if(kind==='raw'){const rr=s42RawFiltered();s42CSV('실적_원본_'+dates,['구분','년월','일자','고객사','폐기물명','처리장','차량','운반중량T','처리톤수T','총매출','순매출','처리비'],rr.map(({period,d})=>[period,d.month,d.date,d.customer,d.waste,d.processor,d.vehicle,d.weight,d.processedWeight??'',d.totalRev,d.netRev,d.processingCost??'']));return;}
  const src=kind==='waste'?s42State.wasteRows:kind==='plant'?s42State.plantRows:s42State.groupRows,k=kind==='groups'?s42Val('s42GroupMetric'):'weight',tA=s42Sum(s42State.A)[k],tB=s42Sum(s42State.B)[k];s42CSV('영업전략_'+kind+'_'+dates,['항목','기준기간합계','비교기간합계','증감','증감률%','비교기간비중%','비중변화%p','기준처리비T','비교처리비T'],src.map(x=>[x.name,x.A[k],x.B[k],x.B[k]-x.A[k],s42Rate(x.A[k],x.B[k])??'',tB?x.B[k]/tB*100:0,(tB?x.B[k]/tB*100:0)-(tA?x.A[k]/tA*100:0),x.A.costWeight?x.A.cost/x.A.costWeight:'',x.B.costWeight?x.B.cost/x.B.costWeight:'']));}
+function s42UpdateCustomerScope(){
+ const selected=getFilterVals(tsCust),label=document.getElementById('s42CustomerScopeText'),btn=document.getElementById('s42ClearCustomerBtn');
+ if(label)label.textContent=selected.length?`${selected.length}개 고객사 선택 중: ${selected.slice(0,3).join(', ')}${selected.length>3?' 외 '+(selected.length-3)+'개':''}`:'전체 업체 비교 중';
+ if(btn)btn.classList.toggle('hidden',selected.length===0);
+}
+function s42ClearCustomerOnly(){
+ // 기간·차량·폐기물·처리장·연도/월 조건은 그대로 두고 고객사 필터만 해제한다.
+ if(!tsCust)return;
+ tsCust.clear(); // TomSelect change 이벤트가 종속 폐기물 옵션과 상단 뱃지를 동기화한다.
+ renderPills();
+ s42UpdateCustomerScope();
+ renderDashboard();
+}
 function s42GoCustomerIndex(index){const record=s42State.groupRows[index];if(record)s42GoCustomer(record.name);}
-function s42GoCustomer(name){const chosen=Object.keys(tsCust?.options||{}).find(x=>commercialKey(x)===commercialKey(name));if(!chosen){alert('공통 업체 필터 목록에서 이 고객사를 찾지 못했습니다.');return;}tsCust.clear(true);tsCust.addItem(chosen,true);switchTab(2);}
+function s42GoCustomer(name){
+ const chosen=Object.keys(tsCust?.options||{}).find(x=>commercialKey(x)===commercialKey(name));
+ if(!chosen){alert('공통 업체 필터 목록에서 이 고객사를 찾지 못했습니다.');return;}
+ // 기존 clear(true)+addItem(chosen,true)는 change 이벤트를 묵살하여
+ // 선택값이 반영되더라도 상단 뱃지와 활성 필터 표시는 '전체'로 남았다.
+ tsCust.setValue([chosen]); // silent=false: badge/pills/onChange 동기화
+ renderPills();
+ switchTab(2);
+}
 function s42Refresh(){s43BuildYearOptions();s43UpdateYearTools();s42Render();}
 
 </script>
