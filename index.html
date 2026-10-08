@@ -2044,9 +2044,29 @@
             </div>
             <section class="bg-white border border-slate-100 shadow-sm rounded-2xl p-5">
                 <div class="flex flex-wrap items-center justify-between gap-3 mb-3"><h3 class="font-bold text-slate-800">비교 기간 설정</h3><span id="s42Basis" class="text-xs text-slate-500">상단 업체·차량·폐기물·처리장 필터 연동 (상단 연도·월 필터는 이 탭에서 제외)</span></div>
+                <div class="mb-3 px-3 py-2.5 bg-teal-50/50 border border-teal-100 rounded-lg text-xs text-slate-700">
+                    <b class="text-teal-800">연도 제한 없음</b> · 처리수입현황에 등록된 연도를 자동으로 불러옵니다. 2024 ↔ 2025처럼 원하는 연도를 선택하거나, 아래 4개 월 입력칸에서 서로 다른 임의 기간을 직접 비교할 수 있습니다.
+                    <span id="s43AvailableYears" class="text-teal-700 font-bold ml-1"></span>
+                </div>
+                <div id="s43YearTools" class="flex flex-wrap items-end gap-3 mb-3 border border-teal-100 rounded-xl bg-teal-50/40 p-3">
+                    <label class="text-xs text-slate-700 font-bold">기준 연도 (A)
+                        <select id="s43YearA" onchange="s43YearChanged()" class="block mt-1 rounded-lg border border-slate-200 p-2 text-sm bg-white min-w-[115px]"></select>
+                    </label>
+                    <span class="text-slate-400 font-bold mb-2">vs</span>
+                    <label class="text-xs text-teal-800 font-bold">비교 연도 (B)
+                        <select id="s43YearB" onchange="s43YearChanged()" class="block mt-1 rounded-lg border border-teal-200 p-2 text-sm bg-white min-w-[115px]"></select>
+                    </label>
+                    <label class="text-xs text-slate-700 font-bold">시작 월
+                        <select id="s43StartMonth" onchange="s43YearChanged()" class="block mt-1 rounded-lg border border-slate-200 p-2 text-sm bg-white"></select>
+                    </label>
+                    <label class="text-xs text-slate-700 font-bold">종료 월
+                        <select id="s43EndMonth" onchange="s43YearChanged()" class="block mt-1 rounded-lg border border-slate-200 p-2 text-sm bg-white"></select>
+                    </label>
+                    <span class="text-[11px] text-slate-500 mb-2">두 연도에 같은 월 범위를 적용하며, 실적이 없는 월은 별도로 안내합니다.</span>
+                </div>
                 <div class="flex flex-wrap items-end gap-3">
                     <label class="text-xs text-slate-600 font-bold">빠른 비교
-                        <select id="s42Preset" onchange="s42PresetChange()" class="block mt-1 rounded-lg border border-slate-200 p-2.5 text-sm bg-white min-w-[175px]"><option value="yoy">전년 동기간 (YoY)</option><option value="mom">최근 확정월 vs 전월 (MoM)</option><option value="qoq">직전 3개월 vs 이전 3개월</option><option value="custom">사용자 지정 비교</option></select>
+                        <select id="s42Preset" onchange="s42PresetChange()" class="block mt-1 rounded-lg border border-slate-200 p-2.5 text-sm bg-white min-w-[200px]"><option value="years">연도 직접 선택 비교</option><option value="yoy">최근 전년 동기간 (YoY)</option><option value="mom">최근 확정월 vs 전월 (MoM)</option><option value="qoq">직전 3개월 vs 이전 3개월</option><option value="custom">기간 직접 선택 (자유 비교)</option></select>
                     </label>
                     <label class="text-xs text-slate-600 font-bold">기준기간 시작<input id="s42AStart" type="month" onchange="s42DatesChanged()" class="block mt-1 rounded-lg border border-slate-200 p-2 text-sm bg-white"></label>
                     <label class="text-xs text-slate-600 font-bold">기준기간 종료<input id="s42AEnd" type="month" onchange="s42DatesChanged()" class="block mt-1 rounded-lg border border-slate-200 p-2 text-sm bg-white"></label>
@@ -2062,7 +2082,7 @@
                 <section class="xl:col-span-3 bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                     <div class="flex items-center justify-between gap-2 flex-wrap mb-3"><div><h3 class="font-bold text-slate-800">📉 월별 흐름 비교</h3><p class="text-xs text-slate-500 mt-1">두 기간의 1개월차부터 동일 위치에 겹쳐서 비교합니다 (없는 월은 0이 아닌 빈값)</p></div>
                         <select id="s42TrendMetric" onchange="s42RenderCharts()" class="rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold"><option value="gross">총매출</option><option value="net">순매출</option><option value="transport">운반부문 매출(계산)</option><option value="weight">운반중량(T)</option><option value="processed">처리톤수(T)</option><option value="cost">처리비</option><option value="trip">배차 건수</option></select>
-                    </div><div class="relative h-[300px]"><canvas id="s42TrendChart"></canvas></div>
+                    </div><div id="s43TrendScroll" class="relative h-[320px] overflow-x-auto"><div id="s43TrendCanvasBox" class="relative h-[295px]" style="min-width:100%"><canvas id="s42TrendChart"></canvas></div></div>
                 </section>
                 <section class="xl:col-span-2 bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                     <div class="flex items-center justify-between flex-wrap gap-2"><div><h3 class="font-bold text-slate-800">🎯 매출 기여도 상위 고객사</h3><p class="text-xs text-slate-500 mt-1">비교기간(B) 매출 기준 · 고객 집중도 확인</p></div><select id="s42ShareMetric" onchange="s42RenderCharts()" class="rounded-lg border border-slate-200 px-2 py-2 text-xs"><option value="gross">총매출</option><option value="net">순매출</option><option value="weight">물량</option></select></div>
@@ -10824,7 +10844,41 @@ function s42Sum(rows){
  x.trip=keys.size;return x;
 }
 function s42SelectorChange(){s42Render();}
-function s42Init(){if(s42State.started)return;const ds=(window.rawData||[]).map(d=>s42MonthIndex(d.month)).filter(x=>x!==null);if(!ds.length)return;s42State.started=true;s42ResetFilters(false);}
+// v43: 모든 연도 자동 탐지, 기준/비교 연도 + 공통 월 구간 자유 선택
+function s43ExistingYears(){
+ return [...new Set((window.rawData||[]).map(d=>s42MonthIndex(d.month)).filter(i=>i!==null).map(i=>Math.floor(i/12)))].sort((a,b)=>a-b);
+}
+function s43BuildYearOptions(){
+ const years=s43ExistingYears(),a=document.getElementById('s43YearA'),b=document.getElementById('s43YearB');
+ if(!a||!b)return years;
+ const oldA=a.value,oldB=b.value;
+ const opts=years.map(y=>`<option value="${y}">${y}년</option>`).join('');
+ for(const el of [a,b])el.innerHTML=opts;
+ if(years.length){a.value=years.includes(Number(oldA))?oldA:String(years.length>=2?years[years.length-2]:years[0]);b.value=years.includes(Number(oldB))?oldB:String(years[years.length-1]);}
+ const status=document.getElementById('s43AvailableYears');if(status)status.textContent=years.length?`(등록 연도: ${years.join(', ')})`:'(등록된 연도 없음)';
+ for(const id of ['s43StartMonth','s43EndMonth']){
+   const el=document.getElementById(id);if(!el)continue;const prev=el.value;
+   el.innerHTML=Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}월</option>`).join('');
+   el.value=prev|| (id==='s43StartMonth'?'1':'12');
+ }
+ return years;
+}
+function s43UpdateYearTools(){
+ const el=document.getElementById('s43YearTools');if(el)el.style.display=s42Val('s42Preset')==='years'?'flex':'none';
+}
+function s43SetDates(ast,aen,bst,ben){
+ [['s42AStart',ast],['s42AEnd',aen],['s42BStart',bst],['s42BEnd',ben]].forEach(([id,n])=>{const el=document.getElementById(id);if(el)el.value=s42IndexToInput(n);});
+}
+function s43YearChanged(){
+ const ya=Number(s42Val('s43YearA')),yb=Number(s42Val('s43YearB')),start=Number(s42Val('s43StartMonth')),end=Number(s42Val('s43EndMonth'));
+ if(!Number.isInteger(ya)||!Number.isInteger(yb)||!Number.isInteger(start)||!Number.isInteger(end)||start<1||end>12)return;
+ const preset=document.getElementById('s42Preset');if(preset)preset.value='years';
+ s43UpdateYearTools();
+ if(start>end){const note=document.getElementById('s42PeriodNote');if(note)note.textContent='⚠️ 시작 월이 종료 월보다 늦습니다. 월 범위를 다시 설정해주세요.';return;}
+ s43SetDates(ya*12+start-1,ya*12+end-1,yb*12+start-1,yb*12+end-1);
+ s42Render();
+}
+function s42Init(){if(s42State.started)return;const ds=(window.rawData||[]).map(d=>s42MonthIndex(d.month)).filter(x=>x!==null);if(!ds.length)return;s42State.started=true;s43BuildYearOptions();s42ResetFilters(false);}
 function s42ResetFilters(doRender=true){
  const available=(window.rawData||[]).map(d=>s42MonthIndex(d.month)).filter(x=>x!==null);
  if(!available.length)return;
@@ -10832,11 +10886,17 @@ function s42ResetFilters(doRender=true){
  const end=Math.min(latest,closed);const start=end-(end%12); // 최근 완결 월까지의 해당 연도
  const set=(id,n)=>{const el=document.getElementById(id);if(el)el.value=s42IndexToInput(n);};
  set('s42AStart',start-12);set('s42AEnd',end-12);set('s42BStart',start);set('s42BEnd',end);
+ s43BuildYearOptions();
+ const yrs=s43ExistingYears();
+ const ya=document.getElementById('s43YearA'),yb=document.getElementById('s43YearB'),sm=document.getElementById('s43StartMonth'),em=document.getElementById('s43EndMonth');
+ if(ya&&yrs.includes(Math.floor((start-12)/12)))ya.value=String(Math.floor((start-12)/12));
+ if(yb&&yrs.includes(Math.floor(start/12)))yb.value=String(Math.floor(start/12));
+ if(sm)sm.value=String(start%12+1);if(em)em.value=String(end%12+1);
  if(document.getElementById('s42Preset'))document.getElementById('s42Preset').value='yoy';
- if(doRender)s42Render();
+ s43UpdateYearTools();if(doRender)s42Render();
 }
 function s42PresetChange(){
- const preset=s42Val('s42Preset');if(preset==='custom'){s42Render();return;}
+ const preset=s42Val('s42Preset');s43BuildYearOptions();s43UpdateYearTools();if(preset==='years'){s43YearChanged();return;}if(preset==='custom'){s42Render();return;}
  const months=(window.rawData||[]).map(d=>s42MonthIndex(d.month)).filter(x=>x!==null);if(!months.length)return;
  const today=new Date(),closed=today.getFullYear()*12+today.getMonth()-1;const latest=Math.min(Math.max(...months),closed);
  let ast,aen,bst,ben;
@@ -10845,7 +10905,7 @@ function s42PresetChange(){
  else {bst=latest-latest%12;ben=latest;ast=bst-12;aen=ben-12;}
  [['s42AStart',ast],['s42AEnd',aen],['s42BStart',bst],['s42BEnd',ben]].forEach(([id,n])=>{document.getElementById(id).value=s42IndexToInput(n);});s42Render();
 }
-function s42DatesChanged(){const p=document.getElementById('s42Preset');if(p)p.value='custom';s42Render();}
+function s42DatesChanged(){const p=document.getElementById('s42Preset');if(p)p.value='custom';s43UpdateYearTools();s42Render();}
 function s42Toggle(id){const el=document.getElementById(id);if(!el)return;el.style.display=el.style.display==='none'?'':'none';}
 function s42Scoped(){
  const tc=getFilterVals(tsCust),tv=getFilterVals(tsVeh),tw=getFilterVals(tsWaste),tp=getFilterVals(tsPlant);
@@ -10863,8 +10923,8 @@ function s42Render(){
  const rows=s42Scoped(), a=rows.filter(d=>{const m=s42MonthIndex(d.month);return m!==null&&m>=p.as&&m<=p.ae;}),b=rows.filter(d=>{const m=s42MonthIndex(d.month);return m!==null&&m>=p.bs&&m<=p.be;});
  s42State.A=a;s42State.B=b;s42State.all=rows;s42State.periods=p;s42State.rawPage=0;
  const now=new Date(),incomplete=now.getFullYear()*12+now.getMonth(),partial=p.be>=incomplete||p.ae>=incomplete;
- const aNames=new Set(a.map(d=>d.month)),bNames=new Set(b.map(d=>d.month));
- note.innerHTML=`기준 <b>${s42IndexLabel(p.as)} ~ ${s42IndexLabel(p.ae)}</b> (${a.length.toLocaleString()}행 · ${aNames.size}개월) &nbsp;vs&nbsp; 비교 <b>${s42IndexLabel(p.bs)} ~ ${s42IndexLabel(p.be)}</b> (${b.length.toLocaleString()}행 · ${bNames.size}개월)${partial?'<span class="text-red-700 font-bold"> · 진행 중인 월 포함: 잠정 실적</span>':''}${!a.length||!b.length?'<span class="text-red-700 font-bold"> · 일부 비교기간 자료 없음: 증감률 해석 주의</span>':''}`;
+ const aNames=new Set(a.map(d=>d.month)),bNames=new Set(b.map(d=>d.month));const aMonths=p.ae-p.as+1,bMonths=p.be-p.bs+1;const periodMismatch=aMonths!==bMonths;const missingMonths=aNames.size<aMonths||bNames.size<bMonths;
+ note.innerHTML=`기준 <b>${s42IndexLabel(p.as)} ~ ${s42IndexLabel(p.ae)}</b> (${a.length.toLocaleString()}행 · ${aNames.size}개월) &nbsp;vs&nbsp; 비교 <b>${s42IndexLabel(p.bs)} ~ ${s42IndexLabel(p.be)}</b> (${b.length.toLocaleString()}행 · ${bNames.size}개월)${partial?'<span class="text-red-700 font-bold"> · 진행 중인 월 포함: 잠정 실적</span>':''}${!a.length||!b.length?'<span class="text-red-700 font-bold"> · 일부 비교기간 자료 없음: 증감률 해석 주의</span>':''}${periodMismatch?'<span class="text-amber-800 font-bold"> · 두 기간의 개월 수가 달라 단순 합계 비교에 주의</span>':''}${missingMonths?'<span class="text-amber-800 font-bold"> · 선택 기간 중 실적 기록이 없는 월이 있습니다(0으로 단정 금지)</span>':''}`;
  if(document.getElementById('s42Basis'))document.getElementById('s42Basis').textContent=`${_dataBasis==='account'?'매출인식':'수행월'} 기준 · 상단 고객사/차량/폐기물/처리장 연동 · 연도/월 필터는 탭 내 비교기간 사용`;
  s42RenderCards();s42RenderCharts();s42RenderGroups();s42RenderDetails();s42RenderStrategy();s42RenderRaw(true);
 }
@@ -10876,7 +10936,7 @@ function s42Destroy(name){if(s42State.charts[name]){try{s42State.charts[name].de
 function s42ChartOptions(unit,axis='y'){return {responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11,weight:'bold'}}},datalabels:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label||''}: ${s42Fmt(axis==='x'?c.parsed.x:c.parsed.y,c.dataset._metric||'gross')} ${unit}`}}},scales:axis==='y'?{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>Number(v).toLocaleString('ko-KR',{notation:'compact'})}}}:{x:{beginAtZero:true},y:{grid:{display:false}}}};}
 function s42RenderCharts(){
  if(!s42State.periods||typeof Chart==='undefined')return;
- const p=s42State.periods,k=s42Val('s42TrendMetric')||'gross',unit=s42MetricInfo[k][1],maxLen=Math.min(36,Math.max(p.ae-p.as+1,p.be-p.bs+1));
+ const p=s42State.periods,k=s42Val('s42TrendMetric')||'gross',unit=s42MetricInfo[k][1],maxLen=Math.max(p.ae-p.as+1,p.be-p.bs+1);const trendBox=document.getElementById('s43TrendCanvasBox');if(trendBox){const view=document.getElementById('s43TrendScroll');trendBox.style.width=Math.max(view?.clientWidth||760,maxLen*65)+'px';}
  const calc=(r,start,end)=>{const out=new Map();for(const d of r){const i=s42MonthIndex(d.month);if(i<start||i>end)continue;if(!out.has(i))out.set(i,[]);out.get(i).push(d);}return out;};const aa=calc(s42State.A,p.as,p.ae),bb=calc(s42State.B,p.bs,p.be);
  const months=Array.from({length:maxLen},(_,i)=>i);const val=(map,start,end,offset)=>{if(start+offset>end||!map.has(start+offset))return null;const group=s42Sum(map.get(start+offset));return k==='transport'&&!group.transportKnown?null:group[k];};
  s42Destroy('trend');const cv=document.getElementById('s42TrendChart');if(cv)s42State.charts.trend=new Chart(cv,{type:'line',data:{labels:months.map(x=>`${x+1}개월차`),datasets:[{_metric:k,label:`A ${s42IndexLabel(p.as)} 시작`,data:months.map(i=>val(aa,p.as,p.ae,i)),borderColor:'#94a3b8',backgroundColor:'#94a3b820',borderWidth:2.5,pointRadius:3,tension:.25,spanGaps:false},{_metric:k,label:`B ${s42IndexLabel(p.bs)} 시작`,data:months.map(i=>val(bb,p.bs,p.be,i)),borderColor:'#0d9488',backgroundColor:'#0d948822',borderWidth:2.8,pointRadius:4,tension:.25,spanGaps:false}]},options:{...s42ChartOptions(unit),plugins:{...s42ChartOptions(unit).plugins,tooltip:{callbacks:{title:it=>{const off=it[0]?.dataIndex||0;return `A: ${s42IndexLabel(p.as+off)} / B: ${s42IndexLabel(p.bs+off)}`;},label:it=>`${it.dataset.label}: ${s42Fmt(it.raw,k)} ${unit}`}}}}});
@@ -10914,7 +10974,7 @@ function s42Download(kind){const dates=s42State.periods?`${s42IndexToYYMM(s42Sta
  const src=kind==='waste'?s42State.wasteRows:kind==='plant'?s42State.plantRows:s42State.groupRows,k=kind==='groups'?s42Val('s42GroupMetric'):'weight',tA=s42Sum(s42State.A)[k],tB=s42Sum(s42State.B)[k];s42CSV('영업전략_'+kind+'_'+dates,['항목','기준기간합계','비교기간합계','증감','증감률%','비교기간비중%','비중변화%p','기준처리비T','비교처리비T'],src.map(x=>[x.name,x.A[k],x.B[k],x.B[k]-x.A[k],s42Rate(x.A[k],x.B[k])??'',tB?x.B[k]/tB*100:0,(tB?x.B[k]/tB*100:0)-(tA?x.A[k]/tA*100:0),x.A.costWeight?x.A.cost/x.A.costWeight:'',x.B.costWeight?x.B.cost/x.B.costWeight:'']));}
 function s42GoCustomerIndex(index){const record=s42State.groupRows[index];if(record)s42GoCustomer(record.name);}
 function s42GoCustomer(name){const chosen=Object.keys(tsCust?.options||{}).find(x=>commercialKey(x)===commercialKey(name));if(!chosen){alert('공통 업체 필터 목록에서 이 고객사를 찾지 못했습니다.');return;}tsCust.clear(true);tsCust.addItem(chosen,true);switchTab(2);}
-function s42Refresh(){s42Render();}
+function s42Refresh(){s43BuildYearOptions();s43UpdateYearTools();s42Render();}
 
 </script>
 </body>
