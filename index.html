@@ -555,12 +555,12 @@
                         <p id="cmNetRev" class="text-teal-100 text-sm mt-2">순매출 0원</p>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-5 border border-slate-200 flex flex-col justify-center">
-                        <p class="text-sm font-semibold text-slate-500 mb-1">전월 동기간 대비 (MoM)</p>
+                        <p id="cmMomTitle" class="text-sm font-semibold text-slate-500 mb-1">전월 동기간 대비 (MoM)</p>
                         <h3 id="cmMomPct" class="text-3xl font-bold text-slate-400">-</h3>
                         <p id="cmMomDetail" class="text-xs text-slate-400 mt-1"></p>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-5 border border-slate-200 flex flex-col justify-center">
-                        <p class="text-sm font-semibold text-slate-500 mb-1">전년 동기간 대비 (YoY)</p>
+                        <p id="cmYoyTitle" class="text-sm font-semibold text-slate-500 mb-1">전년 동기간 대비 (YoY)</p>
                         <h3 id="cmYoyPct" class="text-3xl font-bold text-slate-400">-</h3>
                         <p id="cmYoyDetail" class="text-xs text-slate-400 mt-1"></p>
                     </div>
@@ -569,6 +569,11 @@
                 <div id="cmCumulativeWrap" class="mt-4 pt-4 border-t border-slate-100">
                     <p class="text-sm font-bold text-slate-600 mb-2">📈 이번 달 누적 매출 추이 <span class="text-xs font-normal text-slate-400">(전월·전년 동기간 점선 대비)</span></p>
                     <div class="relative w-full h-[240px]"><canvas id="cmCumulativeChart"></canvas></div>
+                </div>
+                <div id="cmAccountChartWrap" class="hidden mt-4 pt-4 border-t border-slate-100">
+                    <p class="text-sm font-bold text-slate-600 mb-2">📊 매출인식 월별 총매출 비교 <span class="text-xs font-normal text-slate-400">(전년 동월 / 전월 / 기준월)</span></p>
+                    <div class="relative w-full h-[245px]"><canvas id="cmAccountCompareChart"></canvas></div>
+                    <p class="text-xs text-amber-700 mt-2">※ 매출인식은 월(YYMM) 기준 데이터입니다. 일자별 누적을 계산할 수 없으며, 미마감 월은 확정월과의 비교 시 잠정 수치입니다.</p>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -695,6 +700,7 @@
                     <div>
                         <h2 class="text-xl font-bold text-slate-800">🔍 업체별 실적 및 성장률 (MoM / YoY)</h2>
                         <p class="text-sm text-slate-500 mt-1" id="tableSubtitle">선택된 기준 월에 대한 전월(MoM) 및 전년 동월(YoY) 총매출액 변동 추이입니다.</p>
+                        <p class="text-xs text-rose-600 mt-1">NEW: 선택한 기준 월에 전체 DB상 첫 매출이 확인된 사업장 (매출 재개와 구분)</p>
                     </div>
                 </div>
                 <div class="overflow-x-auto rounded-lg border border-slate-200">
@@ -2649,7 +2655,7 @@
     let _compSortAsc = false;
     let _compTargetMonth = '';
     let overallChartInst = null;
-    let cmCumInst = null;
+    let cmCumInst = null, cmAccountCompareInst = null;
     let chartTotalRevInst = null, chartAvgNetRevInst = null, chartAvgWeightInst = null;
     let vehicleRevChartInst = null, vehicleCountChartInst = null;
     let donutChartInst = null;
@@ -3414,6 +3420,10 @@ const plantValues = getFilterVals(tsPlant);
         // 수행일은 실제 일자가 있으므로 같은 일수 구간 비교가 가능.
         // 매출인식은 원본 DB가 YYMM 월 단위이므로 일자 컷을 억지로 적용하지 않는다.
         const hasDailyBasis = _dataBasis === 'perform';
+        const momTitle = document.getElementById('cmMomTitle');
+        const yoyTitle = document.getElementById('cmYoyTitle');
+        if (momTitle) momTitle.textContent = hasDailyBasis ? '전월 동기간 대비 (MoM)' : '전월 월별 비교 (MoM)';
+        if (yoyTitle) yoyTitle.textContent = hasDailyBasis ? '전년 동기간 대비 (YoY)' : '전년 동월 비교 (YoY)';
         const cutDay = hasDailyBasis ? day : null;
         const cur = agg(yymm, cutDay);
         const pm  = agg(prevM, cutDay);
@@ -3465,13 +3475,39 @@ const plantValues = getFilterVals(tsPlant);
             hasDailyBasis ? `전년(${yoyM.substring(0,2)}년 ${yoyM.substring(2,4)}월) 동기간` : `전년(${yoyM.substring(0,2)}년 ${yoyM.substring(2,4)}월)`);
 
         // ── 누적 매출 추이 (전월·전년 점선 대비) ──
-        // 매출인식은 일자 정보가 없으므로 일별 누적차트를 숨긴다.
+        // 수행일은 일별 누적, 매출인식은 월별 막대 비교로 전환한다.
+        // 월 단위 회계값을 일별로 나누어 가짜 누적 차트를 만드는 것은 금지한다.
         const cumWrap = document.getElementById('cmCumulativeWrap');
+        const accountWrap = document.getElementById('cmAccountChartWrap');
         if (cumWrap) cumWrap.classList.toggle('hidden', !hasDailyBasis);
+        if (accountWrap) accountWrap.classList.toggle('hidden', hasDailyBasis);
         if (!hasDailyBasis) {
             cmCumInst = destroyChart(cmCumInst, 'cmCumulativeChart');
+            cmAccountCompareInst = destroyChart(cmAccountCompareInst, 'cmAccountCompareChart');
+            const accountCanvas = document.getElementById('cmAccountCompareChart');
+            if (accountCanvas) {
+                cmAccountCompareInst = new Chart(accountCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: [`20${yoyM.slice(0,2)}년 ${Number(yoyM.slice(2))}월`, `20${prevM.slice(0,2)}년 ${Number(prevM.slice(2))}월`, `20${yymm.slice(0,2)}년 ${Number(yymm.slice(2))}월`],
+                        datasets: [{ label:'총매출액', data:[py.rev, pm.rev, cur.rev], backgroundColor:['#fdba74','#94a3b8','#0d9488'], borderRadius:7, maxBarThickness:120 }]
+                    },
+                    options: {
+                        responsive:true, maintainAspectRatio:false,
+                        plugins: {
+                            legend:{display:false}, datalabels:{display:false},
+                            tooltip:{callbacks:{label:ctx=>`총매출: ${formatCurrency(ctx.parsed.y)}원`}}
+                        },
+                        scales:{
+                            y:{beginAtZero:true,ticks:{callback:v=>v>=100000000?(v/100000000).toFixed(1)+'억':v>=10000?(v/10000).toFixed(0)+'만':v}},
+                            x:{grid:{display:false}}
+                        }
+                    }
+                });
+            }
             return;
         }
+        cmAccountCompareInst = destroyChart(cmAccountCompareInst, 'cmAccountCompareChart');
         const dailyCumulative = (month, upto) => {
             const byDay = {};
             window.rawData.forEach(d => {
@@ -5668,6 +5704,15 @@ if (!dd) return;
         const cutDay = isPartial ? _today.day : 99;
 
         _compTargetMonth = targetMonth;
+        // NEW는 전월/전년 0매출 여부가 아니라, DB에서 최초로 매출이 발생한 월을 의미한다.
+        // 달력 기준 필터/고객사 필터를 적용하기 전의 전체 원본을 사용하여 재개 고객을 신규로 오표시하지 않는다.
+        const firstRevenueMonth = new Map();
+        (window.rawDataBase || []).forEach(d => {
+            const firstMonth = _dataBasis === 'account' ? d.accountMonth : d.performMonth;
+            if (!firstMonth || !/^\d{4}$/.test(firstMonth) || !(Number(d.totalRev) > 0) || !d.customer) return;
+            const existing = firstRevenueMonth.get(d.customer);
+            if (!existing || firstMonth < existing) firstRevenueMonth.set(d.customer, firstMonth);
+        });
         _compRows = customers.map(c => {
             const cd = rel.filter(d=>d.customer===c);
             let curRev=0,prevRev=0,yoyRev=0,curNet=0,curWeight=0;
@@ -5684,6 +5729,7 @@ if (!dd) return;
             const yoyPct = calcGrowthPct(curRev, yoyRev);
             return {
                 c, curRev, prevRev, yoyRev, curNet, curWeight, curCount,
+                isNewCustomer: curRev > 0 && firstRevenueMonth.get(c) === targetMonth,
                 momPct, yoyPct,
                 avgTotal: curCount ? curRev / curCount : 0,
                 avgNet:   curCount ? curNet / curCount : 0,
@@ -5693,7 +5739,7 @@ if (!dd) return;
 
         const fmt = m => m ? `${m.substring(0,2)}년 ${m.substring(2,4)}월` : '-';
         const partialNote = isPartial ? ` <span class="text-amber-600 font-bold">(진행 중 · ${cutDay}일까지 동일 구간 비교)</span>` : '';
-        document.getElementById('tableSubtitle').innerHTML = `기준 월(<b class="text-teal-800">${fmt(targetMonth)}</b>) 대비 전월(<b class="text-teal-800">${fmt(prevMonth)}</b>) 및 전년 동월(<b class="text-teal-800">${fmt(yoyMonth)}</b>) 증감률입니다.${partialNote}`;
+        document.getElementById('tableSubtitle').innerHTML = `기준 월(<b class="text-teal-800">${fmt(targetMonth)}</b>) 대비 전월(<b class="text-teal-800">${fmt(prevMonth)}</b>) 및 전년 동월(<b class="text-teal-800">${fmt(yoyMonth)}</b>) 증감률입니다. <span class="text-slate-500">(${_dataBasis==='account'?'매출인식':'수행일'} 기준)</span>${partialNote}`;
 
         _compSortKey = 'curRev';
         _compSortAsc = false;
@@ -5732,7 +5778,7 @@ if (!dd) return;
             const mom = calcGrowth(r.curRev, r.prevRev);
             const yoy = calcGrowth(r.curRev, r.yoyRev);
             html += `<tr class="border-b border-slate-200 hover:bg-teal-50 transition-colors">
-                <td class="p-3 font-semibold text-slate-800">${r.c}</td>
+                <td class="p-3 font-semibold text-slate-800">${r.c}${r.isNewCustomer ? ' <span class="inline-block ml-1 text-xs font-extrabold text-rose-600" title="DB 기준 최초 매출월">NEW</span>' : ''}</td>
                 <td class="p-3 text-slate-500 font-medium">${fmt(_compTargetMonth)}</td>
                 <td class="p-3 text-right font-bold text-slate-800">${formatCurrency(r.curRev)} 원</td>
                 <td class="p-3 text-right font-bold tracking-wide ${mom.color}">${mom.text}</td>
